@@ -1,0 +1,28 @@
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Python (backend)
+backend/.venv/
+backend/__pycache__/
+backend/**/*.py[cod]
+backend/.pytest_cache/
+backend/.mypy_cache/
+backend/.ruff_cache/
+
+# Local DB
+backend/app/db/*.db
+backend/app/db/*.sqlite3
+
+# Frontend (Vite)
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Env / Logs
+.env
+.env.*
+!.env.example
+*.log
