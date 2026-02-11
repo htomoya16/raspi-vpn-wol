@@ -37,6 +37,7 @@ def init_db() -> None:
                 mac_address TEXT NOT NULL,
                 ip_address TEXT,
                 broadcast_ip TEXT,
+                send_interface TEXT NOT NULL DEFAULT 'eth0',
                 wol_port INTEGER NOT NULL DEFAULT 9,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -54,5 +55,18 @@ def init_db() -> None:
                 message TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
+            """
+        )
+        _migrate_targets_table(conn)
+
+
+def _migrate_targets_table(conn: sqlite3.Connection) -> None:
+    rows = conn.execute("PRAGMA table_info(targets)").fetchall()
+    columns = {str(row["name"]) for row in rows}
+    if "send_interface" not in columns:
+        conn.execute(
+            """
+            ALTER TABLE targets
+            ADD COLUMN send_interface TEXT NOT NULL DEFAULT 'eth0'
             """
         )
