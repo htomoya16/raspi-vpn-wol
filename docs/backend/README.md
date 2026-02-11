@@ -8,6 +8,10 @@
 ## 変更内容
 
 - 2026-02-11: バックエンド向けドキュメントの初期ページを作成。
+- 2026-02-11: FastAPI の最小 API 構成を追加（`/api/health` `/api/wol` `/api/status` `/api/logs`）。
+- 2026-02-11: `db/database.py` に SQLite 初期化処理（`targets` `logs`）を追加。
+- 2026-02-11: `repositories/` を追加し、ログ SQL を `log_repository.py` へ分離。
+- 2026-02-11: API -> services -> repositories の呼び出し経路に統一。
 - 今後は API 定義、DB スキーマ、運用時エラー対応を追記する。
 
 ## 運用時の注意点

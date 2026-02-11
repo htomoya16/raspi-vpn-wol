@@ -1,0 +1,58 @@
+from __future__ import annotations
+
+import sqlite3
+from contextlib import contextmanager
+from pathlib import Path
+from typing import Iterator
+
+
+DB_PATH = Path(__file__).resolve().parent / "app.db"
+
+
+def get_connection() -> sqlite3.Connection:
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+@contextmanager
+def connection() -> Iterator[sqlite3.Connection]:
+    conn = get_connection()
+    try:
+        yield conn
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def init_db() -> None:
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    with connection() as conn:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS targets (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                mac_address TEXT NOT NULL,
+                ip_address TEXT,
+                broadcast_ip TEXT,
+                wol_port INTEGER NOT NULL DEFAULT 9,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                action TEXT NOT NULL,
+                target TEXT NOT NULL,
+                status TEXT NOT NULL,
+                message TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
