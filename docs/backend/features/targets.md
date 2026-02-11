@@ -9,6 +9,7 @@
 
 - `GET /api/targets`: 登録済みターゲット一覧を返す。
 - `POST /api/targets`: ターゲット設定を新規作成/更新（upsert）する。
+- `DELETE /api/targets/{id}`: 指定IDのターゲット設定を削除する。
 - 保存項目: `id`, `name`, `mac_address`, `ip_address`, `broadcast_ip`, `send_interface`, `wol_port`。
 - 入力検証:
   - `id` / `name` 必須。
@@ -20,5 +21,6 @@
 ## 運用時の注意点
 
 - `id` は論理キーなので、再登録時は同じ `id` で更新される。
+- 削除対象が存在しない場合は `404` を返す。
 - `send_interface` を変更すると WOL送信経路が変わるため、LAN到達性を再確認する。
-- 設定変更は `logs` に `action=target_upsert` で記録される。
+- 設定変更/削除は `logs` に `action=target_upsert` / `action=target_delete` で記録される。

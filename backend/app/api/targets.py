@@ -42,3 +42,15 @@ def upsert_target(payload: TargetUpsertRequest) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     return {"item": item}
+
+
+@router.delete("/targets/{target_id}")
+def delete_target(target_id: str) -> dict[str, Any]:
+    try:
+        deleted = target_service.delete_target(target_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {"deleted": deleted}

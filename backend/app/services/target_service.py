@@ -80,3 +80,28 @@ def save_target(
     )
 
     return target_row
+
+
+def delete_target(target_id: str) -> dict[str, str]:
+    normalized_id = target_id.strip()
+    if not normalized_id:
+        raise ValueError("id is required")
+
+    deleted = target_repository.delete_target_by_id(normalized_id)
+    if not deleted:
+        message = f"target not found: {normalized_id}"
+        insert_log(
+            action="target_delete",
+            target=normalized_id,
+            status="failed",
+            message=message,
+        )
+        raise LookupError(message)
+
+    insert_log(
+        action="target_delete",
+        target=normalized_id,
+        status="ok",
+        message="target deleted",
+    )
+    return {"id": normalized_id}

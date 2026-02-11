@@ -64,3 +64,15 @@ def upsert_target(
     if row is None:
         raise ValueError(f"failed to upsert target: {target_id}")
     return row
+
+
+def delete_target_by_id(target_id: str) -> bool:
+    with connection() as conn:
+        result = conn.execute(
+            """
+            DELETE FROM targets
+            WHERE id = ?
+            """,
+            (target_id,),
+        )
+    return result.rowcount > 0

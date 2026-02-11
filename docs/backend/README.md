@@ -10,6 +10,7 @@
 - 2026-02-11: `docs/backend` を機能別ドキュメント構成へ再編。
 - 2026-02-11: `targets` `wol` `status` `logs` `runtime` の機能ページを追加。
 - 2026-02-11: `status` を ping ベース実装へ更新（`online/offline` 判定）。
+- 2026-02-11: `DELETE /api/targets/{id}` を追加（存在しないIDは404）。
 
 ## 運用時の注意点
 
