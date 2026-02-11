@@ -1,51 +1,50 @@
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
 
+from app.models.target import (
+    Target,
+    TargetDeleteResponse,
+    TargetDeleted,
+    TargetItemResponse,
+    TargetsListResponse,
+    TargetUpsertRequest,
+)
 from app.services import target_service
 
 router = APIRouter()
 
 
-class TargetUpsertRequest(BaseModel):
-    id: str = Field(..., min_length=1)
-    name: str = Field(..., min_length=1)
-    mac_address: str = Field(..., min_length=2)
-    ip_address: str | None = None
-    broadcast_ip: str | None = None
-    send_interface: str | None = Field(default="eth0", min_length=1)
-    wol_port: int = Field(default=9, ge=1, le=65535)
+@router.get("/targets", response_model=TargetsListResponse)
+def get_targets() -> TargetsListResponse:
+    items = [Target.model_validate(item) for item in target_service.list_targets()]
+    return TargetsListResponse(items=items)
 
 
-@router.get("/targets")
-def get_targets() -> dict[str, Any]:
-    items = target_service.list_targets()
-    return {"items": items}
-
-
-@router.post("/targets")
-def upsert_target(payload: TargetUpsertRequest) -> dict[str, Any]:
+@router.post("/targets", response_model=TargetItemResponse)
+def upsert_target(payload: TargetUpsertRequest) -> TargetItemResponse:
     try:
-        item = target_service.save_target(
-            target_id=payload.id,
-            name=payload.name,
-            mac_address=payload.mac_address,
-            ip_address=payload.ip_address,
-            broadcast_ip=payload.broadcast_ip,
-            send_interface=payload.send_interface,
-            wol_port=payload.wol_port,
+        item = Target.model_validate(
+            target_service.save_target(
+                target_id=payload.id,
+                name=payload.name,
+                mac_address=payload.mac_address,
+                ip_address=payload.ip_address,
+                broadcast_ip=payload.broadcast_ip,
+                send_interface=payload.send_interface,
+                wol_port=payload.wol_port,
+                status_method=payload.status_method,
+                status_port=payload.status_port,
+            )
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    return {"item": item}
+    return TargetItemResponse(item=item)
 
 
-@router.delete("/targets/{target_id}")
-def delete_target(target_id: str) -> dict[str, Any]:
+@router.delete("/targets/{target_id}", response_model=TargetDeleteResponse)
+def delete_target(target_id: str) -> TargetDeleteResponse:
     try:
         deleted = target_service.delete_target(target_id)
     except LookupError as exc:
@@ -53,4 +52,4 @@ def delete_target(target_id: str) -> dict[str, Any]:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    return {"deleted": deleted}
+    return TargetDeleteResponse(deleted=TargetDeleted.model_validate(deleted))

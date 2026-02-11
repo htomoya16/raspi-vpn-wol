@@ -36,6 +36,13 @@ def _normalize_interface_name(send_interface: str | None) -> str:
     return interface_name
 
 
+def _normalize_status_method(status_method: str | None) -> str:
+    method = (status_method or "tcp").strip().lower()
+    if method not in {"tcp", "ping"}:
+        raise ValueError("status_method must be 'tcp' or 'ping'")
+    return method
+
+
 def save_target(
     target_id: str,
     name: str,
@@ -44,6 +51,8 @@ def save_target(
     broadcast_ip: str | None = None,
     send_interface: str | None = None,
     wol_port: int = 9,
+    status_method: str | None = None,
+    status_port: int | None = None,
 ) -> dict[str, Any]:
     normalized_id = target_id.strip()
     normalized_name = name.strip()
@@ -61,6 +70,10 @@ def save_target(
         broadcast_value = ipaddress.ip_address(broadcast_ip.strip())
         if not isinstance(broadcast_value, ipaddress.IPv4Address):
             raise ValueError("broadcast_ip must be an IPv4 address")
+    normalized_status_method = _normalize_status_method(status_method)
+    normalized_status_port = status_port if status_port is not None else 445
+    if normalized_status_port < 1 or normalized_status_port > 65535:
+        raise ValueError("status_port must be between 1 and 65535")
 
     target_row = target_repository.upsert_target(
         target_id=normalized_id,
@@ -70,6 +83,8 @@ def save_target(
         broadcast_ip=broadcast_ip.strip() if broadcast_ip else None,
         send_interface=_normalize_interface_name(send_interface),
         wol_port=wol_port,
+        status_method=normalized_status_method,
+        status_port=normalized_status_port,
     )
 
     insert_log(

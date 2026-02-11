@@ -9,7 +9,16 @@ def get_target_by_id(target_id: str) -> dict[str, Any] | None:
     with connection() as conn:
         row = conn.execute(
             """
-            SELECT id, name, mac_address, ip_address, broadcast_ip, send_interface, wol_port
+            SELECT
+                id,
+                name,
+                mac_address,
+                ip_address,
+                broadcast_ip,
+                send_interface,
+                wol_port,
+                status_method,
+                status_port
             FROM targets
             WHERE id = ?
             """,
@@ -25,7 +34,18 @@ def list_targets() -> list[dict[str, Any]]:
     with connection() as conn:
         rows = conn.execute(
             """
-            SELECT id, name, mac_address, ip_address, broadcast_ip, send_interface, wol_port, created_at, updated_at
+            SELECT
+                id,
+                name,
+                mac_address,
+                ip_address,
+                broadcast_ip,
+                send_interface,
+                wol_port,
+                status_method,
+                status_port,
+                created_at,
+                updated_at
             FROM targets
             ORDER BY id ASC
             """
@@ -42,12 +62,24 @@ def upsert_target(
     broadcast_ip: str | None,
     send_interface: str,
     wol_port: int,
+    status_method: str,
+    status_port: int,
 ) -> dict[str, Any]:
     with connection() as conn:
         conn.execute(
             """
-            INSERT INTO targets (id, name, mac_address, ip_address, broadcast_ip, send_interface, wol_port)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO targets (
+                id,
+                name,
+                mac_address,
+                ip_address,
+                broadcast_ip,
+                send_interface,
+                wol_port,
+                status_method,
+                status_port
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 name = excluded.name,
                 mac_address = excluded.mac_address,
@@ -55,9 +87,21 @@ def upsert_target(
                 broadcast_ip = excluded.broadcast_ip,
                 send_interface = excluded.send_interface,
                 wol_port = excluded.wol_port,
+                status_method = excluded.status_method,
+                status_port = excluded.status_port,
                 updated_at = CURRENT_TIMESTAMP
             """,
-            (target_id, name, mac_address, ip_address, broadcast_ip, send_interface, wol_port),
+            (
+                target_id,
+                name,
+                mac_address,
+                ip_address,
+                broadcast_ip,
+                send_interface,
+                wol_port,
+                status_method,
+                status_port,
+            ),
         )
 
     row = get_target_by_id(target_id)

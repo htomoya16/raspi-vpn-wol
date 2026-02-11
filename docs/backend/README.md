@@ -11,6 +11,8 @@
 - 2026-02-11: `targets` `wol` `status` `logs` `runtime` の機能ページを追加。
 - 2026-02-11: `status` を ping ベース実装へ更新（`online/offline` 判定）。
 - 2026-02-11: `DELETE /api/targets/{id}` を追加（存在しないIDは404）。
+- 2026-02-11: `status_method/status_port` を追加し、status を TCP疎通対応。
+- 2026-02-11: `app/models` を追加し、API入出力モデル定義を `api` から分離。
 
 ## 運用時の注意点
 

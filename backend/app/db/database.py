@@ -39,6 +39,8 @@ def init_db() -> None:
                 broadcast_ip TEXT,
                 send_interface TEXT NOT NULL DEFAULT 'eth0',
                 wol_port INTEGER NOT NULL DEFAULT 9,
+                status_method TEXT NOT NULL DEFAULT 'tcp',
+                status_port INTEGER NOT NULL DEFAULT 445,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
@@ -68,5 +70,19 @@ def _migrate_targets_table(conn: sqlite3.Connection) -> None:
             """
             ALTER TABLE targets
             ADD COLUMN send_interface TEXT NOT NULL DEFAULT 'eth0'
+            """
+        )
+    if "status_method" not in columns:
+        conn.execute(
+            """
+            ALTER TABLE targets
+            ADD COLUMN status_method TEXT NOT NULL DEFAULT 'tcp'
+            """
+        )
+    if "status_port" not in columns:
+        conn.execute(
+            """
+            ALTER TABLE targets
+            ADD COLUMN status_port INTEGER NOT NULL DEFAULT 445
             """
         )
