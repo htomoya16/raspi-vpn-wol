@@ -15,6 +15,7 @@
 - 判定方式:
   - `tcp`: `status_port` への TCP connect（timeout 1秒）
   - `ping`: `ping -c 1 -W 1`
+- ターゲット作成時のデフォルトは `status_method=tcp`, `status_port=445`。
 - 呼び出し時は `logs` に `action=status` と結果メッセージを記録する。
 - エラー時（HTTP 400）:
   - 対象ID未登録
@@ -27,4 +28,4 @@
 - `tcp` は対象ポートが閉じていると起動中でも `offline` になる。
 - `ping` は ICMP遮断端末で `offline` になる。
 - デフォルトは `status_method=tcp`, `status_port=445` なので、端末に合わせて変更する。
-- 返却値の語彙（`online/offline/unknown` など）はフロントと同時に更新する。
+- 現在の返却値は `online/offline` の2値のみ。

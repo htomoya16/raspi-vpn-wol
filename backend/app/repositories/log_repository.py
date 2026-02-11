@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import sqlite3
-from typing import Any
+from typing import cast
 
 from app.db.database import connection
+from app.types import LogRow
 
 LOG_RETENTION_DAYS = 30
 LOG_MAX_ROWS = 7000
@@ -22,7 +23,7 @@ def insert_log_row(action: str, target: str, status: str, message: str | None = 
         _prune_excess_logs(conn)
 
 
-def get_recent_logs(limit: int) -> list[dict[str, Any]]:
+def get_recent_logs(limit: int) -> list[LogRow]:
     with connection() as conn:
         rows = conn.execute(
             """
@@ -34,7 +35,7 @@ def get_recent_logs(limit: int) -> list[dict[str, Any]]:
             (limit,),
         ).fetchall()
 
-    return [dict(row) for row in rows]
+    return [cast(LogRow, dict(row)) for row in rows]
 
 
 def _prune_old_logs(conn: sqlite3.Connection) -> None:

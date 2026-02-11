@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import cast
 
 from app.db.database import connection
+from app.types import TargetRow
 
 
-def get_target_by_id(target_id: str) -> dict[str, Any] | None:
+def get_target_by_id(target_id: str) -> TargetRow | None:
     with connection() as conn:
         row = conn.execute(
             """
@@ -29,10 +30,10 @@ def get_target_by_id(target_id: str) -> dict[str, Any] | None:
 
     if row is None:
         return None
-    return dict(row)
+    return cast(TargetRow, dict(row))
 
 
-def list_targets() -> list[dict[str, Any]]:
+def list_targets() -> list[TargetRow]:
     with connection() as conn:
         rows = conn.execute(
             """
@@ -53,7 +54,7 @@ def list_targets() -> list[dict[str, Any]]:
             """
         ).fetchall()
 
-    return [dict(row) for row in rows]
+    return [cast(TargetRow, dict(row)) for row in rows]
 
 
 def upsert_target(
@@ -66,7 +67,7 @@ def upsert_target(
     wol_port: int,
     status_method: str,
     status_port: int,
-) -> dict[str, Any]:
+) -> TargetRow:
     with connection() as conn:
         conn.execute(
             """

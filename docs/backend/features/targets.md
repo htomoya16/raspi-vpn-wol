@@ -10,6 +10,7 @@
 - `GET /api/targets`: 登録済みターゲット一覧を返す。
 - `POST /api/targets`: ターゲット設定を新規作成/更新（upsert）する。
 - `DELETE /api/targets/{id}`: 指定IDのターゲット設定を削除する。
+- `PUT/PATCH` は未実装（更新も `POST` upsert で扱う）。
 - 保存項目: `id`, `name`, `mac_address`, `ip_address`, `broadcast_ip`, `send_interface`, `wol_port`, `status_method`, `status_port`。
 - 入力検証:
   - `id` / `name` 必須。

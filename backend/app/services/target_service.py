@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import ipaddress
-from typing import Any
 
 from app.repositories import target_repository
 from app.services.log_service import insert_log
+from app.types import TargetDeletedResult, TargetRow
 
 
 def _normalize_mac_address(mac_address: str) -> str:
@@ -21,7 +21,7 @@ def _normalize_mac_address(mac_address: str) -> str:
     return ":".join(pairs)
 
 
-def list_targets() -> list[dict[str, Any]]:
+def list_targets() -> list[TargetRow]:
     return target_repository.list_targets()
 
 
@@ -53,7 +53,7 @@ def save_target(
     wol_port: int = 9,
     status_method: str | None = None,
     status_port: int | None = None,
-) -> dict[str, Any]:
+) -> TargetRow:
     normalized_id = target_id.strip()
     normalized_name = name.strip()
     if not normalized_id:
@@ -97,7 +97,7 @@ def save_target(
     return target_row
 
 
-def delete_target(target_id: str) -> dict[str, str]:
+def delete_target(target_id: str) -> TargetDeletedResult:
     normalized_id = target_id.strip()
     if not normalized_id:
         raise ValueError("id is required")

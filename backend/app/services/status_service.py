@@ -6,16 +6,17 @@ import subprocess
 
 from app.repositories import target_repository
 from app.services.log_service import insert_log
+from app.types import StatusResult
 
 DEFAULT_STATUS_TIMEOUT_SECONDS = 1.0
 
 
-def _status_offline(target_id: str, message: str) -> dict[str, str]:
+def _status_offline(target_id: str, message: str) -> StatusResult:
     insert_log(action="status", target=target_id, status="offline", message=message)
     return {"target": target_id, "status": "offline"}
 
 
-def _probe_ping(ip_value: ipaddress.IPv4Address, target_id: str) -> dict[str, str]:
+def _probe_ping(ip_value: ipaddress.IPv4Address, target_id: str) -> StatusResult:
     command = ["ping", "-c", "1", "-W", "1", str(ip_value)]
     try:
         result = subprocess.run(command, capture_output=True, text=True, check=False)
@@ -36,7 +37,7 @@ def _probe_ping(ip_value: ipaddress.IPv4Address, target_id: str) -> dict[str, st
     return _status_offline(target_id, f"ping failed (code={result.returncode}): {ip_value}")
 
 
-def _probe_tcp(ip_value: ipaddress.IPv4Address, status_port: int, target_id: str) -> dict[str, str]:
+def _probe_tcp(ip_value: ipaddress.IPv4Address, status_port: int, target_id: str) -> StatusResult:
     try:
         with socket.create_connection((str(ip_value), status_port), timeout=DEFAULT_STATUS_TIMEOUT_SECONDS):
             pass
@@ -48,7 +49,7 @@ def _probe_tcp(ip_value: ipaddress.IPv4Address, status_port: int, target_id: str
     return {"target": target_id, "status": "online"}
 
 
-def get_status(target: str) -> dict[str, str]:
+def get_status(target: str) -> StatusResult:
     target_id = target.strip()
     if not target_id:
         raise ValueError("target is required")

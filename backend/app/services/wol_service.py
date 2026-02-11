@@ -7,6 +7,7 @@ import struct
 
 from app.repositories import target_repository
 from app.services.log_service import insert_log
+from app.types import WolResult
 
 SIOCGIFADDR = 0x8915
 SIOCGIFBRDADDR = 0x8919
@@ -70,7 +71,7 @@ def _send_magic_packet(
         sock.sendto(packet, (broadcast_ip, wol_port))
 
 
-def send_wol(target: str) -> dict[str, str]:
+def send_wol(target: str) -> WolResult:
     target_id = target.strip()
     if not target_id:
         raise ValueError("target is required")
