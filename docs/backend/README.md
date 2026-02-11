@@ -13,6 +13,7 @@
 - 2026-02-11: `DELETE /api/targets/{id}` を追加（存在しないIDは404）。
 - 2026-02-11: `status_method/status_port` を追加し、status を TCP疎通対応。
 - 2026-02-11: `app/models` を追加し、API入出力モデル定義を `api` から分離。
+- 2026-02-11: logs保持ポリシーを実装（30日超削除 + 最新7000件上限）。
 
 ## 運用時の注意点
 

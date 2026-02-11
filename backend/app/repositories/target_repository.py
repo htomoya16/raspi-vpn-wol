@@ -18,7 +18,9 @@ def get_target_by_id(target_id: str) -> dict[str, Any] | None:
                 send_interface,
                 wol_port,
                 status_method,
-                status_port
+                status_port,
+                created_at,
+                updated_at
             FROM targets
             WHERE id = ?
             """,
