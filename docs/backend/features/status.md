@@ -8,11 +8,24 @@
 ## 変更内容
 
 - `GET /api/status?target=<id>` を提供。
-- 現状実装はプレースホルダで、`status="unknown"` を返す。
+- `target`（ID）から `targets.ip_address` を参照し、`status_method` に応じて判定する。
+- 返却値:
+  - `online`: 疎通成功
+  - `offline`: 疎通失敗
+- 判定方式:
+  - `tcp`: `status_port` への TCP connect（timeout 1秒）
+  - `ping`: `ping -c 1 -W 1`
+- ターゲット作成時のデフォルトは `status_method=tcp`, `status_port=445`。
 - 呼び出し時は `logs` に `action=status` と結果メッセージを記録する。
+- エラー時（HTTP 400）:
+  - 対象ID未登録
+  - `ip_address` 未設定 / 不正
+  - `status_method` / `status_port` 不正
+  - `ping` コマンド未導入（`status_method=ping` 時）
 
 ## 運用時の注意点
 
-- 現段階の `status` は実測値ではないため、運用判断には使わない。
-- 実測実装へ移行時は、判定方式（ping/ARP/ポート疎通）とタイムアウトを明記する。
-- 返却値の語彙（`online/offline/unknown` など）はフロントと同時に更新する。
+- `tcp` は対象ポートが閉じていると起動中でも `offline` になる。
+- `ping` は ICMP遮断端末で `offline` になる。
+- デフォルトは `status_method=tcp`, `status_port=445` なので、端末に合わせて変更する。
+- 現在の返却値は `online/offline` の2値のみ。

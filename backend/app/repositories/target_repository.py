@@ -1,15 +1,27 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import cast
 
 from app.db.database import connection
+from app.types import TargetRow
 
 
-def get_target_by_id(target_id: str) -> dict[str, Any] | None:
+def get_target_by_id(target_id: str) -> TargetRow | None:
     with connection() as conn:
         row = conn.execute(
             """
-            SELECT id, name, mac_address, ip_address, broadcast_ip, send_interface, wol_port
+            SELECT
+                id,
+                name,
+                mac_address,
+                ip_address,
+                broadcast_ip,
+                send_interface,
+                wol_port,
+                status_method,
+                status_port,
+                created_at,
+                updated_at
             FROM targets
             WHERE id = ?
             """,
@@ -18,20 +30,31 @@ def get_target_by_id(target_id: str) -> dict[str, Any] | None:
 
     if row is None:
         return None
-    return dict(row)
+    return cast(TargetRow, dict(row))
 
 
-def list_targets() -> list[dict[str, Any]]:
+def list_targets() -> list[TargetRow]:
     with connection() as conn:
         rows = conn.execute(
             """
-            SELECT id, name, mac_address, ip_address, broadcast_ip, send_interface, wol_port, created_at, updated_at
+            SELECT
+                id,
+                name,
+                mac_address,
+                ip_address,
+                broadcast_ip,
+                send_interface,
+                wol_port,
+                status_method,
+                status_port,
+                created_at,
+                updated_at
             FROM targets
             ORDER BY id ASC
             """
         ).fetchall()
 
-    return [dict(row) for row in rows]
+    return [cast(TargetRow, dict(row)) for row in rows]
 
 
 def upsert_target(
@@ -42,12 +65,24 @@ def upsert_target(
     broadcast_ip: str | None,
     send_interface: str,
     wol_port: int,
-) -> dict[str, Any]:
+    status_method: str,
+    status_port: int,
+) -> TargetRow:
     with connection() as conn:
         conn.execute(
             """
-            INSERT INTO targets (id, name, mac_address, ip_address, broadcast_ip, send_interface, wol_port)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO targets (
+                id,
+                name,
+                mac_address,
+                ip_address,
+                broadcast_ip,
+                send_interface,
+                wol_port,
+                status_method,
+                status_port
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 name = excluded.name,
                 mac_address = excluded.mac_address,
@@ -55,12 +90,36 @@ def upsert_target(
                 broadcast_ip = excluded.broadcast_ip,
                 send_interface = excluded.send_interface,
                 wol_port = excluded.wol_port,
+                status_method = excluded.status_method,
+                status_port = excluded.status_port,
                 updated_at = CURRENT_TIMESTAMP
             """,
-            (target_id, name, mac_address, ip_address, broadcast_ip, send_interface, wol_port),
+            (
+                target_id,
+                name,
+                mac_address,
+                ip_address,
+                broadcast_ip,
+                send_interface,
+                wol_port,
+                status_method,
+                status_port,
+            ),
         )
 
     row = get_target_by_id(target_id)
     if row is None:
         raise ValueError(f"failed to upsert target: {target_id}")
     return row
+
+
+def delete_target_by_id(target_id: str) -> bool:
+    with connection() as conn:
+        result = conn.execute(
+            """
+            DELETE FROM targets
+            WHERE id = ?
+            """,
+            (target_id,),
+        )
+    return result.rowcount > 0

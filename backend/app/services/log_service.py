@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
-
 from app.repositories import log_repository
+from app.types import LogRow
 
 
 def insert_log(action: str, target: str, status: str, message: str | None = None) -> None:
@@ -14,5 +13,5 @@ def insert_log(action: str, target: str, status: str, message: str | None = None
     )
 
 
-def fetch_logs(limit: int) -> list[dict[str, Any]]:
+def fetch_logs(limit: int) -> list[LogRow]:
     return log_repository.get_recent_logs(limit)
