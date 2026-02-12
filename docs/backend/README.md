@@ -15,6 +15,7 @@
 - 2026-02-11: `app/models` を追加し、API入出力モデル定義を `api` から分離。
 - 2026-02-11: logs保持ポリシーを実装（30日超削除 + 最新7000件上限）。
 - 2026-02-11: `app/types.py` を追加し、repository/service の戻り値を `TypedDict` で型付け。
+- 2026-02-12: `pytest + TestClient` による API最小テストを追加。
 
 ## 現状の機能
 
@@ -25,6 +26,7 @@
 - `POST /api/wol`: ターゲットID指定で WOL マジックパケット送信。
 - `GET /api/status?target=<id>`: `tcp` または `ping` で状態判定。
 - `GET /api/logs?limit=<n>`: 操作ログ取得（1..200）。
+- `pytest` で最小回帰テストを実行可能（health/targets/status/wol/logs）。
 
 ## 運用時の注意点
 
@@ -50,3 +52,4 @@
 - `docs/backend/features/runtime.md`
 - `docs/backend/features/types-and-models.md`
 - `docs/backend/features/backlog.md`
+- `docs/backend/features/testing.md`

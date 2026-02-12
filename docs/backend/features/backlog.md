@@ -4,7 +4,7 @@
 
 - 認証/認可
 - APIレート制限
-- 自動テスト（unit/integration）
+- 自動テスト拡充（status/wol成功系、service単体、CI連携）
 - エラーレスポンス形式の共通化
 - DBバックアップ/リストア手順
 - スキーマ変更管理の明確化（手書き migration 継続か Alembic 導入か）
