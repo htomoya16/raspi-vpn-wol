@@ -19,5 +19,6 @@
 ## 目次
 
 - フロントエンド: `docs/frontend/README.md`
+- フロント学習ガイド: `docs/frontend/learning-path.md`
 - バックエンド: `docs/backend/README.md`
 - デプロイ/運用: `docs/deploy/README.md`
