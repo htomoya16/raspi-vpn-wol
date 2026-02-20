@@ -16,6 +16,7 @@
 - 2026-02-11: logs保持ポリシーを実装（30日超削除 + 最新7000件上限）。
 - 2026-02-11: `app/types.py` を追加し、repository/service の戻り値を `TypedDict` で型付け。
 - 2026-02-12: `pytest + TestClient` による API最小テストを追加。
+- 2026-02-20: OpenAPI 契約の横断ドキュメントを `api/openapi.md` として追加。
 
 ## 現状の機能
 
@@ -42,6 +43,10 @@
 - status 判定方式の追加（ARP、複数ポート、複合判定）。
 - 自動テスト（unit/integration）と CI 整備。
 - DBバックアップ・リストア手順の明文化。
+
+## API 契約ドキュメント
+
+- `docs/backend/api/openapi.md`
 
 ## 機能別ドキュメント
 
