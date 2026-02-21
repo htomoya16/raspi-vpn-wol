@@ -1,5 +1,5 @@
-import {request} from "./http";
+import { request } from './http'
 
 export function fetchHealth() {
-    return request("/api/health");
+  return request('/api/health')
 }
