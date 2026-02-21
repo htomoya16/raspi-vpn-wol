@@ -4,17 +4,19 @@ from pydantic import BaseModel, Field
 
 
 class WolRequest(BaseModel):
-    target: str = Field(
-        ...,
-        min_length=1,
-        description="WOL 送信対象のターゲット ID。",
-        json_schema_extra={"example": "main-pc"},
+    broadcast: str | None = Field(
+        default=None,
+        description="送信先ブロードキャストIP。未指定時はPC設定を使う。",
     )
-
-
-class WolResponse(BaseModel):
-    message: str = Field(
-        ...,
-        description="WOL 送信結果メッセージ。",
-        json_schema_extra={"example": "wol packet sent: main-pc"},
+    port: int | None = Field(
+        default=None,
+        ge=1,
+        le=65535,
+        description="WOL送信ポート。未指定時はPC設定を使う。",
+    )
+    repeat: int = Field(
+        default=1,
+        ge=1,
+        le=5,
+        description="送信回数。",
     )

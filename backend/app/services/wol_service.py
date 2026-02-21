@@ -5,7 +5,7 @@ import ipaddress
 import socket
 import struct
 
-from app.repositories import target_repository
+from app.repositories import pc_repository
 from app.services.log_service import insert_log
 from app.types import WolResult
 
@@ -71,62 +71,66 @@ def _send_magic_packet(
         sock.sendto(packet, (broadcast_ip, wol_port))
 
 
-def send_wol(target: str) -> WolResult:
-    target_id = target.strip()
-    if not target_id:
-        raise ValueError("target is required")
+def send_wol(
+    pc_id: str,
+    broadcast_ip_override: str | None = None,
+    wol_port_override: int | None = None,
+) -> WolResult:
+    normalized_id = pc_id.strip()
+    if not normalized_id:
+        raise ValueError("pc_id is required")
 
-    target_row = target_repository.get_target_by_id(target_id)
-    if target_row is None:
-        message = f"target not found: {target_id}"
-        insert_log(action="wol", target=target_id, status="failed", message=message)
+    pc_row = pc_repository.get_pc_by_id(normalized_id)
+    if pc_row is None:
+        message = f"pc not found: {normalized_id}"
+        insert_log(action="wol", pc_id=normalized_id, status="failed", message=message)
         raise ValueError(message)
 
-    mac_address = str(target_row["mac_address"])
-    send_interface = str(target_row.get("send_interface") or "eth0")
-    wol_port = int(target_row["wol_port"] or 9)
+    mac_address = str(pc_row["mac_address"])
+    send_interface = str(pc_row.get("send_interface") or "eth0")
+    wol_port = wol_port_override if wol_port_override is not None else int(pc_row["wol_port"] or 9)
     if wol_port < 1 or wol_port > 65535:
-        message = f"invalid wol_port for target: {target_id}"
-        insert_log(action="wol", target=target_id, status="failed", message=message)
+        message = f"invalid wol_port for pc: {normalized_id}"
+        insert_log(action="wol", pc_id=normalized_id, status="failed", message=message)
         raise ValueError(message)
 
     try:
         interface_ip, interface_broadcast, interface_network = _get_interface_ipv4_config(send_interface)
     except ValueError as exc:
         message = str(exc)
-        insert_log(action="wol", target=target_id, status="failed", message=message)
+        insert_log(action="wol", pc_id=normalized_id, status="failed", message=message)
         raise ValueError(message) from exc
 
-    broadcast_ip = str(target_row["broadcast_ip"] or interface_broadcast)
+    broadcast_ip = broadcast_ip_override or str(pc_row["broadcast_ip"] or interface_broadcast)
     try:
         broadcast_addr = ipaddress.ip_address(broadcast_ip)
     except ValueError as exc:
-        message = f"invalid broadcast_ip for target: {target_id}"
-        insert_log(action="wol", target=target_id, status="failed", message=message)
+        message = f"invalid broadcast_ip for pc: {normalized_id}"
+        insert_log(action="wol", pc_id=normalized_id, status="failed", message=message)
         raise ValueError(message) from exc
     if not isinstance(broadcast_addr, ipaddress.IPv4Address):
         message = "only IPv4 broadcast addresses are supported for WOL"
-        insert_log(action="wol", target=target_id, status="failed", message=message)
+        insert_log(action="wol", pc_id=normalized_id, status="failed", message=message)
         raise ValueError(message)
 
-    target_ip = target_row.get("ip_address")
-    if target_ip:
+    pc_ip = pc_row.get("ip_address")
+    if pc_ip:
         try:
-            target_ip_addr = ipaddress.ip_address(str(target_ip))
+            pc_ip_addr = ipaddress.ip_address(str(pc_ip))
         except ValueError as exc:
-            message = f"invalid ip_address for target: {target_id}"
-            insert_log(action="wol", target=target_id, status="failed", message=message)
+            message = f"invalid ip_address for pc: {normalized_id}"
+            insert_log(action="wol", pc_id=normalized_id, status="failed", message=message)
             raise ValueError(message) from exc
-        if not isinstance(target_ip_addr, ipaddress.IPv4Address):
-            message = "only IPv4 target ip_address is supported for WOL"
-            insert_log(action="wol", target=target_id, status="failed", message=message)
+        if not isinstance(pc_ip_addr, ipaddress.IPv4Address):
+            message = "only IPv4 pc ip_address is supported for WOL"
+            insert_log(action="wol", pc_id=normalized_id, status="failed", message=message)
             raise ValueError(message)
-        if target_ip_addr not in interface_network:
+        if pc_ip_addr not in interface_network:
             message = (
-                f"target ip {target_ip_addr} is outside interface network "
+                f"pc ip {pc_ip_addr} is outside interface network "
                 f"{interface_network.with_prefixlen} ({send_interface})"
             )
-            insert_log(action="wol", target=target_id, status="failed", message=message)
+            insert_log(action="wol", pc_id=normalized_id, status="failed", message=message)
             raise ValueError(message)
 
     try:
@@ -138,17 +142,17 @@ def send_wol(target: str) -> WolResult:
         )
     except (OSError, ValueError) as exc:
         message = f"failed to send WOL packet: {exc}"
-        insert_log(action="wol", target=target_id, status="failed", message=message)
+        insert_log(action="wol", pc_id=normalized_id, status="failed", message=message)
         raise ValueError(message) from exc
 
     message = (
-        f"WOL packet sent to target={target_id} "
+        f"WOL packet sent to pc={normalized_id} "
         f"(if={send_interface}, broadcast={broadcast_ip}, port={wol_port})"
     )
 
     insert_log(
         action="wol",
-        target=target_id,
+        pc_id=normalized_id,
         status="sent",
         message=message,
     )

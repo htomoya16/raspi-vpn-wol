@@ -29,13 +29,18 @@ def init_db() -> None:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     with connection() as conn:
+        conn.execute("PRAGMA foreign_keys = ON")
         conn.execute(
             """
-            CREATE TABLE IF NOT EXISTS targets (
+            CREATE TABLE IF NOT EXISTS pcs (
                 id TEXT PRIMARY KEY,
                 name TEXT NOT NULL,
                 mac_address TEXT NOT NULL,
                 ip_address TEXT,
+                tags_json TEXT NOT NULL DEFAULT '[]',
+                note TEXT,
+                status TEXT NOT NULL DEFAULT 'unknown',
+                last_seen_at TEXT,
                 broadcast_ip TEXT,
                 send_interface TEXT NOT NULL DEFAULT 'eth0',
                 wol_port INTEGER NOT NULL DEFAULT 9,
@@ -51,38 +56,46 @@ def init_db() -> None:
             """
             CREATE TABLE IF NOT EXISTS logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pc_id TEXT,
                 action TEXT NOT NULL,
-                target TEXT NOT NULL,
+                ok INTEGER NOT NULL DEFAULT 1,
                 status TEXT NOT NULL,
                 message TEXT,
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                error_code TEXT,
+                details_json TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (pc_id) REFERENCES pcs(id) ON DELETE SET NULL
             )
             """
         )
-        _migrate_targets_table(conn)
-
-
-def _migrate_targets_table(conn: sqlite3.Connection) -> None:
-    rows = conn.execute("PRAGMA table_info(targets)").fetchall()
-    columns = {str(row["name"]) for row in rows}
-    if "send_interface" not in columns:
         conn.execute(
             """
-            ALTER TABLE targets
-            ADD COLUMN send_interface TEXT NOT NULL DEFAULT 'eth0'
+            CREATE TABLE IF NOT EXISTS jobs (
+                id TEXT PRIMARY KEY,
+                job_type TEXT NOT NULL,
+                state TEXT NOT NULL,
+                payload_json TEXT,
+                result_json TEXT,
+                error_message TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                started_at TEXT,
+                finished_at TEXT,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
             """
         )
-    if "status_method" not in columns:
         conn.execute(
-            """
-            ALTER TABLE targets
-            ADD COLUMN status_method TEXT NOT NULL DEFAULT 'tcp'
-            """
+            "CREATE INDEX IF NOT EXISTS idx_pcs_status ON pcs(status)"
         )
-    if "status_port" not in columns:
         conn.execute(
-            """
-            ALTER TABLE targets
-            ADD COLUMN status_port INTEGER NOT NULL DEFAULT 445
-            """
+            "CREATE INDEX IF NOT EXISTS idx_pcs_name ON pcs(name)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_logs_pc_created_at ON logs(pc_id, created_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_logs_action_created_at ON logs(action, created_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_jobs_state_created_at ON jobs(state, created_at DESC)"
         )

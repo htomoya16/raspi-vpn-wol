@@ -11,10 +11,10 @@
   - 各テストで `DB_PATH` を一時SQLiteファイルに差し替え、実DBを汚さない構成にした。
 - `backend/tests/test_api_minimum.py` を追加。
   - `GET /api/health`
-  - `POST/GET/DELETE /api/targets`
-  - `GET /api/status`（未登録ターゲット異常系）
-  - `POST /api/wol`（未登録ターゲット異常系）
-  - `GET /api/logs`（limit検証含む）
+  - `POST/GET/PATCH/DELETE /api/pcs`
+  - `POST /api/pcs/{pc_id}/wol`（ジョブ受付）
+  - `GET /api/jobs/{job_id}`
+  - `GET /api/logs`（フィルタ検証含む）
 - `backend/requirements-dev.txt` を追加。
   - `pytest` / `httpx` を開発用依存として分離。
 
@@ -29,5 +29,5 @@ pytest -q
 ## 運用時の注意点
 
 - 現在の最小テストは「API I/F と代表的な異常系」の回帰確認が中心。
-- `status` の成功系（tcp/ping）や `wol` 成功系はネットワーク依存のため未カバー。
+- `status` / `wol` の成功系はネットワーク依存のため未カバー。
 - 今後は service単位のモックテストと、CI自動実行を追加する。

@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.api import logs, status, targets, wol
+from app.api import events, jobs, logs, pcs
 from app.db.database import init_db
 
 
@@ -14,10 +14,10 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="raspi-vpn-wol API", lifespan=lifespan)
 
-app.include_router(wol.router, prefix="/api", tags=["wol"])
-app.include_router(status.router, prefix="/api", tags=["status"])
 app.include_router(logs.router, prefix="/api", tags=["logs"])
-app.include_router(targets.router, prefix="/api", tags=["targets"])
+app.include_router(pcs.router, prefix="/api", tags=["pcs"])
+app.include_router(jobs.router, prefix="/api", tags=["jobs"])
+app.include_router(events.router, prefix="/api", tags=["events"])
 
 
 @app.get(

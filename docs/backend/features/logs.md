@@ -7,15 +7,15 @@
 
 ## 変更内容
 
-- `GET /api/logs?limit=<n>` を提供（`1..200`, default `20`）。
+- `GET /api/logs` を提供（`pc_id` `action` `ok` `since` `until` `limit` `cursor`）。
 - `logs` テーブルの記録項目:
-  - `id`, `action`, `target`, `status`, `message`, `created_at`
+  - `id`, `pc_id`, `action`, `ok`, `status`, `message`, `details_json`, `created_at`
 - 主な記録トリガー:
-  - `target_upsert`
-  - `target_delete`
+  - `pc_upsert`
+  - `pc_delete`
   - `wol`（成功/失敗）
   - `status`
-- 取得順序は `id DESC`（新しい順）。
+- 取得順序は `id DESC`（新しい順）、ページングは `cursor`（`id < cursor`）で実施。
 - 保持ポリシー:
   - `created_at` が30日より古いログを削除
   - 最新7000件を超える分を削除

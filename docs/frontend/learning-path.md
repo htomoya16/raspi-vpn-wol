@@ -24,11 +24,11 @@
 3. `Step 3: APIクライアントを作る`
 - `src/api/` に通信処理を集約し、UIから分離する。
 
-4. `Step 4: Targets 一覧を表示する`
-- `GET /api/targets` の結果を表示する。
+4. `Step 4: PCs 一覧を表示する`
+- `GET /api/pcs` の結果を表示する。
 
 5. `Step 5: WOL送信と状態確認を追加する`
-- `POST /api/wol` と `GET /api/status` を接続する。
+- `POST /api/pcs/{pc_id}/wol` と `POST /api/pcs/{pc_id}/status/refresh` を接続する。
 
 6. `Step 6: ログ表示を追加する`
 - `GET /api/logs` を表示し、件数切替を実装する。
