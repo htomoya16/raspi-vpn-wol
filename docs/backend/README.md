@@ -7,11 +7,9 @@
 
 ## 変更内容
 
+- 2026-02-21: API/DBを vNext 契約ベースへ再設計（`pcs`/`jobs`/`events` を追加）。
 - 2026-02-11: `docs/backend` を機能別ドキュメント構成へ再編。
-- 2026-02-11: `targets` `wol` `status` `logs` `runtime` の機能ページを追加。
-- 2026-02-11: `status` を ping ベース実装へ更新（`online/offline` 判定）。
-- 2026-02-11: `DELETE /api/targets/{id}` を追加（存在しないIDは404）。
-- 2026-02-11: `status_method/status_port` を追加し、status を TCP疎通対応。
+- 2026-02-11: 初期機能ページを追加し、以後 vNext 構成へ更新。
 - 2026-02-11: `app/models` を追加し、API入出力モデル定義を `api` から分離。
 - 2026-02-11: logs保持ポリシーを実装（30日超削除 + 最新7000件上限）。
 - 2026-02-11: `app/types.py` を追加し、repository/service の戻り値を `TypedDict` で型付け。
@@ -21,26 +19,31 @@
 ## 現状の機能
 
 - `GET /api/health`: 稼働確認（`{"status":"ok"}`）。
-- `GET /api/targets`: ターゲット一覧取得。
-- `POST /api/targets`: ターゲット作成/更新（upsert）。
-- `DELETE /api/targets/{id}`: ターゲット削除。
-- `POST /api/wol`: ターゲットID指定で WOL マジックパケット送信。
-- `GET /api/status?target=<id>`: `tcp` または `ping` で状態判定。
-- `GET /api/logs?limit=<n>`: 操作ログ取得（1..200）。
-- `pytest` で最小回帰テストを実行可能（health/targets/status/wol/logs）。
+- `GET /api/pcs`: PC一覧取得（検索/フィルタ/カーソル対応）。
+- `POST /api/pcs`: PC登録。
+- `GET /api/pcs/{pc_id}`: PC詳細取得。
+- `PATCH /api/pcs/{pc_id}`: PC部分更新。
+- `DELETE /api/pcs/{pc_id}`: PC削除。
+- `POST /api/pcs/{pc_id}/wol`: WOL送信ジョブ受付（202）。
+- `POST /api/pcs/{pc_id}/status/refresh`: 単体ステータス更新。
+- `POST /api/pcs/status/refresh`: 全PCステータス更新ジョブ受付（202）。
+- `GET /api/logs`: 操作ログ取得（`pc_id`/`action`/`ok`/`since`/`until`/`cursor`）。
+- `GET /api/jobs/{job_id}`: 非同期ジョブ状態取得。
+- `GET /api/events`: SSEイベントストリーム。
+- `pytest` で最小回帰テストを実行可能（health/pcs/logs/jobs）。
 
 ## 運用時の注意点
 
 - 実装変更時は、該当機能ページを同時更新する。
 - API仕様の確認は `docs/backend/api/openapi.md` を参照する。
 - API I/F変更時は、入力項目・バリデーション・代表レスポンスを明記する。
-- DBスキーマ変更時は、既存DB向けマイグレーション有無を追記する。
+- DBスキーマ変更時は、初期化手順（`app.db` 再作成）を合わせて追記する。
 
 ## 未実装 / 改善候補
 
 - 認証/認可（簡易トークンやLAN/VPN制限の強化）。
 - レート制限（WOL/APIの連打対策）。
-- `PUT/PATCH /api/targets/{id}` の分離（現在は `POST` upsert のみ）。
+- job ワーカー分離（現在はアプリ内で非同期実行）。
 - status 判定方式の追加（ARP、複数ポート、複合判定）。
 - 自動テスト（unit/integration）と CI 整備。
 - DBバックアップ・リストア手順の明文化。
@@ -51,7 +54,7 @@
 
 ## 機能別ドキュメント
 
-- `docs/backend/features/targets.md`
+- `docs/backend/features/pcs.md`
 - `docs/backend/features/wol.md`
 - `docs/backend/features/status.md`
 - `docs/backend/features/logs.md`

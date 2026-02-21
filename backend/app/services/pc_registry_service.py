@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import ipaddress
+import json
+from datetime import datetime, timezone
 
-from app.repositories import target_repository
+from app.repositories import pc_repository
 from app.services.log_service import insert_log
-from app.types import TargetDeletedResult, TargetRow
+from app.types import PcDeletedResult, PcRow
+
+STATUS_VALUES = {"online", "offline", "unknown", "booting", "unreachable"}
 
 
 def _normalize_mac_address(mac_address: str) -> str:
@@ -21,8 +25,8 @@ def _normalize_mac_address(mac_address: str) -> str:
     return ":".join(pairs)
 
 
-def list_targets() -> list[TargetRow]:
-    return target_repository.list_targets()
+def list_pcs() -> list[PcRow]:
+    return pc_repository.list_pcs()
 
 
 def _normalize_interface_name(send_interface: str | None) -> str:
@@ -43,18 +47,22 @@ def _normalize_status_method(status_method: str | None) -> str:
     return method
 
 
-def save_target(
-    target_id: str,
+def upsert_pc(
+    pc_id: str,
     name: str,
     mac_address: str,
     ip_address: str | None = None,
+    tags: list[str] | None = None,
+    note: str | None = None,
+    status: str | None = None,
+    last_seen_at: str | None = None,
     broadcast_ip: str | None = None,
     send_interface: str | None = None,
     wol_port: int = 9,
     status_method: str | None = None,
     status_port: int | None = None,
-) -> TargetRow:
-    normalized_id = target_id.strip()
+) -> PcRow:
+    normalized_id = pc_id.strip()
     normalized_name = name.strip()
     if not normalized_id:
         raise ValueError("id is required")
@@ -74,12 +82,36 @@ def save_target(
     normalized_status_port = status_port if status_port is not None else 445
     if normalized_status_port < 1 or normalized_status_port > 65535:
         raise ValueError("status_port must be between 1 and 65535")
+    if status is not None and status not in STATUS_VALUES:
+        raise ValueError(f"status must be one of: {', '.join(sorted(STATUS_VALUES))}")
 
-    target_row = target_repository.upsert_target(
-        target_id=normalized_id,
+    existing = pc_repository.get_pc_by_id(normalized_id)
+    persisted_status = status or (existing["status"] if existing else "unknown")
+    persisted_last_seen_at = last_seen_at
+    if persisted_last_seen_at is None and existing:
+        persisted_last_seen_at = existing.get("last_seen_at")
+    persisted_note = note
+    if persisted_note is None and existing:
+        persisted_note = existing.get("note")
+    persisted_tags = tags
+    if persisted_tags is None:
+        if existing:
+            try:
+                persisted_tags = json.loads(existing.get("tags_json", "[]"))
+            except json.JSONDecodeError:
+                persisted_tags = []
+        else:
+            persisted_tags = []
+
+    pc_row = pc_repository.upsert_pc(
+        pc_id=normalized_id,
         name=normalized_name,
         mac_address=_normalize_mac_address(mac_address),
         ip_address=ip_address.strip() if ip_address else None,
+        tags_json=json.dumps([tag.strip() for tag in persisted_tags if tag.strip()]),
+        note=persisted_note.strip() if isinstance(persisted_note, str) and persisted_note.strip() else None,
+        status=persisted_status,
+        last_seen_at=persisted_last_seen_at,
         broadcast_ip=broadcast_ip.strip() if broadcast_ip else None,
         send_interface=_normalize_interface_name(send_interface),
         wol_port=wol_port,
@@ -88,35 +120,46 @@ def save_target(
     )
 
     insert_log(
-        action="target_upsert",
-        target=normalized_id,
+        action="pc_upsert",
+        pc_id=normalized_id,
         status="ok",
-        message="target configuration saved",
+        message="pc configuration saved",
     )
 
-    return target_row
+    return pc_row
 
 
-def delete_target(target_id: str) -> TargetDeletedResult:
-    normalized_id = target_id.strip()
+def delete_pc(pc_id: str) -> PcDeletedResult:
+    normalized_id = pc_id.strip()
     if not normalized_id:
         raise ValueError("id is required")
 
-    deleted = target_repository.delete_target_by_id(normalized_id)
+    deleted = pc_repository.delete_pc_by_id(normalized_id)
     if not deleted:
-        message = f"target not found: {normalized_id}"
+        message = f"pc not found: {normalized_id}"
         insert_log(
-            action="target_delete",
-            target=normalized_id,
+            action="pc_delete",
+            pc_id=normalized_id,
             status="failed",
             message=message,
         )
         raise LookupError(message)
 
     insert_log(
-        action="target_delete",
-        target=normalized_id,
+        action="pc_delete",
+        pc_id=normalized_id,
         status="ok",
-        message="target deleted",
+        message="pc deleted",
     )
     return {"id": normalized_id}
+
+
+def update_runtime_status(pc_id: str, status: str, mark_seen: bool = False) -> PcRow | None:
+    normalized_id = pc_id.strip()
+    if not normalized_id:
+        raise ValueError("id is required")
+    if status not in STATUS_VALUES:
+        raise ValueError(f"status must be one of: {', '.join(sorted(STATUS_VALUES))}")
+
+    seen_at = datetime.now(timezone.utc).isoformat() if mark_seen else None
+    return pc_repository.update_pc_status(normalized_id, status=status, last_seen_at=seen_at)

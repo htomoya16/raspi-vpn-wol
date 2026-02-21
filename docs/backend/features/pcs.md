@@ -1,16 +1,17 @@
-# Targets Feature
+# PCs Feature
 
 ## 目的
 
-- WOL送信対象（ターゲット）の設定を管理する。
-- `id` ベースで他機能（`/api/wol` `/api/status`）から参照できる状態を作る。
+- WOL送信対象PCの設定を管理する。
+- `pc_id` ベースで `wol` / `status` / `logs` / `jobs` と連携できる状態を作る。
 
 ## 変更内容
 
-- `GET /api/targets`: 登録済みターゲット一覧を返す。
-- `POST /api/targets`: ターゲット設定を新規作成/更新（upsert）する。
-- `DELETE /api/targets/{id}`: 指定IDのターゲット設定を削除する。
-- `PUT/PATCH` は未実装（更新も `POST` upsert で扱う）。
+- `GET /api/pcs`: 登録済みPC一覧を返す。
+- `POST /api/pcs`: PC設定を新規作成する。
+- `GET /api/pcs/{pc_id}`: 指定PCの詳細を返す。
+- `PATCH /api/pcs/{pc_id}`: 指定PCを部分更新する。
+- `DELETE /api/pcs/{pc_id}`: 指定PCを削除する。
 - 保存項目: `id`, `name`, `mac_address`, `ip_address`, `broadcast_ip`, `send_interface`, `wol_port`, `status_method`, `status_port`。
 - 入力検証:
   - `id` / `name` 必須。
@@ -23,7 +24,7 @@
 
 ## 運用時の注意点
 
-- `id` は論理キーなので、再登録時は同じ `id` で更新される。
+- `id` は論理キーなので重複登録時は `409` を返す。
 - 削除対象が存在しない場合は `404` を返す。
 - `send_interface` を変更すると WOL送信経路が変わるため、LAN到達性を再確認する。
-- 設定変更/削除は `logs` に `action=target_upsert` / `action=target_delete` で記録される。
+- 設定変更/削除は `logs` に `action=pc_upsert` / `action=pc_delete` で記録される。

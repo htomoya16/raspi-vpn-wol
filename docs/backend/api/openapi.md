@@ -1,61 +1,90 @@
-# OpenAPI Contract Notes
+# OpenAPI Contract Notes (vNext)
 
-## API 契約ドラフト
+## エンドポイント
 
 ### `GET /api/health`
 
-- summary: API 稼働状態を確認する
-- description: アプリの生存確認用エンドポイント。成功時は固定レスポンスを返す。
-- responses:
-  - `200`: `{"status":"ok"}`
+- operationId: `getHealth`
+- summary: API稼働状態を確認
+- responses: `200`
 
-### `GET /api/status?target=<id>`
+### `GET /api/pcs`
 
-- summary: ターゲットの起動状態を取得する
-- description: `target` の到達性を判定し、`status` は `online/offline` を返す。
-- responses:
-  - `200`: `StatusResponse`
-  - `400`: 業務エラー（対象未登録、IP未設定、判定方式不正など）
-  - `422`: リクエスト形式エラー（`target` 未指定、型不正）
+- operationId: `listPcs`
+- summary: PC一覧取得
+- query: `q`, `status`, `tag`, `limit`, `cursor`
+- responses: `200`
 
-### `POST /api/wol`
+### `POST /api/pcs`
 
-- summary: 指定ターゲットへ WOL を送信する
-- description: `target` で指定した端末へ Magic Packet を送信し、結果を返す。
-- responses:
-  - `200`: `WolResponse`
-  - `400`: 業務エラー（対象未登録、送信設定不正など）
-  - `422`: リクエスト形式エラー（必須項目不足、型不正）
+- operationId: `createPc`
+- summary: PC登録
+- requestBody: `PcCreate`
+- responses: `201`, `400`, `409`, `422`
 
-### `GET /api/targets`
+### `GET /api/pcs/{pc_id}`
 
-- summary: ターゲット一覧を取得する
-- description: 登録済みターゲット設定を返す。
-- responses:
-  - `200`: `TargetsListResponse`
+- operationId: `getPc`
+- summary: PC詳細取得
+- responses: `200`, `404`
 
-### `POST /api/targets`
+### `PATCH /api/pcs/{pc_id}`
 
-- summary: ターゲットを作成または更新する
-- description: `id` をキーに upsert し、WOL/状態確認の設定を保存する。
-- responses:
-  - `200`: `TargetItemResponse`
-  - `400`: 業務エラー（サービス層の検証エラー）
-  - `422`: リクエスト形式エラー（必須不足、型不正、範囲外）
+- operationId: `updatePc`
+- summary: PC部分更新
+- requestBody: `PcUpdate`
+- responses: `200`, `400`, `404`, `422`
 
-### `DELETE /api/targets/{target_id}`
+### `DELETE /api/pcs/{pc_id}`
 
-- summary: ターゲットを削除する
-- description: 指定した `target_id` の設定を削除する。
-- responses:
-  - `200`: `TargetDeleteResponse`
-  - `400`: 業務エラー（ID不正）
-  - `404`: 対象が存在しない
+- operationId: `deletePc`
+- summary: PC削除
+- responses: `204`, `404`
 
-### `GET /api/logs?limit=<n>`
+### `POST /api/pcs/{pc_id}/wol`
 
-- summary: 操作ログを取得する
-- description: 最新ログを `limit` 件返す。並び順は新しい順。
-- responses:
-  - `200`: `LogsResponse`
-  - `422`: リクエスト形式エラー（`limit` 範囲外、型不正）
+- operationId: `sendWol`
+- summary: WOL送信（非同期）
+- requestBody: `WolRequest`（任意）
+- responses: `202`, `400`, `404`, `422`
+
+### `POST /api/pcs/{pc_id}/status/refresh`
+
+- operationId: `refreshPcStatus`
+- summary: 単体ステータス更新
+- responses: `200`, `400`, `404`
+
+### `POST /api/pcs/status/refresh`
+
+- operationId: `refreshAllStatuses`
+- summary: 全PCステータス更新（非同期）
+- responses: `202`
+
+### `GET /api/logs`
+
+- operationId: `listLogs`
+- summary: 操作ログ取得
+- query: `pc_id`, `action`, `ok`, `since`, `until`, `limit`, `cursor`
+- responses: `200`, `422`
+
+### `GET /api/jobs/{job_id}`
+
+- operationId: `getJob`
+- summary: ジョブ状態取得
+- responses: `200`, `404`
+
+### `GET /api/events`
+
+- operationId: `streamEvents`
+- summary: SSEイベントストリーム
+- responses: `200` (`text/event-stream`)
+
+## 主要スキーマ
+
+- `PcStatus`: `online`, `offline`, `unknown`, `booting`, `unreachable`
+- `Pc`: PC基本情報 + `status` + `timestamps`
+- `PcCreate` / `PcUpdate`: 登録/更新入力
+- `WolRequest`: `broadcast`, `port`, `repeat`
+- `JobAccepted`, `Job`, `JobState`: 非同期処理
+- `LogEntry`, `LogListResponse`: 監査ログ
+- `Error`: 共通エラー（`code`, `message`, `details`）

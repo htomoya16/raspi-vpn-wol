@@ -19,11 +19,12 @@
 ## TypedDict 適用で実施した内容
 
 - `dict[str, Any]` / `dict[str, str]` の戻り値を以下に置換。
-- `TargetRow`
+- `PcRow`
 - `LogRow`
+- `JobRow`
 - `WolResult`
-- `StatusResult`
-- `TargetDeletedResult`
+- `PcStatusProbeResult`
+- `PcDeletedResult`
 - SQLiteの `Row` を辞書化する箇所は `cast(...)` で返却型を明示。
 - API層は Pydantic モデルでレスポンス化するため、HTTPの挙動変更はない。
 

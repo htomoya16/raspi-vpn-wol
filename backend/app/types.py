@@ -1,13 +1,21 @@
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import Literal, TypedDict
 
 
-class TargetRow(TypedDict):
+PcStatus = Literal["online", "offline", "unknown", "booting", "unreachable"]
+JobState = Literal["queued", "running", "succeeded", "failed"]
+
+
+class PcRow(TypedDict):
     id: str
     name: str
     mac_address: str
     ip_address: str | None
+    tags_json: str
+    note: str | None
+    status: PcStatus
+    last_seen_at: str | None
     broadcast_ip: str | None
     send_interface: str
     wol_port: int
@@ -19,21 +27,35 @@ class TargetRow(TypedDict):
 
 class LogRow(TypedDict):
     id: int
+    pc_id: str | None
     action: str
-    target: str
-    status: str
+    ok: int
     message: str | None
+    details_json: str | None
     created_at: str
+
+
+class JobRow(TypedDict):
+    id: str
+    job_type: str
+    state: JobState
+    payload_json: str | None
+    result_json: str | None
+    error_message: str | None
+    created_at: str
+    started_at: str | None
+    finished_at: str | None
+    updated_at: str
 
 
 class WolResult(TypedDict):
     message: str
 
 
-class StatusResult(TypedDict):
-    target: str
+class PcStatusProbeResult(TypedDict):
+    pc_id: str
     status: str
 
 
-class TargetDeletedResult(TypedDict):
+class PcDeletedResult(TypedDict):
     id: str

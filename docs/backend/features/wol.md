@@ -2,12 +2,13 @@
 
 ## 目的
 
-- 指定ターゲットへ Magic Packet を送信し、PC起動をトリガーする。
+- 指定PCへ Magic Packet を送信し、PC起動をトリガーする。
 - 送信結果をログへ記録し、失敗原因を追跡できるようにする。
 
 ## 変更内容
 
-- `POST /api/wol` で `target`（ターゲットID）を受け取り、`targets` から設定を取得して送信。
+- `POST /api/pcs/{pc_id}/wol` で `pc_id` を受け取り、`pcs` 設定から送信する。
+- 実行はジョブとして受け付け、`202` + `job_id` を返す。
 - Magic Packet 仕様:
   - `0xFF` を 6バイト
   - MACアドレスを 16回連結
@@ -19,6 +20,8 @@
 - 検証:
   - `wol_port` 範囲チェック。
   - `ip_address` 設定時は IF のネットワーク内に属するか確認。
+- リクエスト上書き:
+  - `broadcast`, `port`, `repeat` を指定した場合は送信時に上書き。
 - ログ:
   - 成功: `status=sent`
   - 失敗: `status=failed`（理由を `message` に格納）

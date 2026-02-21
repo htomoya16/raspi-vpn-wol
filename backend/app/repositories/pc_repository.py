@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import cast
 
 from app.db.database import connection
-from app.types import TargetRow
+from app.types import PcRow
 
 
-def get_target_by_id(target_id: str) -> TargetRow | None:
+def get_pc_by_id(pc_id: str) -> PcRow | None:
     with connection() as conn:
         row = conn.execute(
             """
@@ -15,6 +16,10 @@ def get_target_by_id(target_id: str) -> TargetRow | None:
                 name,
                 mac_address,
                 ip_address,
+                tags_json,
+                note,
+                status,
+                last_seen_at,
                 broadcast_ip,
                 send_interface,
                 wol_port,
@@ -22,18 +27,18 @@ def get_target_by_id(target_id: str) -> TargetRow | None:
                 status_port,
                 created_at,
                 updated_at
-            FROM targets
+            FROM pcs
             WHERE id = ?
             """,
-            (target_id,),
+            (pc_id,),
         ).fetchone()
 
     if row is None:
         return None
-    return cast(TargetRow, dict(row))
+    return cast(PcRow, dict(row))
 
 
-def list_targets() -> list[TargetRow]:
+def list_pcs() -> list[PcRow]:
     with connection() as conn:
         rows = conn.execute(
             """
@@ -42,6 +47,10 @@ def list_targets() -> list[TargetRow]:
                 name,
                 mac_address,
                 ip_address,
+                tags_json,
+                note,
+                status,
+                last_seen_at,
                 broadcast_ip,
                 send_interface,
                 wol_port,
@@ -49,44 +58,56 @@ def list_targets() -> list[TargetRow]:
                 status_port,
                 created_at,
                 updated_at
-            FROM targets
+            FROM pcs
             ORDER BY id ASC
             """
         ).fetchall()
 
-    return [cast(TargetRow, dict(row)) for row in rows]
+    return [cast(PcRow, dict(row)) for row in rows]
 
 
-def upsert_target(
-    target_id: str,
+def upsert_pc(
+    pc_id: str,
     name: str,
     mac_address: str,
     ip_address: str | None,
+    tags_json: str,
+    note: str | None,
+    status: str,
+    last_seen_at: str | None,
     broadcast_ip: str | None,
     send_interface: str,
     wol_port: int,
     status_method: str,
     status_port: int,
-) -> TargetRow:
+) -> PcRow:
     with connection() as conn:
         conn.execute(
             """
-            INSERT INTO targets (
+            INSERT INTO pcs (
                 id,
                 name,
                 mac_address,
                 ip_address,
+                tags_json,
+                note,
+                status,
+                last_seen_at,
                 broadcast_ip,
                 send_interface,
                 wol_port,
                 status_method,
                 status_port
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 name = excluded.name,
                 mac_address = excluded.mac_address,
                 ip_address = excluded.ip_address,
+                tags_json = excluded.tags_json,
+                note = excluded.note,
+                status = excluded.status,
+                last_seen_at = excluded.last_seen_at,
                 broadcast_ip = excluded.broadcast_ip,
                 send_interface = excluded.send_interface,
                 wol_port = excluded.wol_port,
@@ -95,10 +116,14 @@ def upsert_target(
                 updated_at = CURRENT_TIMESTAMP
             """,
             (
-                target_id,
+                pc_id,
                 name,
                 mac_address,
                 ip_address,
+                tags_json,
+                note,
+                status,
+                last_seen_at,
                 broadcast_ip,
                 send_interface,
                 wol_port,
@@ -107,19 +132,40 @@ def upsert_target(
             ),
         )
 
-    row = get_target_by_id(target_id)
+    row = get_pc_by_id(pc_id)
     if row is None:
-        raise ValueError(f"failed to upsert target: {target_id}")
+        raise ValueError(f"failed to upsert pc: {pc_id}")
     return row
 
 
-def delete_target_by_id(target_id: str) -> bool:
+def delete_pc_by_id(pc_id: str) -> bool:
     with connection() as conn:
         result = conn.execute(
             """
-            DELETE FROM targets
+            DELETE FROM pcs
             WHERE id = ?
             """,
-            (target_id,),
+            (pc_id,),
         )
     return result.rowcount > 0
+
+
+def update_pc_status(
+    pc_id: str,
+    status: str,
+    last_seen_at: str | None = None,
+) -> PcRow | None:
+    updated_at = datetime.now(timezone.utc).isoformat()
+    with connection() as conn:
+        conn.execute(
+            """
+            UPDATE pcs
+            SET
+                status = ?,
+                last_seen_at = COALESCE(?, last_seen_at),
+                updated_at = ?
+            WHERE id = ?
+            """,
+            (status, last_seen_at, updated_at, pc_id),
+        )
+    return get_pc_by_id(pc_id)
