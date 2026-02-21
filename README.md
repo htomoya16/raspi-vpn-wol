@@ -23,3 +23,6 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 
 - 現在 `frontend/` は学習用に初期化済み（実装は未着手）。
 - 実務スタイルで、要件整理から1ステップずつ実装していく方針。
+## API契約
+
+- API契約の詳細は `docs/backend/api/openapi.md` を参照してください。
