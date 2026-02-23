@@ -1,52 +1,35 @@
-import { useState } from 'react'
-
-function parseDate(value) {
-  if (value === null || value === undefined || value === '') {
-    return null
-  }
-
-  const raw = String(value).trim()
-  // SQLiteのタイムゾーンなし時刻は UTC として先に解釈する
-  const naive = raw.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2}(?:\.\d+)?)$/)
-  if (naive) {
-    const utc = new Date(`${naive[1]}T${naive[2]}Z`)
-    if (!Number.isNaN(utc.getTime())) {
-      return utc
-    }
-  }
-
-  const direct = new Date(raw)
-  if (!Number.isNaN(direct.getTime())) {
-    return direct
-  }
-
-  return null
-}
-
-function formatDateTime(value) {
-  const date = parseDate(value)
-  if (!date) {
-    return value
-  }
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-  return date.toLocaleString('ja-JP', {
-    timeZone: 'Asia/Tokyo',
-    hour12: false,
-  })
-}
+import { Fragment, useState } from 'react'
+import { formatJstDateParts } from '../utils/datetime'
 
 function formatDetails(details) {
-  if (!details || typeof details !== 'object') {
+  if (details === null || details === undefined || details === '') {
     return '-'
   }
-  return JSON.stringify(details)
+  if (typeof details === 'string') {
+    const trimmed = details.trim()
+    if (trimmed === '') {
+      return '-'
+    }
+    try {
+      const parsed = JSON.parse(trimmed)
+      if (parsed && typeof parsed === 'object') {
+        return JSON.stringify(parsed, null, 2)
+      }
+    } catch {
+      // noop: 文字列のまま表示する
+    }
+    return details.replace(/\r\n/g, '\n')
+  }
+  if (typeof details === 'object') {
+    return JSON.stringify(details, null, 2)
+  }
+  return String(details)
 }
 
 function LogsPanel({ items, loading, error, onReload, onClear, embedded = false }) {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [clearLoading, setClearLoading] = useState(false)
+  const [expandedDetailIds, setExpandedDetailIds] = useState(() => new Set())
 
   function openConfirm() {
     setConfirmOpen(true)
@@ -72,6 +55,26 @@ function LogsPanel({ items, loading, error, onReload, onClear, embedded = false 
     } finally {
       setClearLoading(false)
     }
+  }
+
+  function toggleDetails(id) {
+    setExpandedDetailIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  function handleRowKeyDown(event, id) {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return
+    }
+    event.preventDefault()
+    toggleDetails(id)
   }
 
   const content = (
@@ -105,26 +108,71 @@ function LogsPanel({ items, loading, error, onReload, onClear, embedded = false 
             <thead>
               <tr>
                 <th>時刻</th>
-                <th>Action</th>
+                <th>操作</th>
                 <th>PC</th>
                 <th>結果</th>
-                <th>Message</th>
-                <th>Details</th>
+                <th>メッセージ</th>
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
-                <tr key={item.id}>
-                  <td data-label="時刻">{formatDateTime(item.created_at)}</td>
-                  <td data-label="Action">{item.action}</td>
-                  <td data-label="PC">{item.pc_id || '-'}</td>
-                  <td data-label="結果">
-                    <span className={item.ok ? 'result-ok' : 'result-ng'}>{item.ok ? 'OK' : 'NG'}</span>
-                  </td>
-                  <td data-label="Message">{item.message || '-'}</td>
-                  <td data-label="Details">{formatDetails(item.details)}</td>
-                </tr>
-              ))}
+              {items.map((item) => {
+                const detailsText = formatDetails(item.details)
+                const hasDetails = detailsText !== '-'
+                const isExpanded = hasDetails && expandedDetailIds.has(item.id)
+                const timeParts = formatJstDateParts(item.created_at, { fallbackDate: '-', fallbackTime: '' })
+
+                return (
+                  <Fragment key={item.id}>
+                    <tr
+                      className={`logs-table__row${hasDetails ? ' logs-table__row--expandable' : ''}${isExpanded ? ' logs-table__row--expanded' : ''}`}
+                      role={hasDetails ? 'button' : undefined}
+                      tabIndex={hasDetails ? 0 : undefined}
+                      aria-expanded={hasDetails ? isExpanded : undefined}
+                      onClick={hasDetails ? () => toggleDetails(item.id) : undefined}
+                      onKeyDown={hasDetails ? (event) => handleRowKeyDown(event, item.id) : undefined}
+                    >
+                      <td data-label="時刻">
+                        <span className="logs-time-cell">
+                          <span className="logs-time-cell__value">
+                            <span className="logs-time-cell__date">{timeParts.date}</span>
+                            {timeParts.time ? <span className="logs-time-cell__time">{timeParts.time}</span> : null}
+                          </span>
+                          <span
+                            className={`logs-result-badge logs-result-badge--mobile ${item.ok ? 'logs-result-badge--ok' : 'logs-result-badge--ng'}`}
+                            aria-label={item.ok ? '結果: OK' : '結果: NG'}
+                          >
+                            {item.ok ? 'OK' : 'NG'}
+                          </span>
+                        </span>
+                      </td>
+                      <td data-label="操作">{item.action}</td>
+                      <td data-label="PC">{item.pc_id || '-'}</td>
+                      <td data-label="結果">
+                        <span className={item.ok ? 'result-ok' : 'result-ng'}>{item.ok ? 'OK' : 'NG'}</span>
+                      </td>
+                      <td data-label="メッセージ">
+                        <span className="logs-message-cell">
+                          <span className="logs-message-cell__text">{item.message || '-'}</span>
+                          {hasDetails ? (
+                            <span className={`logs-message-cell__hint${isExpanded ? ' logs-message-cell__hint--open' : ''}`}>
+                              {isExpanded ? 'タップで閉じる' : 'タップで詳細'}
+                            </span>
+                          ) : null}
+                        </span>
+                      </td>
+                    </tr>
+                    {hasDetails && isExpanded ? (
+                      <tr className="logs-table__detail-row">
+                        <td colSpan={5}>
+                          <div className="log-details">
+                            <pre className="log-details__text log-details__text--expanded">{detailsText}</pre>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
+                )
+              })}
             </tbody>
           </table>
         </div>

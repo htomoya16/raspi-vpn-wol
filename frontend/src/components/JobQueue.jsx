@@ -1,15 +1,4 @@
-function formatDateTime(value) {
-  if (!value) {
-    return '-'
-  }
-
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return date.toLocaleTimeString()
-}
+import { formatLocalTime } from '../utils/datetime'
 
 const JOB_STATE_LABEL = {
   queued: '待機中',
@@ -41,7 +30,7 @@ function JobQueue({ jobs, embedded = false }) {
                   <span className={`job-state job-state--${job.state}`}>
                     {JOB_STATE_LABEL[job.state] || job.state}
                   </span>
-                  <span>{formatDateTime(job.updated_at || job.created_at)}</span>
+                  <span>{formatLocalTime(job.updated_at || job.created_at, { fallback: '-' })}</span>
                 </div>
                 {job.error ? <p className="feedback feedback--error">{job.error}</p> : null}
               </li>
