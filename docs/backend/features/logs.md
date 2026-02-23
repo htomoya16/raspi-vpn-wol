@@ -8,6 +8,7 @@
 ## 変更内容
 
 - `GET /api/logs` を提供（`pc_id` `action` `ok` `since` `until` `limit` `cursor`）。
+- `DELETE /api/logs` を提供（全ログ削除、削除件数を返却）。
 - `logs` テーブルの記録項目:
   - `id`, `pc_id`, `action`, `ok`, `status`, `message`, `details_json`, `created_at`
 - 主な記録トリガー:
@@ -24,4 +25,5 @@
 
 - `message` は障害追跡に必要な最小情報のみ記録し、個人情報は入れない。
 - ログ削除は書き込み時に自動実行される（定期ジョブは未実装）。
+- UIからのログ消去は不可逆操作のため、確認ダイアログ表示を必須とする。
 - API障害時は `/api/logs` と SQLite直接参照の両方で整合性を確認する。

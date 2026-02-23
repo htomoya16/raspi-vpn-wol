@@ -67,6 +67,12 @@
 - query: `pc_id`, `action`, `ok`, `since`, `until`, `limit`, `cursor`
 - responses: `200`, `422`
 
+### `DELETE /api/logs`
+
+- operationId: `clearLogs`
+- summary: 操作ログ全削除
+- responses: `200`
+
 ### `GET /api/jobs/{job_id}`
 
 - operationId: `getJob`
@@ -86,5 +92,5 @@
 - `PcCreate` / `PcUpdate`: 登録/更新入力
 - `WolRequest`: `broadcast`, `port`, `repeat`
 - `JobAccepted`, `Job`, `JobState`: 非同期処理
-- `LogEntry`, `LogListResponse`: 監査ログ
+- `LogEntry`, `LogListResponse`, `LogClearResponse`: 監査ログ
 - `Error`: 共通エラー（`code`, `message`, `details`）

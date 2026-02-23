@@ -33,6 +33,14 @@ export function deletePc(pcId) {
   })
 }
 
+export function updatePc(pcId, payload) {
+  return request(`/api/pcs/${encodeURIComponent(pcId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+}
+
 export function refreshPcStatus(pcId) {
   return request(`/api/pcs/${encodeURIComponent(pcId)}/status/refresh`, {
     method: 'POST',

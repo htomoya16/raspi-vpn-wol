@@ -86,6 +86,12 @@ def get_recent_logs(limit: int) -> list[LogRow]:
     )
 
 
+def clear_logs() -> int:
+    with connection() as conn:
+        result = conn.execute("DELETE FROM logs")
+    return int(result.rowcount or 0)
+
+
 def _prune_old_logs(conn: sqlite3.Connection) -> None:
     conn.execute(
         """

@@ -18,3 +18,10 @@ export function listLogs(params = {}) {
   const query = toQueryString(params)
   return request(`/api/logs${query}`)
 }
+
+
+export function clearLogs() {
+  return request('/api/logs', {
+    method: 'DELETE',
+  })
+}

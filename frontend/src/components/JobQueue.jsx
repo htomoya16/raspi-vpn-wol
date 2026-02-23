@@ -18,9 +18,9 @@ const JOB_STATE_LABEL = {
   failed: '失敗',
 }
 
-function JobQueue({ jobs }) {
-  return (
-    <section className="panel">
+function JobQueue({ jobs, embedded = false }) {
+  const content = (
+    <>
       <div className="panel__header">
         <h2>ジョブ状態</h2>
         <p>非同期処理の進行状況を表示します。</p>
@@ -29,26 +29,34 @@ function JobQueue({ jobs }) {
       {jobs.length === 0 ? (
         <p className="empty-state">ジョブはまだありません。</p>
       ) : (
-        <ul className="job-list">
-          {jobs.map((job) => (
-            <li key={job.id} className="job-row">
-              <div>
-                <p className="job-id">{job.id}</p>
-                <p className="job-type">{job.label || job.type}</p>
-              </div>
-              <div className="job-meta">
-                <span className={`job-state job-state--${job.state}`}>
-                  {JOB_STATE_LABEL[job.state] || job.state}
-                </span>
-                <span>{formatDateTime(job.updated_at || job.created_at)}</span>
-              </div>
-              {job.error ? <p className="feedback feedback--error">{job.error}</p> : null}
-            </li>
-          ))}
-        </ul>
+        <div className="job-list-wrap">
+          <ul className="job-list">
+            {jobs.map((job) => (
+              <li key={job.id} className="job-row">
+                <div>
+                  <p className="job-id">{job.id}</p>
+                  <p className="job-type">{job.label || job.type}</p>
+                </div>
+                <div className="job-meta">
+                  <span className={`job-state job-state--${job.state}`}>
+                    {JOB_STATE_LABEL[job.state] || job.state}
+                  </span>
+                  <span>{formatDateTime(job.updated_at || job.created_at)}</span>
+                </div>
+                {job.error ? <p className="feedback feedback--error">{job.error}</p> : null}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
-    </section>
+    </>
   )
+
+  if (embedded) {
+    return <div className="panel-embedded panel-embedded--job">{content}</div>
+  }
+
+  return <section className="panel">{content}</section>
 }
 
 export default JobQueue

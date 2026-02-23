@@ -16,3 +16,7 @@ class LogEntry(BaseModel):
 class LogListResponse(BaseModel):
     items: list[LogEntry] = Field(..., description="ログ一覧（新しい順）。")
     next_cursor: int | None = Field(default=None, description="次ページ取得用カーソル。")
+
+
+class LogClearResponse(BaseModel):
+    deleted: int = Field(..., ge=0, description="削除したログ件数。")

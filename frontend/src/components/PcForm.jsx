@@ -8,7 +8,7 @@ const INITIAL_FORM = {
   note: '',
 }
 
-function PcForm({ loading, error, onCreate }) {
+function PcForm({ loading, error, onCreate, embedded = false }) {
   const [form, setForm] = useState(INITIAL_FORM)
 
   function updateField(key, value) {
@@ -37,8 +37,8 @@ function PcForm({ loading, error, onCreate }) {
     }
   }
 
-  return (
-    <section className="panel">
+  const content = (
+    <>
       <div className="panel__header">
         <h2>PC登録</h2>
         <p>必要な項目だけ入力すれば登録できます。IDはサーバー側で自動採番されます。</p>
@@ -103,8 +103,14 @@ function PcForm({ loading, error, onCreate }) {
       </form>
 
       {error ? <p className="feedback feedback--error">{error}</p> : null}
-    </section>
+    </>
   )
+
+  if (embedded) {
+    return <div className="panel-embedded">{content}</div>
+  }
+
+  return <section className="panel">{content}</section>
 }
 
 export default PcForm

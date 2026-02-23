@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Query
 
-from app.models.logs import LogListResponse
+from app.models.logs import LogClearResponse, LogListResponse
 from app.services import log_service
 
 router = APIRouter()
@@ -33,3 +33,13 @@ def get_logs(
         cursor=cursor,
     )
     return LogListResponse(items=items, next_cursor=next_cursor)
+
+
+@router.delete(
+    "/logs",
+    response_model=LogClearResponse,
+    summary="操作ログ全削除",
+)
+def clear_logs() -> LogClearResponse:
+    deleted = log_service.clear_logs()
+    return LogClearResponse(deleted=deleted)

@@ -48,6 +48,10 @@ def fetch_logs(
     return items, next_cursor
 
 
+def clear_logs() -> int:
+    return log_repository.clear_logs()
+
+
 def _row_to_log_entry(row: LogRow) -> dict[str, object]:
     details: dict[str, object] | None = None
     raw_details = row.get("details_json")
