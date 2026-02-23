@@ -1,4 +1,25 @@
+import type { FormEvent } from 'react'
+
+import type { Pc } from '../../types/models'
 import { formatLocalDateTime } from '../../utils/datetime'
+import type { PcEditFormState } from './constants'
+
+interface PcDetailDialogProps {
+  selectedPc: Pc
+  isEditing: boolean
+  editForm: PcEditFormState
+  editError: string
+  editLoading: boolean
+  deleteBusy: boolean
+  rowError?: string
+  statusLabel: string
+  onClose: () => void
+  onSubmitEdit: (event: FormEvent<HTMLFormElement>) => Promise<void>
+  onStartEdit: () => void
+  onCancelEdit: () => void
+  onOpenDeleteDialog: (pcId: string, pcName: string) => void
+  onUpdateEditField: (key: keyof PcEditFormState, value: string) => void
+}
 
 function PcDetailDialog({
   selectedPc,
@@ -15,7 +36,7 @@ function PcDetailDialog({
   onCancelEdit,
   onOpenDeleteDialog,
   onUpdateEditField,
-}) {
+}: PcDetailDialogProps) {
   return (
     <div className="pc-detail-dialog__backdrop" role="presentation" onClick={onClose}>
       <section

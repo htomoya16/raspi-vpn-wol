@@ -4,14 +4,19 @@ import './App.css'
 import AppHeader from './components/AppHeader'
 import DesktopWorkspace from './components/workspace/DesktopWorkspace'
 import MobileWorkspace from './components/workspace/MobileWorkspace'
+import type { LogsPanelProps } from './components/LogsPanel'
+import type { PcListProps } from './components/PcList'
+import type { LeftView } from './components/workspace/DesktopWorkspace'
+import type { MobileView } from './components/workspace/MobileWorkspace'
 import { useDashboardData } from './hooks/useDashboardData'
 import { useMediaQuery } from './hooks/useMediaQuery'
+import type { PcCreatePayload } from './types/models'
 
 const MOBILE_BREAKPOINT = '(max-width: 760px)'
 
 function App() {
-  const [leftView, setLeftView] = useState('list')
-  const [mobileView, setMobileView] = useState('pcs')
+  const [leftView, setLeftView] = useState<LeftView>('list')
+  const [mobileView, setMobileView] = useState<MobileView>('pcs')
   const isMobile = useMediaQuery(MOBILE_BREAKPOINT)
   const {
     notice,
@@ -46,7 +51,7 @@ function App() {
   } = useDashboardData()
 
   const handleCreatePc = useCallback(
-    async (payload) => {
+    async (payload: PcCreatePayload) => {
       const created = await createPcEntry(payload)
       if (created) {
         setLeftView('list')
@@ -57,7 +62,7 @@ function App() {
     [createPcEntry],
   )
 
-  const pcListProps = {
+  const pcListProps: PcListProps = {
     items: pcs,
     loading: pcLoading,
     error: pcError,
@@ -76,7 +81,7 @@ function App() {
     lastSyncedAt,
   }
 
-  const logsPanelProps = {
+  const logsPanelProps: LogsPanelProps = {
     items: logs,
     loading: logsLoading,
     error: logsError,

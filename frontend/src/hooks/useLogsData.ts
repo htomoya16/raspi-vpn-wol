@@ -1,12 +1,25 @@
 import { useCallback, useState } from 'react'
 
+import type { LogEntry } from '../types/models'
 import { formatApiError } from '../api/http'
 import { clearLogs, listLogs } from '../api/logs'
 
 const DEFAULT_LOG_LIMIT = 200
 
-export function useLogsData({ setNotice }) {
-  const [logs, setLogs] = useState([])
+interface UseLogsDataParams {
+  setNotice: (message: string) => void
+}
+
+interface UseLogsDataReturn {
+  logs: LogEntry[]
+  logsLoading: boolean
+  logsError: string
+  loadLogs: () => Promise<void>
+  clearLogsEntry: () => Promise<void>
+}
+
+export function useLogsData({ setNotice }: UseLogsDataParams): UseLogsDataReturn {
+  const [logs, setLogs] = useState<LogEntry[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
   const [logsError, setLogsError] = useState('')
 

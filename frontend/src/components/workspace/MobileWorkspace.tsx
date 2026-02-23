@@ -5,6 +5,23 @@ import PcList from '../PcList'
 import homeIcon from '../icons/home.svg'
 import logIcon from '../icons/log.svg'
 import registerIcon from '../icons/register.svg'
+import type { JobQueueProps } from '../JobQueue'
+import type { LogsPanelProps } from '../LogsPanel'
+import type { PcFormProps } from '../PcForm'
+import type { PcListProps } from '../PcList'
+
+export type MobileView = 'pcs' | 'create' | 'logs'
+
+interface MobileWorkspaceProps {
+  mobileView: MobileView
+  onChangeMobileView: (view: MobileView) => void
+  pcListProps: PcListProps
+  createLoading: PcFormProps['loading']
+  createError: PcFormProps['error']
+  onCreatePc: PcFormProps['onCreate']
+  jobs: JobQueueProps['jobs']
+  logsPanelProps: LogsPanelProps
+}
 
 function MobileWorkspace({
   mobileView,
@@ -15,7 +32,7 @@ function MobileWorkspace({
   onCreatePc,
   jobs,
   logsPanelProps,
-}) {
+}: MobileWorkspaceProps) {
   return (
     <>
       <section className="mobile-workspace">

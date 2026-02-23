@@ -1,4 +1,16 @@
+import type { Pc, PcBusyState } from '../../types/models'
 import { formatLocalDateTime } from '../../utils/datetime'
+
+interface PcRowItemProps {
+  pc: Pc
+  isActive: boolean
+  isBusy: PcBusyState
+  statusLabel: string
+  rowError?: string
+  onOpenDetail: (pcId: string) => void
+  onSendWol: (pcId: string) => Promise<void> | void
+  onRefreshStatus: (pcId: string) => Promise<void> | void
+}
 
 function PcRowItem({
   pc,
@@ -9,7 +21,7 @@ function PcRowItem({
   onOpenDetail,
   onSendWol,
   onRefreshStatus,
-}) {
+}: PcRowItemProps) {
   return (
     <li className={`pc-row ${isActive ? 'pc-row--active' : ''}`}>
       <div

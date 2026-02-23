@@ -3,11 +3,44 @@ import { useCallback, useEffect, useState } from 'react'
 import { openEvents } from '../api/events'
 import { formatApiError } from '../api/http'
 import { refreshAllStatuses, sendPcWol } from '../api/pcs'
+import type { PcCreatePayload, PcFilterState, PcUpdatePayload } from '../types/models'
 import { useJobTracker } from './useJobTracker'
 import { useLogsData } from './useLogsData'
 import { usePcData } from './usePcData'
 
-export function useDashboardData() {
+export interface UseDashboardDataResult {
+  notice: string
+  pcs: ReturnType<typeof usePcData>['pcs']
+  pcLoading: boolean
+  pcError: string
+  pcFilters: PcFilterState
+  appliedPcFilters: PcFilterState
+  createLoading: boolean
+  createError: string
+  busyById: ReturnType<typeof usePcData>['busyById']
+  rowErrorById: ReturnType<typeof usePcData>['rowErrorById']
+  logs: ReturnType<typeof useLogsData>['logs']
+  logsLoading: boolean
+  logsError: string
+  jobs: ReturnType<typeof useJobTracker>['jobs']
+  refreshAllLoading: boolean
+  lastSyncedAt: string
+  onlineCount: number
+  loadPcs: () => Promise<void>
+  loadLogs: () => Promise<void>
+  createPcEntry: (payload: PcCreatePayload) => Promise<boolean>
+  deletePcEntry: (pcId: string) => Promise<void>
+  updatePcEntry: (pcId: string, payload: PcUpdatePayload) => Promise<ReturnType<typeof usePcData>['pcs'][number]>
+  refreshPcStatusEntry: (pcId: string) => Promise<void>
+  sendPcWolEntry: (pcId: string) => Promise<void>
+  refreshAllStatusesEntry: () => Promise<void>
+  clearLogsEntry: () => Promise<void>
+  handleFilterChange: (key: keyof PcFilterState, value: string) => void
+  handleApplyFilters: () => void
+  handleClearFilters: () => void
+}
+
+export function useDashboardData(): UseDashboardDataResult {
   const [notice, setNotice] = useState('')
   const [refreshAllLoading, setRefreshAllLoading] = useState(false)
 
@@ -53,21 +86,21 @@ export function useDashboardData() {
   })
 
   const sendPcWolEntry = useCallback(
-    async (pcId) => {
+    async (pcId: string) => {
       setBusy(pcId, 'wol', true)
       setRowError(pcId, '')
 
       try {
         const job = await sendPcWol(pcId)
         setNotice(`WOLジョブを投入しました: ${pcId}`)
-        trackJob(job.job_id, 'WOL送信')
+        await trackJob(job.job_id, 'WOL送信')
       } catch (error) {
         setRowError(pcId, formatApiError(error))
       } finally {
         setBusy(pcId, 'wol', false)
       }
     },
-    [setBusy, setNotice, setRowError, trackJob],
+    [setBusy, setRowError, trackJob],
   )
 
   const refreshAllStatusesEntry = useCallback(async () => {
@@ -76,20 +109,20 @@ export function useDashboardData() {
     try {
       const job = await refreshAllStatuses()
       setNotice('全PCステータス更新ジョブを投入しました')
-      trackJob(job.job_id, '全体ステータス更新')
+      await trackJob(job.job_id, '全体ステータス更新')
     } catch (error) {
       setPcError(formatApiError(error))
     } finally {
       setRefreshAllLoading(false)
     }
-  }, [setNotice, setPcError, trackJob])
+  }, [setPcError, trackJob])
 
   useEffect(() => {
-    loadLogs()
+    void loadLogs()
   }, [loadLogs])
 
   useEffect(() => {
-    loadPcs()
+    void loadPcs()
   }, [loadPcs])
 
   useEffect(() => {
@@ -99,8 +132,8 @@ export function useDashboardData() {
     }
 
     const refreshFromEvent = () => {
-      loadPcs()
-      loadLogs()
+      void loadPcs()
+      void loadLogs()
     }
 
     source.addEventListener('pc_status', refreshFromEvent)

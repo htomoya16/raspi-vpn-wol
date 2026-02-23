@@ -1,9 +1,21 @@
+interface PendingDeleteState {
+  id: string
+  name: string
+}
+
+interface PcDeleteDialogProps {
+  pendingDelete: PendingDeleteState | null
+  confirmLoading: boolean
+  onCloseDeleteDialog: () => void
+  onConfirmDelete: () => void
+}
+
 function PcDeleteDialog({
   pendingDelete,
   confirmLoading,
   onCloseDeleteDialog,
   onConfirmDelete,
-}) {
+}: PcDeleteDialogProps) {
   if (!pendingDelete) {
     return null
   }
@@ -36,3 +48,4 @@ function PcDeleteDialog({
 }
 
 export default PcDeleteDialog
+export type { PendingDeleteState }

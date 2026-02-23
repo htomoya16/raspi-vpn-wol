@@ -1,5 +1,9 @@
 export class ApiError extends Error {
-  constructor(status, detail, rawDetail) {
+  status: number
+  detail: string
+  rawDetail: unknown
+
+  constructor(status: number, detail: string, rawDetail: unknown) {
     super(detail || `HTTP ${status}`)
     this.name = 'ApiError'
     this.status = status
@@ -8,7 +12,7 @@ export class ApiError extends Error {
   }
 }
 
-function normalizeDetail(detail) {
+function normalizeDetail(detail: unknown): string {
   if (detail == null) {
     return ''
   }
@@ -20,7 +24,7 @@ function normalizeDetail(detail) {
           return item
         }
         if (item && typeof item === 'object' && 'msg' in item) {
-          return String(item.msg)
+          return String((item as { msg?: unknown }).msg)
         }
         return JSON.stringify(item)
       })
@@ -29,7 +33,7 @@ function normalizeDetail(detail) {
 
   if (typeof detail === 'object') {
     if ('msg' in detail) {
-      return String(detail.msg)
+      return String((detail as { msg?: unknown }).msg)
     }
     return JSON.stringify(detail)
   }
@@ -37,7 +41,7 @@ function normalizeDetail(detail) {
   return String(detail)
 }
 
-export function formatApiError(error) {
+export function formatApiError(error: unknown): string {
   if (!(error instanceof ApiError)) {
     return error instanceof Error ? error.message : '通信に失敗しました'
   }
@@ -58,17 +62,22 @@ export function formatApiError(error) {
   return `HTTP ${error.status}: ${error.detail}`
 }
 
-export async function request(path, options = {}) {
+function withDefaultHeaders(headers?: HeadersInit): Headers {
+  const next = new Headers(headers)
+  if (!next.has('Accept')) {
+    next.set('Accept', 'application/json')
+  }
+  return next
+}
+
+export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(path, {
     ...options,
-    headers: {
-      Accept: 'application/json',
-      ...(options.headers || {}),
-    },
+    headers: withDefaultHeaders(options.headers),
   })
 
   const contentType = response.headers.get('content-type') || ''
-  let data = null
+  let data: unknown = null
 
   if (contentType.includes('application/json')) {
     try {
@@ -82,10 +91,13 @@ export async function request(path, options = {}) {
   }
 
   if (!response.ok) {
-    const rawDetail = data && typeof data === 'object' ? data.detail : null
+    const rawDetail =
+      data && typeof data === 'object' && 'detail' in data
+        ? (data as { detail?: unknown }).detail
+        : null
     const detail = normalizeDetail(rawDetail) || `HTTP ${response.status}`
     throw new ApiError(response.status, detail, rawDetail)
   }
 
-  return data
+  return data as T
 }

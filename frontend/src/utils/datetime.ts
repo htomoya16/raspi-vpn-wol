@@ -1,4 +1,20 @@
-function parseNaiveUtc(raw) {
+interface FormatOptions {
+  fallback?: string
+}
+
+interface FormatDatePartsOptions {
+  fallbackDate?: string
+  fallbackTime?: string
+}
+
+interface DateParts {
+  date: string
+  time: string
+}
+
+type DateLike = string | number | Date | null | undefined
+
+function parseNaiveUtc(raw: string): Date | null {
   const naive = raw.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2}(?:\.\d+)?)$/)
   if (!naive) {
     return null
@@ -11,7 +27,7 @@ function parseNaiveUtc(raw) {
   return utc
 }
 
-export function parseDate(value) {
+export function parseDate(value: DateLike): Date | null {
   if (value === null || value === undefined || value === '') {
     return null
   }
@@ -33,7 +49,7 @@ export function parseDate(value) {
   return direct
 }
 
-function formatWith(value, formatter, fallback) {
+function formatWith(value: DateLike, formatter: (date: Date) => string, fallback: string): string {
   const date = parseDate(value)
   if (!date) {
     if (value !== null && value !== undefined && String(value).trim() !== '') {
@@ -49,17 +65,17 @@ function formatWith(value, formatter, fallback) {
   }
 }
 
-export function formatLocalDateTime(value, options = {}) {
+export function formatLocalDateTime(value: DateLike, options: FormatOptions = {}): string {
   const { fallback = '-' } = options
   return formatWith(value, (date) => date.toLocaleString(), fallback)
 }
 
-export function formatLocalTime(value, options = {}) {
+export function formatLocalTime(value: DateLike, options: FormatOptions = {}): string {
   const { fallback = '-' } = options
   return formatWith(value, (date) => date.toLocaleTimeString(), fallback)
 }
 
-export function formatJstDateTime(value, options = {}) {
+export function formatJstDateTime(value: DateLike, options: FormatOptions = {}): string {
   const { fallback = '-' } = options
   return formatWith(
     value,
@@ -72,7 +88,7 @@ export function formatJstDateTime(value, options = {}) {
   )
 }
 
-export function formatJstDateParts(value, options = {}) {
+export function formatJstDateParts(value: DateLike, options: FormatDatePartsOptions = {}): DateParts {
   const { fallbackDate = '-', fallbackTime = '' } = options
   const formatted = formatJstDateTime(value, { fallback: '' })
   const text = String(formatted).trim()

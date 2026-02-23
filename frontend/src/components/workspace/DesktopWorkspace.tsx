@@ -2,6 +2,23 @@ import JobQueue from '../JobQueue'
 import LogsPanel from '../LogsPanel'
 import PcForm from '../PcForm'
 import PcList from '../PcList'
+import type { JobQueueProps } from '../JobQueue'
+import type { LogsPanelProps } from '../LogsPanel'
+import type { PcFormProps } from '../PcForm'
+import type { PcListProps } from '../PcList'
+
+export type LeftView = 'list' | 'create'
+
+interface DesktopWorkspaceProps {
+  leftView: LeftView
+  onChangeLeftView: (view: LeftView) => void
+  pcListProps: PcListProps
+  createLoading: PcFormProps['loading']
+  createError: PcFormProps['error']
+  onCreatePc: PcFormProps['onCreate']
+  jobs: JobQueueProps['jobs']
+  logsPanelProps: LogsPanelProps
+}
 
 function DesktopWorkspace({
   leftView,
@@ -12,7 +29,7 @@ function DesktopWorkspace({
   onCreatePc,
   jobs,
   logsPanelProps,
-}) {
+}: DesktopWorkspaceProps) {
   return (
     <section className="workspace-grid">
       <div className="workspace-grid__left">

@@ -1,9 +1,16 @@
+interface AppHeaderProps {
+  totalCount: number
+  onlineCount: number
+  refreshAllLoading: boolean
+  onRefreshAllStatuses: () => Promise<void> | void
+}
+
 function AppHeader({
   totalCount,
   onlineCount,
   refreshAllLoading,
   onRefreshAllStatuses,
-}) {
+}: AppHeaderProps) {
   return (
     <header className="hero hero--compact">
       <div className="hero__lead">

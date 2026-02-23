@@ -1,29 +1,61 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 
+import type {
+  BusyById,
+  Pc,
+  PcCreatePayload,
+  PcFilterState,
+  PcUpdatePayload,
+  RowErrorById,
+} from '../types/models'
 import { formatApiError } from '../api/http'
-import {
-  createPc,
-  deletePc,
-  listPcs,
-  refreshPcStatus,
-  updatePc,
-} from '../api/pcs'
+import { createPc, deletePc, listPcs, refreshPcStatus, updatePc } from '../api/pcs'
 
-const DEFAULT_FILTERS = { q: '', status: '' }
+const DEFAULT_FILTERS: PcFilterState = { q: '', status: '' }
 
-export function usePcData({ loadLogs, setNotice }) {
-  const [pcs, setPcs] = useState([])
+interface UsePcDataParams {
+  loadLogs: () => Promise<void>
+  setNotice: (message: string) => void
+}
+
+interface UsePcDataReturn {
+  pcs: Pc[]
+  pcLoading: boolean
+  pcError: string
+  pcFilters: PcFilterState
+  appliedPcFilters: PcFilterState
+  createLoading: boolean
+  createError: string
+  busyById: BusyById
+  rowErrorById: RowErrorById
+  lastSyncedAt: string
+  onlineCount: number
+  loadPcs: () => Promise<void>
+  setBusy: (pcId: string, key: keyof BusyById[string], value: boolean) => void
+  setPcError: (message: string) => void
+  setRowError: (pcId: string, message: string) => void
+  createPcEntry: (payload: PcCreatePayload) => Promise<boolean>
+  deletePcEntry: (pcId: string) => Promise<void>
+  updatePcEntry: (pcId: string, payload: PcUpdatePayload) => Promise<Pc>
+  refreshPcStatusEntry: (pcId: string) => Promise<void>
+  handleFilterChange: (key: keyof PcFilterState, value: string) => void
+  handleApplyFilters: () => void
+  handleClearFilters: () => void
+}
+
+export function usePcData({ loadLogs, setNotice }: UsePcDataParams): UsePcDataReturn {
+  const [pcs, setPcs] = useState<Pc[]>([])
   const [pcLoading, setPcLoading] = useState(false)
   const [pcError, setPcError] = useState('')
-  const [pcFilters, setPcFilters] = useState(DEFAULT_FILTERS)
-  const [appliedPcFilters, setAppliedPcFilters] = useState(DEFAULT_FILTERS)
+  const [pcFilters, setPcFilters] = useState<PcFilterState>(DEFAULT_FILTERS)
+  const [appliedPcFilters, setAppliedPcFilters] = useState<PcFilterState>(DEFAULT_FILTERS)
 
   const [createLoading, setCreateLoading] = useState(false)
   const [createError, setCreateError] = useState('')
   const createInFlightRef = useRef(false)
 
-  const [busyById, setBusyById] = useState({})
-  const [rowErrorById, setRowErrorById] = useState({})
+  const [busyById, setBusyById] = useState<BusyById>({})
+  const [rowErrorById, setRowErrorById] = useState<RowErrorById>({})
   const [lastSyncedAt, setLastSyncedAt] = useState('')
 
   const onlineCount = useMemo(
@@ -31,7 +63,7 @@ export function usePcData({ loadLogs, setNotice }) {
     [pcs],
   )
 
-  const setBusy = useCallback((pcId, key, value) => {
+  const setBusy = useCallback((pcId: string, key: keyof BusyById[string], value: boolean) => {
     setBusyById((prev) => ({
       ...prev,
       [pcId]: {
@@ -41,7 +73,7 @@ export function usePcData({ loadLogs, setNotice }) {
     }))
   }, [])
 
-  const setRowError = useCallback((pcId, message) => {
+  const setRowError = useCallback((pcId: string, message: string) => {
     setRowErrorById((prev) => ({
       ...prev,
       [pcId]: message,
@@ -68,7 +100,7 @@ export function usePcData({ loadLogs, setNotice }) {
   }, [appliedPcFilters.q, appliedPcFilters.status])
 
   const createPcEntry = useCallback(
-    async (payload) => {
+    async (payload: PcCreatePayload) => {
       if (createInFlightRef.current) {
         return false
       }
@@ -94,7 +126,7 @@ export function usePcData({ loadLogs, setNotice }) {
   )
 
   const deletePcEntry = useCallback(
-    async (pcId) => {
+    async (pcId: string) => {
       setBusy(pcId, 'delete', true)
       setRowError(pcId, '')
 
@@ -112,7 +144,7 @@ export function usePcData({ loadLogs, setNotice }) {
   )
 
   const updatePcEntry = useCallback(
-    async (pcId, payload) => {
+    async (pcId: string, payload: PcUpdatePayload) => {
       setBusy(pcId, 'update', true)
       setRowError(pcId, '')
 
@@ -134,7 +166,7 @@ export function usePcData({ loadLogs, setNotice }) {
   )
 
   const refreshPcStatusEntry = useCallback(
-    async (pcId) => {
+    async (pcId: string) => {
       setBusy(pcId, 'status', true)
       setRowError(pcId, '')
 
@@ -152,7 +184,7 @@ export function usePcData({ loadLogs, setNotice }) {
     [loadLogs, setBusy, setNotice, setRowError],
   )
 
-  const handleFilterChange = useCallback((key, value) => {
+  const handleFilterChange = useCallback((key: keyof PcFilterState, value: string) => {
     setPcFilters((prev) => ({
       ...prev,
       [key]: value,

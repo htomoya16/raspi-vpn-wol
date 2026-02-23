@@ -1,7 +1,9 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useState, type KeyboardEvent } from 'react'
+
+import type { LogEntry } from '../types/models'
 import { formatJstDateParts } from '../utils/datetime'
 
-function formatDetails(details) {
+function formatDetails(details: LogEntry['details']): string {
   if (details === null || details === undefined || details === '') {
     return '-'
   }
@@ -26,10 +28,26 @@ function formatDetails(details) {
   return String(details)
 }
 
-function LogsPanel({ items, loading, error, onReload, onClear, embedded = false }) {
+export interface LogsPanelProps {
+  items: LogEntry[]
+  loading: boolean
+  error: string
+  onReload: () => Promise<void> | void
+  onClear: () => Promise<void>
+  embedded?: boolean
+}
+
+function LogsPanel({
+  items,
+  loading,
+  error,
+  onReload,
+  onClear,
+  embedded = false,
+}: LogsPanelProps) {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [clearLoading, setClearLoading] = useState(false)
-  const [expandedDetailIds, setExpandedDetailIds] = useState(() => new Set())
+  const [expandedDetailIds, setExpandedDetailIds] = useState<Set<number>>(() => new Set())
 
   function openConfirm() {
     setConfirmOpen(true)
@@ -57,7 +75,7 @@ function LogsPanel({ items, loading, error, onReload, onClear, embedded = false 
     }
   }
 
-  function toggleDetails(id) {
+  function toggleDetails(id: number) {
     setExpandedDetailIds((prev) => {
       const next = new Set(prev)
       if (next.has(id)) {
@@ -69,7 +87,7 @@ function LogsPanel({ items, loading, error, onReload, onClear, embedded = false 
     })
   }
 
-  function handleRowKeyDown(event, id) {
+  function handleRowKeyDown(event: KeyboardEvent<HTMLTableRowElement>, id: number) {
     if (event.key !== 'Enter' && event.key !== ' ') {
       return
     }

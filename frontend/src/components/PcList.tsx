@@ -1,13 +1,35 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useMediaQuery } from '../hooks/useMediaQuery'
+import type { BusyById, Pc, PcBusyState, PcFilterState, PcUpdatePayload, RowErrorById } from '../types/models'
 import { formatJstDateTime } from '../utils/datetime'
 import PcDeleteDialog from './pc-list/PcDeleteDialog'
+import type { PendingDeleteState } from './pc-list/PcDeleteDialog'
 import PcDetailDialog from './pc-list/PcDetailDialog'
 import PcRowItem from './pc-list/PcRowItem'
-import { EMPTY_EDIT_FORM, STATUS_LABELS } from './pc-list/constants'
-import { parseTags, toEditForm } from './pc-list/utils'
+import { EMPTY_EDIT_FORM, STATUS_LABELS, type PcEditFormState } from './pc-list/constants'
+import { toEditForm, toUpdatePayload } from './pc-list/utils'
+
+export interface PcListProps {
+  items: Pc[]
+  loading: boolean
+  error: string
+  filters: PcFilterState
+  appliedFilters: PcFilterState
+  onFilterChange: (key: keyof PcFilterState, value: string) => void
+  onApplyFilters: () => void
+  onClearFilters: () => void
+  onReload: () => Promise<void> | void
+  onRefreshStatus: (pcId: string) => Promise<void> | void
+  onSendWol: (pcId: string) => Promise<void> | void
+  onDelete: (pcId: string) => Promise<void>
+  onUpdate: (pcId: string, payload: PcUpdatePayload) => Promise<Pc>
+  busyById: BusyById
+  rowErrorById: RowErrorById
+  lastSyncedAt: string
+  embedded?: boolean
+}
 
 function PcList({
   items,
@@ -27,19 +49,19 @@ function PcList({
   rowErrorById,
   lastSyncedAt,
   embedded = false,
-}) {
+}: PcListProps) {
   const isMobile = useMediaQuery('(max-width: 760px)')
   const [showFilters, setShowFilters] = useState(false)
   const [selectedPcId, setSelectedPcId] = useState('')
   const [detailOpen, setDetailOpen] = useState(false)
-  const [pendingDelete, setPendingDelete] = useState(null)
+  const [pendingDelete, setPendingDelete] = useState<PendingDeleteState | null>(null)
   const [confirmLoading, setConfirmLoading] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState('')
-  const [editForm, setEditForm] = useState(EMPTY_EDIT_FORM)
+  const [editForm, setEditForm] = useState<PcEditFormState>(EMPTY_EDIT_FORM)
 
-  const selectedPc = useMemo(
+  const selectedPc = useMemo<Pc | null>(
     () => items.find((pc) => pc.id === selectedPcId) || null,
     [items, selectedPcId],
   )
@@ -100,7 +122,7 @@ function PcList({
     }
   }, [detailOpen, pendingDelete])
 
-  function openDetail(pcId) {
+  function openDetail(pcId: string): void {
     if (confirmLoading || editLoading) {
       return
     }
@@ -110,7 +132,7 @@ function PcList({
     setEditError('')
   }
 
-  function closeDetail() {
+  function closeDetail(): void {
     if (confirmLoading || editLoading) {
       return
     }
@@ -119,18 +141,18 @@ function PcList({
     setEditError('')
   }
 
-  function openDeleteDialog(pcId, pcName) {
+  function openDeleteDialog(pcId: string, pcName: string): void {
     setPendingDelete({ id: pcId, name: pcName })
   }
 
-  function closeDeleteDialog() {
+  function closeDeleteDialog(): void {
     if (confirmLoading) {
       return
     }
     setPendingDelete(null)
   }
 
-  async function confirmAndDelete() {
+  async function confirmAndDelete(): Promise<void> {
     if (!pendingDelete || confirmLoading) {
       return
     }
@@ -149,7 +171,7 @@ function PcList({
     }
   }
 
-  function startEdit() {
+  function startEdit(): void {
     if (!selectedPc) {
       return
     }
@@ -158,7 +180,7 @@ function PcList({
     setIsEditing(true)
   }
 
-  function cancelEdit() {
+  function cancelEdit(): void {
     if (editLoading) {
       return
     }
@@ -167,11 +189,11 @@ function PcList({
     setIsEditing(false)
   }
 
-  function updateEditField(key, value) {
+  function updateEditField(key: keyof PcEditFormState, value: string): void {
     setEditForm((prev) => ({ ...prev, [key]: value }))
   }
 
-  async function submitEdit(event) {
+  async function submitEdit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     if (!selectedPc || editLoading) {
       return
@@ -184,13 +206,11 @@ function PcList({
       return
     }
 
-    const payload = {
+    const payload = toUpdatePayload({
+      ...editForm,
       name,
       mac,
-      ip: editForm.ip.trim() || null,
-      tags: parseTags(editForm.tags),
-      note: editForm.note.trim() || null,
-    }
+    })
 
     setEditLoading(true)
     setEditError('')
@@ -278,7 +298,7 @@ function PcList({
       ) : (
         <ul className="pc-row-list">
           {items.map((pc) => {
-            const isBusy = busyById[pc.id] || {}
+            const isBusy: PcBusyState = busyById[pc.id] || {}
             const isActive = detailOpen && pc.id === selectedPcId
 
             return (
@@ -287,7 +307,7 @@ function PcList({
                 pc={pc}
                 isActive={isActive}
                 isBusy={isBusy}
-                statusLabel={STATUS_LABELS[pc.status] || pc.status}
+                statusLabel={STATUS_LABELS[pc.status]}
                 rowError={rowErrorById[pc.id]}
                 onOpenDetail={openDetail}
                 onSendWol={onSendWol}
@@ -316,7 +336,7 @@ function PcList({
               editLoading={editLoading}
               deleteBusy={selectedPcDeleteBusy}
               rowError={rowErrorById[selectedPc.id]}
-              statusLabel={STATUS_LABELS[selectedPc.status] || selectedPc.status}
+              statusLabel={STATUS_LABELS[selectedPc.status]}
               onClose={closeDetail}
               onSubmitEdit={submitEdit}
               onStartEdit={startEdit}

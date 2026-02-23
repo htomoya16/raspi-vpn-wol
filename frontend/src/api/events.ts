@@ -1,4 +1,4 @@
-export function openEvents() {
+export function openEvents(): EventSource | null {
   if (typeof window === 'undefined' || typeof window.EventSource === 'undefined') {
     return null
   }

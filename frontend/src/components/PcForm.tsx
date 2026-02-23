@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, type FormEvent } from 'react'
+
+import type { PcCreatePayload } from '../types/models'
 
 const INITIAL_FORM = {
   name: '',
@@ -8,14 +10,21 @@ const INITIAL_FORM = {
   note: '',
 }
 
-function PcForm({ loading, error, onCreate, embedded = false }) {
+export interface PcFormProps {
+  loading: boolean
+  error: string
+  onCreate: (payload: PcCreatePayload) => Promise<boolean>
+  embedded?: boolean
+}
+
+function PcForm({ loading, error, onCreate, embedded = false }: PcFormProps) {
   const [form, setForm] = useState(INITIAL_FORM)
 
-  function updateField(key, value) {
+  function updateField(key: keyof typeof INITIAL_FORM, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }))
   }
 
-  async function handleSubmit(event) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const tagList = form.tags
@@ -23,7 +32,7 @@ function PcForm({ loading, error, onCreate, embedded = false }) {
       .map((tag) => tag.trim())
       .filter(Boolean)
 
-    const payload = {
+    const payload: PcCreatePayload = {
       name: form.name.trim(),
       mac: form.mac.trim(),
       ip: form.ip.trim() || null,

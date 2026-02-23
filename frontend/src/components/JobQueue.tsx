@@ -1,13 +1,19 @@
+import type { JobState, TrackedJob } from '../types/models'
 import { formatLocalTime } from '../utils/datetime'
 
-const JOB_STATE_LABEL = {
+const JOB_STATE_LABEL: Record<JobState, string> = {
   queued: '待機中',
   running: '実行中',
   succeeded: '完了',
   failed: '失敗',
 }
 
-function JobQueue({ jobs, embedded = false }) {
+export interface JobQueueProps {
+  jobs: TrackedJob[]
+  embedded?: boolean
+}
+
+function JobQueue({ jobs, embedded = false }: JobQueueProps) {
   const content = (
     <>
       <div className="panel__header">
