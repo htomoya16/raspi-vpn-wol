@@ -8,9 +8,21 @@
 ## 対象ファイル
 
 - `backend/tests/conftest.py`
-- `backend/tests/test_api_minimum.py`
-- `backend/tests/test_api_comprehensive.py`
-- `backend/tests/test_services_unit.py`
+- `backend/tests/api/test_minimum.py`
+- `backend/tests/api/test_pcs_api.py`
+- `backend/tests/api/test_status_api.py`
+- `backend/tests/api/test_wol_api.py`
+- `backend/tests/api/test_jobs_api.py`
+- `backend/tests/api/test_logs_api.py`
+- `backend/tests/api/test_events_api.py`
+- `backend/tests/services/test_pc_registry_service.py`
+- `backend/tests/services/test_status_service.py`
+- `backend/tests/services/test_wol_service.py`
+- `backend/tests/services/test_job_and_event_service.py`
+- `backend/tests/services/test_status_monitor_service.py`
+- `backend/tests/services/test_pc_service.py`
+- `backend/tests/db/test_database_init.py`
+- `backend/tests/runtime/test_lifespan.py`
 
 ## ドキュメント一覧
 
@@ -18,6 +30,8 @@
 - `docs/backend/tests/api-minimum.md`
 - `docs/backend/tests/api-comprehensive.md`
 - `docs/backend/tests/services-unit.md`
+- `docs/backend/tests/db-init.md`
+- `docs/backend/tests/runtime-lifespan.md`
 
 ## 実行方法
 

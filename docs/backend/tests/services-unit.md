@@ -1,9 +1,18 @@
-# `test_services_unit.py` Summary
+# `services/*` Unit Summary
 
 ## 目的
 
 - サービス層の分岐ロジックを、外部依存（socket/subprocess/db）をモックして高速・安定に検証する。
 - APIテストでは見えにくい内部動作（状態遷移、イベント発行、エラーハンドリング）を担保する。
+
+## 対象ファイル
+
+- `backend/tests/services/test_pc_registry_service.py`
+- `backend/tests/services/test_status_service.py`
+- `backend/tests/services/test_wol_service.py`
+- `backend/tests/services/test_job_and_event_service.py`
+- `backend/tests/services/test_status_monitor_service.py`
+- `backend/tests/services/test_pc_service.py`
 
 ## `pc_registry_service`
 
@@ -66,6 +75,9 @@
   - 規定回数で `online` にならなければタイムアウト。
   - `last_seen_at` なし: `unknown`。
   - `last_seen_at` あり: `offline`。
+
+- `test_pc_service_send_wol_marks_unreachable_on_status_probe_error`
+  - ステータス判定処理が例外になった場合は `unreachable` に更新されること。
 
 ## 運用時の注意点
 

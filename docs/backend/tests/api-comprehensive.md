@@ -1,9 +1,18 @@
-# `test_api_comprehensive.py` Summary
+# `api/*` Comprehensive Summary
 
 ## 目的
 
 - API I/Fの詳細仕様（バリデーション、競合、フィルタ、エラーマッピング）を包括的に検証する。
 - 仕様変更時の破壊的変更を早期に検知する。
+
+## 対象ファイル
+
+- `backend/tests/api/test_pcs_api.py`
+- `backend/tests/api/test_status_api.py`
+- `backend/tests/api/test_wol_api.py`
+- `backend/tests/api/test_jobs_api.py`
+- `backend/tests/api/test_logs_api.py`
+- `backend/tests/api/test_events_api.py`
 
 ## PC API
 
@@ -15,6 +24,7 @@
   - 不正MACで `400`。
   - 必須項目不足で `422`。
   - 重複IDで `409`。
+  - 別IDで同一MACを登録しようとした場合も `409`。
 
 - `test_pcs_list_filters_by_query_tag_status_and_cursor`
   - `q` / `tag` / `status` / `cursor` の各フィルタ挙動を確認。
@@ -26,6 +36,9 @@
 - `test_pcs_not_found_and_patch_validation`
   - 未存在IDの GET/PATCH/DELETE が `404`。
   - PATCH不正入力で `422`。
+
+- `test_pcs_patch_duplicate_mac_returns_409`
+  - 別PCのMACへ更新しようとした場合に `409` で拒否されること。
 
 - `test_delete_pc_creates_pc_delete_log`
   - DELETE後に `action=pc_delete` の成功ログが残ること。
@@ -58,6 +71,9 @@
 - `test_jobs_endpoint_error_mapping`
   - 未存在jobで `404`。
   - 空白job_idで `400`。
+
+- `test_refresh_all_statuses_reuses_active_job`
+  - `status_refresh_all` の active job がある場合、新規作成せず既存jobを返すこと。
 
 ## Logs API
 

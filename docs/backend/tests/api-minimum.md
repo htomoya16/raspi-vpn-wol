@@ -1,4 +1,4 @@
-# `test_api_minimum.py` Summary
+# `api/test_minimum.py` Summary
 
 ## 目的
 
@@ -30,4 +30,4 @@
 
 ## 補足
 
-- 本ファイルは「最小保証」のため、詳細なバリデーション・異常系は `test_api_comprehensive.py` 側で担保する。
+- 本ファイルは「最小保証」のため、詳細なバリデーション・異常系は `backend/tests/api/test_pcs_api.py` などの個別APIテスト側で担保する。

@@ -74,3 +74,5 @@
 - `docs/backend/tests/api-minimum.md`
 - `docs/backend/tests/api-comprehensive.md`
 - `docs/backend/tests/services-unit.md`
+- `docs/backend/tests/db-init.md`
+- `docs/backend/tests/runtime-lifespan.md`
