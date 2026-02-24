@@ -24,6 +24,16 @@ def get_job(job_id: str) -> dict[str, object]:
     return _to_job(row)
 
 
+def get_active_job_by_type(job_type: str) -> dict[str, object] | None:
+    normalized_type = job_type.strip()
+    if not normalized_type:
+        raise ValueError("job_type is required")
+    row = job_repository.get_active_job_by_type(normalized_type)
+    if row is None:
+        return None
+    return _to_job(row)
+
+
 async def run_job(
     job_id: str,
     runner: Callable[[], object],
