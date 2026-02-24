@@ -60,7 +60,7 @@ function PcDetailDialog({
         </div>
 
         {isEditing ? (
-          <form className="pc-edit-form" onSubmit={onSubmitEdit}>
+          <form className="pc-edit-form" onSubmit={onSubmitEdit} noValidate>
             <label>
               表示名
               <input
