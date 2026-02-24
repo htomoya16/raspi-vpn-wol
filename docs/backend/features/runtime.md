@@ -8,6 +8,7 @@
 ## 変更内容
 
 - `app.main` の `lifespan` で起動時に `init_db()` を実行。
+- `lifespan` で 60秒間隔の定期ステータス監視タスクを起動する。
 - `init_db()` で `pcs` / `logs` / `jobs` を `CREATE TABLE IF NOT EXISTS`。
 - 初期スキーマ方針:
   - `pcs`: PC設定 + 状態保持
@@ -22,3 +23,4 @@
 - DBファイルは `backend/app/db/app.db`。
 - `health` はアプリ生存確認のみで、外部依存（LAN疎通等）は検査しない。
 - 起動直後にAPI異常がある場合は `init_db()` の例外有無を最優先で確認する。
+- 複数ワーカーで起動した場合は、ワーカー数ぶん監視タスクが立ち上がる点に注意する。

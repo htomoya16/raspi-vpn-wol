@@ -1,15 +1,23 @@
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 
 from app.api import events, jobs, logs, pcs
 from app.db.database import init_db
+from app.services import status_monitor_service
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     init_db()
-    yield
+    monitor_task = asyncio.create_task(status_monitor_service.run_periodic_status_monitor())
+    try:
+        yield
+    finally:
+        monitor_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await monitor_task
 
 
 app = FastAPI(title="raspi-vpn-wol API", lifespan=lifespan)

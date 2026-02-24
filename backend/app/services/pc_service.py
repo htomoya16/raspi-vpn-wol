@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from sqlite3 import IntegrityError
 from datetime import datetime, timezone
 from uuid import uuid4
@@ -12,6 +13,8 @@ from app.services import pc_registry_service, status_service, wol_service
 from app.types import PcRow
 
 STATUS_VALUES: set[PcStatus] = {"online", "offline", "unknown", "booting", "unreachable"}
+BOOTING_POLL_INTERVAL_SECONDS = 3
+BOOTING_POLL_MAX_ATTEMPTS = 20
 
 
 class PcConflictError(ValueError):
@@ -236,6 +239,9 @@ def send_wol(
     broadcast: str | None = None,
     port: int | None = None,
 ) -> dict[str, object]:
+    current = pc_repository.get_pc_by_id(pc_id.strip())
+    had_seen_before = bool(current and current.get("last_seen_at"))
+
     normalized_repeat = repeat if repeat > 0 else 1
     message = ""
     for _ in range(normalized_repeat):
@@ -245,6 +251,43 @@ def send_wol(
             wol_port_override=port,
         )
         message = result["message"]
+
     pc_registry_service.update_runtime_status(pc_id, status="booting", mark_seen=False)
     now_iso = datetime.now(timezone.utc).isoformat()
-    return {"message": message, "requested_at": now_iso}
+
+    attempts = 0
+    for attempt in range(BOOTING_POLL_MAX_ATTEMPTS):
+        attempts = attempt + 1
+        time.sleep(BOOTING_POLL_INTERVAL_SECONDS)
+        try:
+            probe = status_service.get_pc_status(pc_id)
+            probe_status = str(probe["status"])
+        except ValueError:
+            pc_registry_service.update_runtime_status(pc_id, status="unreachable", mark_seen=False)
+            return {
+                "message": message,
+                "requested_at": now_iso,
+                "final_status": "unreachable",
+                "poll_interval_seconds": BOOTING_POLL_INTERVAL_SECONDS,
+                "poll_attempts": attempts,
+            }
+
+        if probe_status == "online":
+            pc_registry_service.update_runtime_status(pc_id, status="online", mark_seen=True)
+            return {
+                "message": message,
+                "requested_at": now_iso,
+                "final_status": "online",
+                "poll_interval_seconds": BOOTING_POLL_INTERVAL_SECONDS,
+                "poll_attempts": attempts,
+            }
+
+    final_status: PcStatus = "offline" if had_seen_before else "unknown"
+    pc_registry_service.update_runtime_status(pc_id, status=final_status, mark_seen=False)
+    return {
+        "message": message,
+        "requested_at": now_iso,
+        "final_status": final_status,
+        "poll_interval_seconds": BOOTING_POLL_INTERVAL_SECONDS,
+        "poll_attempts": attempts,
+    }

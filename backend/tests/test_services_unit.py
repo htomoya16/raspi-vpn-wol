@@ -7,7 +7,15 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.services import event_service, job_service, pc_registry_service, status_service, wol_service
+from app.services import (
+    event_service,
+    job_service,
+    pc_registry_service,
+    pc_service,
+    status_monitor_service,
+    status_service,
+    wol_service,
+)
 
 
 def _pc_row(**overrides: object) -> dict[str, object]:
@@ -280,3 +288,152 @@ def test_event_broker_stream_receives_published_event() -> None:
     message = asyncio.run(_run_case())
     assert "event: pc_status" in message
     assert "\"pc_id\": \"pc-1\"" in message
+
+
+def test_status_monitor_enqueue_reuses_active_job(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        status_monitor_service.job_service,
+        "get_active_job_by_type",
+        lambda _: {"id": "job-active"},
+    )
+    monkeypatch.setattr(
+        status_monitor_service.job_service,
+        "create_job",
+        lambda *args, **kwargs: pytest.fail("create_job should not be called"),
+    )
+
+    job_id = asyncio.run(status_monitor_service.enqueue_status_refresh_all_job())
+    assert job_id == "job-active"
+
+
+def test_status_monitor_enqueue_creates_job_and_publishes(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        status_monitor_service.job_service,
+        "get_active_job_by_type",
+        lambda _: None,
+    )
+    monkeypatch.setattr(
+        status_monitor_service.job_service,
+        "create_job",
+        lambda *args, **kwargs: {"id": "job-new", "state": "queued"},
+    )
+
+    async def _run_job(*args: object, **kwargs: object) -> None:
+        return None
+
+    monkeypatch.setattr(status_monitor_service.job_service, "run_job", _run_job)
+
+    created_coroutines: list[object] = []
+
+    class _DummyTask:
+        def cancel(self) -> None:
+            return None
+
+    def _create_task(coro: object) -> _DummyTask:
+        created_coroutines.append(coro)
+        return _DummyTask()
+
+    monkeypatch.setattr(status_monitor_service.asyncio, "create_task", _create_task)
+
+    published: list[tuple[str, dict[str, object]]] = []
+
+    async def _publish(event: str, data: dict[str, object]) -> None:
+        published.append((event, data))
+
+    monkeypatch.setattr(status_monitor_service.event_service.event_broker, "publish", _publish)
+
+    job_id = asyncio.run(status_monitor_service.enqueue_status_refresh_all_job())
+    assert job_id == "job-new"
+    assert published == [("job", {"job_id": "job-new", "state": "queued"})]
+    assert len(created_coroutines) == 1
+
+    for coro in created_coroutines:
+        close = getattr(coro, "close", None)
+        if callable(close):
+            close()
+
+
+def test_pc_service_send_wol_polls_every_3_seconds_until_online(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        pc_service.pc_repository,
+        "get_pc_by_id",
+        lambda _: _pc_row(last_seen_at=None),
+    )
+    monkeypatch.setattr(
+        pc_service.wol_service,
+        "send_wol",
+        lambda **kwargs: {"message": "sent"},
+    )
+    monkeypatch.setattr(pc_service.time, "sleep", lambda _: None)
+    monkeypatch.setattr(pc_service, "BOOTING_POLL_MAX_ATTEMPTS", 3)
+
+    probes = iter(
+        [
+            {"pc_id": "pc-1", "status": "offline"},
+            {"pc_id": "pc-1", "status": "online"},
+        ]
+    )
+    monkeypatch.setattr(pc_service.status_service, "get_pc_status", lambda _: next(probes))
+
+    updates: list[tuple[str, bool]] = []
+
+    def _capture_update(pc_id: str, status: str, mark_seen: bool = False) -> dict[str, object]:
+        assert pc_id == "pc-1"
+        updates.append((status, mark_seen))
+        return _pc_row(status=status, last_seen_at="2026-01-01T00:00:00+00:00")
+
+    monkeypatch.setattr(pc_service.pc_registry_service, "update_runtime_status", _capture_update)
+
+    result = pc_service.send_wol("pc-1")
+
+    assert result["poll_interval_seconds"] == 3
+    assert result["poll_attempts"] == 2
+    assert result["final_status"] == "online"
+    assert updates == [("booting", False), ("online", True)]
+
+
+def test_pc_service_send_wol_poll_timeout_marks_offline_or_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        pc_service.wol_service,
+        "send_wol",
+        lambda **kwargs: {"message": "sent"},
+    )
+    monkeypatch.setattr(pc_service.time, "sleep", lambda _: None)
+    monkeypatch.setattr(pc_service, "BOOTING_POLL_MAX_ATTEMPTS", 2)
+    monkeypatch.setattr(
+        pc_service.status_service,
+        "get_pc_status",
+        lambda _: {"pc_id": "pc-1", "status": "offline"},
+    )
+
+    unknown_updates: list[tuple[str, bool]] = []
+
+    monkeypatch.setattr(
+        pc_service.pc_repository,
+        "get_pc_by_id",
+        lambda _: _pc_row(last_seen_at=None),
+    )
+    monkeypatch.setattr(
+        pc_service.pc_registry_service,
+        "update_runtime_status",
+        lambda _pc_id, status, mark_seen=False: unknown_updates.append((status, mark_seen)) or _pc_row(status=status),
+    )
+    unknown_result = pc_service.send_wol("pc-1")
+    assert unknown_result["final_status"] == "unknown"
+    assert unknown_updates[-1] == ("unknown", False)
+
+    offline_updates: list[tuple[str, bool]] = []
+
+    monkeypatch.setattr(
+        pc_service.pc_repository,
+        "get_pc_by_id",
+        lambda _: _pc_row(last_seen_at="2026-01-01T00:00:00+00:00"),
+    )
+    monkeypatch.setattr(
+        pc_service.pc_registry_service,
+        "update_runtime_status",
+        lambda _pc_id, status, mark_seen=False: offline_updates.append((status, mark_seen)) or _pc_row(status=status),
+    )
+    offline_result = pc_service.send_wol("pc-1")
+    assert offline_result["final_status"] == "offline"
+    assert offline_updates[-1] == ("offline", False)
