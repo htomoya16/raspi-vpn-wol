@@ -52,6 +52,34 @@ def get_job(job_id: str) -> JobRow | None:
     return cast(JobRow, dict(row))
 
 
+def get_active_job_by_type(job_type: str) -> JobRow | None:
+    with connection() as conn:
+        row = conn.execute(
+            """
+            SELECT
+                id,
+                job_type,
+                state,
+                payload_json,
+                result_json,
+                error_message,
+                created_at,
+                started_at,
+                finished_at,
+                updated_at
+            FROM jobs
+            WHERE job_type = ?
+              AND state IN ('queued', 'running')
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (job_type,),
+        ).fetchone()
+    if row is None:
+        return None
+    return cast(JobRow, dict(row))
+
+
 def mark_running(job_id: str) -> None:
     now_iso = datetime.now(timezone.utc).isoformat()
     with connection() as conn:

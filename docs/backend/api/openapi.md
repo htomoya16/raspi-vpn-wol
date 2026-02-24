@@ -21,6 +21,8 @@
 - summary: PC登録
 - requestBody: `PcCreate`
 - responses: `201`, `400`, `409`, `422`
+- note: `id` または `mac` が重複する場合は `409` を返す
+- note: `409` の `detail` 例: `既に存在しています（MAC: AA:BB:CC:DD:EE:FF）`
 
 ### `GET /api/pcs/{pc_id}`
 
@@ -33,7 +35,9 @@
 - operationId: `updatePc`
 - summary: PC部分更新
 - requestBody: `PcUpdate`
-- responses: `200`, `400`, `404`, `422`
+- responses: `200`, `400`, `409`, `404`, `422`
+- note: 更新後の `mac` が他PCと重複する場合は `409` を返す
+- note: `409` の `detail` 例: `既に存在しています（MAC: AA:BB:CC:DD:EE:FF）`
 
 ### `DELETE /api/pcs/{pc_id}`
 
@@ -59,6 +63,7 @@
 - operationId: `refreshAllStatuses`
 - summary: 全PCステータス更新（非同期）
 - responses: `202`
+- note: `status_refresh_all` が `queued/running` の場合は新規作成せず既存ジョブIDを返す
 
 ### `GET /api/logs`
 

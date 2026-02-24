@@ -5,6 +5,7 @@ import type {
   Pc,
   PcCreatePayload,
   PcFilterState,
+  PcStatus,
   PcUpdatePayload,
   RowErrorById,
 } from '../types/models'
@@ -38,6 +39,7 @@ interface UsePcDataReturn {
   deletePcEntry: (pcId: string) => Promise<void>
   updatePcEntry: (pcId: string, payload: PcUpdatePayload) => Promise<Pc>
   refreshPcStatusEntry: (pcId: string) => Promise<void>
+  applyPcStatusEvent: (pcId: string, status: PcStatus, updatedAt: string, lastSeenAt: string | null) => void
   handleFilterChange: (key: keyof PcFilterState, value: string) => void
   handleApplyFilters: () => void
   handleClearFilters: () => void
@@ -184,6 +186,25 @@ export function usePcData({ loadLogs, setNotice }: UsePcDataParams): UsePcDataRe
     [loadLogs, setBusy, setNotice, setRowError],
   )
 
+  const applyPcStatusEvent = useCallback(
+    (pcId: string, status: PcStatus, updatedAt: string, lastSeenAt: string | null) => {
+      setPcs((prev) =>
+        prev.map((pc) =>
+          pc.id === pcId
+            ? {
+                ...pc,
+                status,
+                updated_at: updatedAt,
+                last_seen_at: lastSeenAt,
+              }
+            : pc,
+        ),
+      )
+      setLastSyncedAt(new Date().toISOString())
+    },
+    [],
+  )
+
   const handleFilterChange = useCallback((key: keyof PcFilterState, value: string) => {
     setPcFilters((prev) => ({
       ...prev,
@@ -220,6 +241,7 @@ export function usePcData({ loadLogs, setNotice }: UsePcDataParams): UsePcDataRe
     deletePcEntry,
     updatePcEntry,
     refreshPcStatusEntry,
+    applyPcStatusEvent,
     handleFilterChange,
     handleApplyFilters,
     handleClearFilters,

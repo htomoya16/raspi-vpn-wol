@@ -9,6 +9,19 @@ from typing import Iterator
 DB_PATH = Path(__file__).resolve().parent / "app.db"
 
 
+def _normalize_mac_for_migration(mac_address: str) -> str:
+    normalized = mac_address.strip().replace("-", ":").replace(".", "")
+    compact = normalized.replace(":", "").lower()
+    if len(compact) != 12:
+        raise ValueError("invalid mac address length")
+    try:
+        int(compact, 16)
+    except ValueError as exc:
+        raise ValueError("invalid mac address format") from exc
+    pairs = [compact[i : i + 2].upper() for i in range(0, 12, 2)]
+    return ":".join(pairs)
+
+
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -98,4 +111,58 @@ def init_db() -> None:
         )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_jobs_state_created_at ON jobs(state, created_at DESC)"
+        )
+
+        pc_rows = conn.execute(
+            """
+            SELECT id, mac_address
+            FROM pcs
+            """
+        ).fetchall()
+        for row in pc_rows:
+            pc_id = str(row["id"])
+            raw_mac = str(row["mac_address"])
+            try:
+                normalized_mac = _normalize_mac_for_migration(raw_mac)
+            except ValueError as exc:
+                raise RuntimeError(
+                    "pcs.mac_address の一意制約マイグレーションに失敗: "
+                    f"不正なMAC形式のレコードがあります。id={pc_id}, mac={raw_mac}"
+                ) from exc
+            if normalized_mac != raw_mac:
+                conn.execute(
+                    """
+                    UPDATE pcs
+                    SET mac_address = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                    """,
+                    (normalized_mac, pc_id),
+                )
+
+        duplicates = conn.execute(
+            """
+            SELECT
+                mac_address,
+                COUNT(*) AS cnt,
+                GROUP_CONCAT(id, ', ') AS ids
+            FROM pcs
+            WHERE mac_address IS NOT NULL
+              AND TRIM(mac_address) != ''
+            GROUP BY mac_address
+            HAVING COUNT(*) > 1
+            ORDER BY cnt DESC, mac_address ASC
+            """
+        ).fetchall()
+        if duplicates:
+            duplicate_lines = [
+                f"{row['mac_address']} ({row['cnt']}件): {row['ids']}"
+                for row in duplicates
+            ]
+            joined = "; ".join(duplicate_lines)
+            raise RuntimeError(
+                "pcs.mac_address の一意制約マイグレーションに失敗: "
+                f"重複MACが存在します。重複を解消してから再起動してください。{joined}"
+            )
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_pcs_mac_address ON pcs(mac_address)"
         )

@@ -42,7 +42,7 @@ def list_pcs(
     summary="PC登録",
     responses={
         400: {"description": "入力値不正"},
-        409: {"description": "重複ID"},
+        409: {"description": "重複ID/MAC"},
         422: {"description": "リクエスト形式エラー"},
     },
 )
@@ -78,6 +78,7 @@ def get_pc(pc_id: str) -> PcResponse:
     summary="PC部分更新",
     responses={
         400: {"description": "入力値不正"},
+        409: {"description": "重複MAC"},
         404: {"description": "対象が存在しない"},
         422: {"description": "リクエスト形式エラー"},
     },
@@ -85,6 +86,8 @@ def get_pc(pc_id: str) -> PcResponse:
 def update_pc(pc_id: str, payload: PcUpdate) -> PcResponse:
     try:
         pc = pc_service.update_pc(pc_id, payload)
+    except PcConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -165,7 +168,12 @@ async def refresh_pc_status(pc_id: str) -> PcResponse:
 
     await event_service.event_broker.publish(
         "pc_status",
-        {"pc_id": pc_id, "status": pc["status"], "updated_at": pc["updated_at"]},
+        {
+            "pc_id": pc_id,
+            "status": pc["status"],
+            "updated_at": pc["updated_at"],
+            "last_seen_at": pc["last_seen_at"],
+        },
     )
     return PcResponse(pc=pc)
 
@@ -177,6 +185,10 @@ async def refresh_pc_status(pc_id: str) -> PcResponse:
     summary="全PCステータス更新（非同期）",
 )
 async def refresh_all_statuses() -> JobAccepted:
+    active_job = job_service.get_active_job_by_type("status_refresh_all")
+    if active_job is not None:
+        return JobAccepted(job_id=str(active_job["id"]), state=str(active_job["state"]))
+
     job = job_service.create_job("status_refresh_all", payload=None)
     asyncio.create_task(job_service.run_job(job["id"], pc_service.refresh_all_statuses))
     await event_service.event_broker.publish("job", {"job_id": job["id"], "state": "queued"})

@@ -38,6 +38,37 @@ def get_pc_by_id(pc_id: str) -> PcRow | None:
     return cast(PcRow, dict(row))
 
 
+def get_pc_by_mac(mac_address: str) -> PcRow | None:
+    with connection() as conn:
+        row = conn.execute(
+            """
+            SELECT
+                id,
+                name,
+                mac_address,
+                ip_address,
+                tags_json,
+                note,
+                status,
+                last_seen_at,
+                broadcast_ip,
+                send_interface,
+                wol_port,
+                status_method,
+                status_port,
+                created_at,
+                updated_at
+            FROM pcs
+            WHERE mac_address = ?
+            """,
+            (mac_address,),
+        ).fetchone()
+
+    if row is None:
+        return None
+    return cast(PcRow, dict(row))
+
+
 def list_pcs() -> list[PcRow]:
     with connection() as conn:
         rows = conn.execute(

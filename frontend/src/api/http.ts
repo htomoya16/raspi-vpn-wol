@@ -53,6 +53,12 @@ export function formatApiError(error: unknown): string {
     return `対象が見つかりません: ${error.detail}`
   }
   if (error.status === 409) {
+    if (error.detail.includes('MAC')) {
+      return 'このMACアドレスは既に登録されています'
+    }
+    if (error.detail.includes('ID')) {
+      return 'このIDは既に登録されています'
+    }
     return `重複エラー: ${error.detail}`
   }
   if (error.status === 422) {

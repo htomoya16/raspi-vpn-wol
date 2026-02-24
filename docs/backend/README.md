@@ -52,6 +52,10 @@
 
 - `docs/backend/api/openapi.md`
 
+## DB 設計ドキュメント
+
+- `docs/backend/db/er.md`（DBスキーマの正）
+
 ## 機能別ドキュメント
 
 - `docs/backend/features/pcs.md`

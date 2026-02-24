@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from sqlite3 import IntegrityError
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -15,6 +16,16 @@ STATUS_VALUES: set[PcStatus] = {"online", "offline", "unknown", "booting", "unre
 
 class PcConflictError(ValueError):
     pass
+
+
+def _ensure_mac_unique(mac_address: str, exclude_pc_id: str | None = None) -> None:
+    normalized_mac = pc_registry_service.normalize_mac_address(mac_address)
+    existing = pc_repository.get_pc_by_mac(normalized_mac)
+    if existing is None:
+        return
+    if exclude_pc_id is not None and existing["id"] == exclude_pc_id:
+        return
+    raise PcConflictError(f"既に存在しています（MAC: {normalized_mac}）")
 
 
 def _normalize_generated_id(name: str) -> str:
@@ -122,20 +133,28 @@ def create_pc(payload: PcCreate) -> dict[str, object]:
     requested_id = payload.id.strip() if payload.id else ""
     if requested_id:
         if pc_repository.get_pc_by_id(requested_id) is not None:
-            raise PcConflictError(f"pc already exists: {requested_id}")
+            raise PcConflictError(f"既に存在しています（ID: {requested_id}）")
         pc_id = requested_id
     else:
         pc_id = _generate_unique_pc_id(payload.name)
 
-    pc_row = pc_registry_service.upsert_pc(
-        pc_id=pc_id,
-        name=payload.name,
-        mac_address=payload.mac,
-        ip_address=payload.ip,
-        tags=payload.tags,
-        note=payload.note,
-        status="unknown",
-    )
+    _ensure_mac_unique(payload.mac)
+
+    try:
+        pc_row = pc_registry_service.upsert_pc(
+            pc_id=pc_id,
+            name=payload.name,
+            mac_address=payload.mac,
+            ip_address=payload.ip,
+            tags=payload.tags,
+            note=payload.note,
+            status="unknown",
+        )
+    except IntegrityError as exc:
+        if "uq_pcs_mac_address" in str(exc) or "pcs.mac_address" in str(exc):
+            normalized_mac = pc_registry_service.normalize_mac_address(payload.mac)
+            raise PcConflictError(f"既に存在しています（MAC: {normalized_mac}）") from exc
+        raise
     return _row_to_pc(pc_row)
 
 
@@ -144,22 +163,30 @@ def update_pc(pc_id: str, payload: PcUpdate) -> dict[str, object]:
     if existing is None:
         raise LookupError(f"pc not found: {pc_id}")
     patch = payload.model_dump(exclude_unset=True)
+    next_mac = patch["mac"] if "mac" in patch else existing["mac_address"]
+    _ensure_mac_unique(str(next_mac), exclude_pc_id=existing["id"])
 
-    pc_row = pc_registry_service.upsert_pc(
-        pc_id=existing["id"],
-        name=patch["name"] if "name" in patch else existing["name"],
-        mac_address=patch["mac"] if "mac" in patch else existing["mac_address"],
-        ip_address=patch["ip"] if "ip" in patch else existing["ip_address"],
-        tags=patch["tags"] if "tags" in patch else _parse_tags(existing.get("tags_json", "[]")),
-        note=patch["note"] if "note" in patch else existing.get("note"),
-        status=str(existing.get("status") or "unknown"),
-        last_seen_at=existing.get("last_seen_at"),
-        broadcast_ip=existing.get("broadcast_ip"),
-        send_interface=existing.get("send_interface"),
-        wol_port=int(existing.get("wol_port") or 9),
-        status_method=existing.get("status_method"),
-        status_port=int(existing.get("status_port") or 445),
-    )
+    try:
+        pc_row = pc_registry_service.upsert_pc(
+            pc_id=existing["id"],
+            name=patch["name"] if "name" in patch else existing["name"],
+            mac_address=patch["mac"] if "mac" in patch else existing["mac_address"],
+            ip_address=patch["ip"] if "ip" in patch else existing["ip_address"],
+            tags=patch["tags"] if "tags" in patch else _parse_tags(existing.get("tags_json", "[]")),
+            note=patch["note"] if "note" in patch else existing.get("note"),
+            status=str(existing.get("status") or "unknown"),
+            last_seen_at=existing.get("last_seen_at"),
+            broadcast_ip=existing.get("broadcast_ip"),
+            send_interface=existing.get("send_interface"),
+            wol_port=int(existing.get("wol_port") or 9),
+            status_method=existing.get("status_method"),
+            status_port=int(existing.get("status_port") or 445),
+        )
+    except IntegrityError as exc:
+        if "uq_pcs_mac_address" in str(exc) or "pcs.mac_address" in str(exc):
+            normalized_mac = pc_registry_service.normalize_mac_address(str(next_mac))
+            raise PcConflictError(f"既に存在しています（MAC: {normalized_mac}）") from exc
+        raise
     return _row_to_pc(pc_row)
 
 

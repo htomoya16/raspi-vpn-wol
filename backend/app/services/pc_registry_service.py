@@ -11,7 +11,7 @@ from app.types import PcDeletedResult, PcRow
 STATUS_VALUES = {"online", "offline", "unknown", "booting", "unreachable"}
 
 
-def _normalize_mac_address(mac_address: str) -> str:
+def normalize_mac_address(mac_address: str) -> str:
     normalized = mac_address.strip().replace("-", ":").replace(".", "")
     compact = normalized.replace(":", "").lower()
     if len(compact) != 12:
@@ -106,7 +106,7 @@ def upsert_pc(
     pc_row = pc_repository.upsert_pc(
         pc_id=normalized_id,
         name=normalized_name,
-        mac_address=_normalize_mac_address(mac_address),
+        mac_address=normalize_mac_address(mac_address),
         ip_address=ip_address.strip() if ip_address else None,
         tags_json=json.dumps([tag.strip() for tag in persisted_tags if tag.strip()]),
         note=persisted_note.strip() if isinstance(persisted_note, str) and persisted_note.strip() else None,
