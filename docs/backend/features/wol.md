@@ -22,6 +22,10 @@
   - `ip_address` 設定時は IF のネットワーク内に属するか確認。
 - リクエスト上書き:
   - `broadcast`, `port`, `repeat` を指定した場合は送信時に上書き。
+- 起動待ちポーリング:
+  - WOL送信後は `booting` に更新し、3秒間隔で起動確認を実行する。
+  - 最大20回（約60秒）まで確認し、成功時は `online` に更新する。
+  - タイムアウト時は、過去に到達実績があるPCは `offline`、未到達PCは `unknown` に更新する。
 - ログ:
   - 成功: `status=sent`
   - 失敗: `status=failed`（理由を `message` に格納）

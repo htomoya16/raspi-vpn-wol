@@ -66,3 +66,13 @@
 - `docs/backend/features/types-and-models.md`
 - `docs/backend/features/backlog.md`
 - `docs/backend/features/testing.md`
+
+## テスト仕様ドキュメント
+
+- `docs/backend/tests/README.md`
+- `docs/backend/tests/conftest.md`
+- `docs/backend/tests/api-minimum.md`
+- `docs/backend/tests/api-comprehensive.md`
+- `docs/backend/tests/services-unit.md`
+- `docs/backend/tests/db-init.md`
+- `docs/backend/tests/runtime-lifespan.md`

@@ -51,6 +51,7 @@
 - summary: WOL送信（非同期）
 - requestBody: `WolRequest`（任意）
 - responses: `202`, `400`, `404`, `422`
+- note: 送信後は `booting` へ更新し、バックエンドで3秒間隔の起動確認（最大20回）を行う
 
 ### `POST /api/pcs/{pc_id}/status/refresh`
 
@@ -64,6 +65,7 @@
 - summary: 全PCステータス更新（非同期）
 - responses: `202`
 - note: `status_refresh_all` が `queued/running` の場合は新規作成せず既存ジョブIDを返す
+- note: バックエンドでは同等の全体更新ジョブを60秒ごとに自動投入する
 
 ### `GET /api/logs`
 

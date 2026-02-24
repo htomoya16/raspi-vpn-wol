@@ -33,6 +33,10 @@
 6. `Step 6: ログ表示を追加する`
 - `GET /api/logs` を表示し、件数切替を実装する。
 
+7. `Step 7: フロント自動テストを追加する`
+- Vitest + Testing Library を導入し、`api/hooks/components/utils` の回帰テストを追加する。
+- `npm run test` をCIに組み込み、PR時に自動実行される状態にする。
+
 ## ステップごとの完了条件
 
 1. 変更ファイルが小さく、役割が説明できる。

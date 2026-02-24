@@ -171,15 +171,16 @@ export function useDashboardData(): UseDashboardDataResult {
       const status = data.status
       const updatedAt = data.updated_at
       const lastSeenAt = data.last_seen_at
+      const normalizedLastSeenAt = typeof lastSeenAt === 'string' ? lastSeenAt : null
       if (
         typeof pcId !== 'string' ||
         !isPcStatus(status) ||
         typeof updatedAt !== 'string' ||
-        (lastSeenAt !== null && typeof lastSeenAt !== 'string')
+        (lastSeenAt !== undefined && lastSeenAt !== null && typeof lastSeenAt !== 'string')
       ) {
         return
       }
-      applyPcStatusEvent(pcId, status, updatedAt, lastSeenAt)
+      applyPcStatusEvent(pcId, status, updatedAt, normalizedLastSeenAt)
       void loadLogs()
     }
 
