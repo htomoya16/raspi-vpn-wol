@@ -67,6 +67,7 @@ def test_pcs_list_filters_by_query_tag_status_and_cursor(client: TestClient) -> 
 
     query_response = client.get("/api/pcs", params={"q": "amm"})
     assert query_response.status_code == 200
+    assert query_response.headers["cache-control"] == "private, max-age=10, stale-while-revalidate=20"
     assert [item["id"] for item in query_response.json()["items"]] == ["pc-c"]
 
     tag_response = client.get("/api/pcs", params={"tag": "desk"})

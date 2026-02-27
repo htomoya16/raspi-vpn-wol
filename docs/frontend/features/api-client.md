@@ -7,6 +7,7 @@
 ## 変更内容
 
 - `src/api/http.ts` に共通 `request` と `ApiError` を実装。
+- キャッシュ方針は `docs/frontend/features/cache.md` に分離し、APIごとのTTL/無効化を管理する。
 - APIモジュールを機能別に分割:
   - `pcs.ts`
   - `logs.ts`

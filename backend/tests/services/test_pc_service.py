@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.models.pcs import PcCreate
 from app.services import pc_service
 
 
@@ -144,3 +145,105 @@ def test_pc_service_send_wol_marks_unreachable_on_status_probe_error(monkeypatch
     assert result["final_status"] == "unreachable"
     assert result["poll_attempts"] == 1
     assert updates == [("booting", False), ("unreachable", False)]
+
+
+def test_list_pcs_uses_memory_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+    pc_service.cache.clear()
+    call_count = {"list_pcs": 0}
+
+    def _list_pcs(**_: object) -> list[dict[str, object]]:
+        call_count["list_pcs"] += 1
+        return [_pc_row(id="pc-cache")]
+
+    monkeypatch.setattr(pc_service.pc_repository, "list_pcs", _list_pcs)
+
+    first_items, first_cursor = pc_service.list_pcs(
+        q=None,
+        status=None,
+        tag=None,
+        limit=50,
+        cursor=None,
+    )
+    second_items, second_cursor = pc_service.list_pcs(
+        q=None,
+        status=None,
+        tag=None,
+        limit=50,
+        cursor=None,
+    )
+
+    assert call_count["list_pcs"] == 1
+    assert first_cursor is None
+    assert second_cursor is None
+    assert [item["id"] for item in first_items] == ["pc-cache"]
+    assert [item["id"] for item in second_items] == ["pc-cache"]
+
+
+def test_create_pc_invalidates_list_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+    pc_service.cache.clear()
+    call_count = {"list_pcs": 0}
+
+    def _list_pcs(**_: object) -> list[dict[str, object]]:
+        call_count["list_pcs"] += 1
+        return [_pc_row(id="pc-before")]
+
+    monkeypatch.setattr(pc_service.pc_repository, "list_pcs", _list_pcs)
+    monkeypatch.setattr(pc_service.pc_repository, "get_pc_by_id", lambda _pc_id: None)
+    monkeypatch.setattr(pc_service.pc_repository, "get_pc_by_mac", lambda _mac: None)
+    monkeypatch.setattr(
+        pc_service.pc_registry_service,
+        "upsert_pc",
+        lambda **kwargs: _pc_row(
+            id=kwargs["pc_id"],
+            name=kwargs["name"],
+            mac_address=kwargs["mac_address"],
+        ),
+    )
+
+    pc_service.list_pcs(q=None, status=None, tag=None, limit=50, cursor=None)
+    pc_service.list_pcs(q=None, status=None, tag=None, limit=50, cursor=None)
+    assert call_count["list_pcs"] == 1
+
+    payload = PcCreate(id="pc-new", name="New PC", mac="AA:BB:CC:DD:EE:99")
+    created = pc_service.create_pc(payload)
+    assert created["id"] == "pc-new"
+
+    pc_service.list_pcs(q=None, status=None, tag=None, limit=50, cursor=None)
+    assert call_count["list_pcs"] == 2
+
+
+def test_get_uptime_summary_uses_memory_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+    pc_service.cache.clear()
+    call_count = {"summary": 0}
+
+    def _get_summary(**_: object) -> dict[str, object]:
+        call_count["summary"] += 1
+        return {
+            "pc_id": "pc-1",
+            "from": "2026-02-01",
+            "to": "2026-02-07",
+            "bucket": "day",
+            "tz": "Asia/Tokyo",
+            "items": [],
+        }
+
+    monkeypatch.setattr(pc_service.uptime_service, "get_pc_uptime_summary", _get_summary)
+
+    first = pc_service.get_uptime_summary(
+        pc_id="pc-1",
+        from_date="2026-02-01",
+        to_date="2026-02-07",
+        bucket="day",
+        tz="Asia/Tokyo",
+    )
+    second = pc_service.get_uptime_summary(
+        pc_id="pc-1",
+        from_date="2026-02-01",
+        to_date="2026-02-07",
+        bucket="day",
+        tz="Asia/Tokyo",
+    )
+
+    assert call_count["summary"] == 1
+    assert first["pc_id"] == "pc-1"
+    assert second["pc_id"] == "pc-1"
