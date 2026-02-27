@@ -82,3 +82,29 @@ def test_init_db_raises_when_duplicate_mac_exists(tmp_path: Path, monkeypatch: p
 
     with pytest.raises(RuntimeError, match="重複MAC"):
         db_module.init_db()
+
+
+def test_init_db_creates_uptime_tables(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    test_db_path = tmp_path / "app-test.db"
+    monkeypatch.setattr(db_module, "DB_PATH", test_db_path)
+
+    db_module.init_db()
+
+    with db_module.connection() as conn:
+        status_history = conn.execute(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type='table' AND name='status_history'
+            """
+        ).fetchone()
+        uptime_daily_summary = conn.execute(
+            """
+            SELECT name
+            FROM sqlite_master
+            WHERE type='table' AND name='uptime_daily_summary'
+            """
+        ).fetchone()
+
+    assert status_history is not None
+    assert uptime_daily_summary is not None

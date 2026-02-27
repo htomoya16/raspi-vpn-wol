@@ -1,4 +1,4 @@
-# Uptime Tables DDL (Design Draft)
+# Uptime Tables DDL
 
 ## 目的
 
@@ -7,9 +7,9 @@
 
 ## 変更内容
 
-- `status_history`（状態変化履歴）と `daily_uptime_summary`（日次集計）のDDL案を定義。
+- `status_history`（状態変化履歴）と `uptime_daily_summary`（日次集計）のDDLを定義。
 - インデックス方針と保持期間削除SQLの方針を追記。
-- 本ドキュメントは設計案であり、現時点では未実装。
+- 本ドキュメントは実装済みスキーマを正として扱う。
 
 ## DDL案
 
@@ -34,7 +34,7 @@ ON status_history (changed_at DESC);
 ```
 
 ```sql
-CREATE TABLE IF NOT EXISTS daily_uptime_summary (
+CREATE TABLE IF NOT EXISTS uptime_daily_summary (
     pc_id TEXT NOT NULL,
     date TEXT NOT NULL,
     tz TEXT NOT NULL DEFAULT 'Asia/Tokyo',
@@ -49,33 +49,39 @@ CREATE TABLE IF NOT EXISTS daily_uptime_summary (
     FOREIGN KEY (pc_id) REFERENCES pcs(id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_daily_uptime_date
-ON daily_uptime_summary (date DESC);
+CREATE INDEX IF NOT EXISTS idx_uptime_daily_summary_date
+ON uptime_daily_summary (date DESC);
+
+CREATE INDEX IF NOT EXISTS idx_uptime_daily_summary_pc_date
+ON uptime_daily_summary (pc_id, date DESC);
 ```
 
 ## 保存ルール（前提）
 
 - `status_history` は「状態変化時のみ保存」する。
 - `status` が `online` のときのみ `is_online=1`。それ以外は `0`。
-- 日次グラフは `daily_uptime_summary` を返し、`online_ratio` はAPI側で算出する。
+- 集計APIは `uptime_daily_summary` を正として返却する。
+- `bucket=day` はそのまま返却し、`bucket=week|month|year` はAPI側で再集約する。
+- `online_ratio` はAPI側で算出する。
 
 ## 保持期間ポリシー
 
 - `status_history`: 1年保持
-- `daily_uptime_summary`: 無期限保持
+- `uptime_daily_summary`: 無期限保持
 
 ```sql
 -- status_history の期限切れ削除（1年）
 DELETE FROM status_history
-WHERE changed_at < datetime('now', '-365 days');
+WHERE datetime(changed_at) < datetime('now', '-365 days');
 ```
 
 ## APIとの対応
 
-- `GET /api/pcs/{pc_id}/uptime/daily`
-  - 主に `daily_uptime_summary` を参照。
+- `GET /api/pcs/{pc_id}/uptime/summary`
+  - `uptime_daily_summary` を参照し、`bucket` に応じて集約して返す。
 - `GET /api/pcs/{pc_id}/uptime/weekly`
   - `status_history` を区間化して返却。
+  - `week_start` は日曜始まり（`YYYY-MM-DD`）。未指定時は `tz` 基準の当週日曜。
 
 ## 運用時の注意点
 

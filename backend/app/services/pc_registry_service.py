@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 from app.repositories import pc_repository
 from app.services.log_service import insert_log
+from app.services import uptime_service
 from app.types import PcDeletedResult, PcRow
 
 STATUS_VALUES = {"online", "offline", "unknown", "booting", "unreachable"}
@@ -161,5 +162,20 @@ def update_runtime_status(pc_id: str, status: str, mark_seen: bool = False) -> P
     if status not in STATUS_VALUES:
         raise ValueError(f"status must be one of: {', '.join(sorted(STATUS_VALUES))}")
 
-    seen_at = datetime.now(timezone.utc).isoformat() if mark_seen else None
+    current = pc_repository.get_pc_by_id(normalized_id)
+    if current is None:
+        return None
+
+    changed_at = datetime.now(timezone.utc).isoformat()
+    previous_status = str(current.get("status") or "unknown")
+    if previous_status != status:
+        uptime_service.record_status_transition(
+            pc_id=normalized_id,
+            previous_status=previous_status,
+            next_status=status,
+            changed_at=changed_at,
+            source="runtime",
+        )
+
+    seen_at = changed_at if mark_seen else None
     return pc_repository.update_pc_status(normalized_id, status=status, last_seen_at=seen_at)

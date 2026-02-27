@@ -24,7 +24,7 @@
   - `status_method` / `status_port` 不正
   - `ping` コマンド未導入（`status_method=ping` 時）
 
-## 稼働時間可視化向けの確定方針（次ブランチ実装予定）
+## 稼働時間可視化向けの確定方針（実装済み）
 
 - 稼働時間集計の状態解釈:
   - `online` のみオンライン時間として集計する。
@@ -35,6 +35,10 @@
 - 保持期間:
   - 日次集計データは無期限保持とする。
   - 週タイムライン表示用の状態履歴は1年保持とする。
+- 提供API:
+  - `GET /api/pcs/{pc_id}/uptime/summary`（`bucket=day|week|month|year`）
+  - `GET /api/pcs/{pc_id}/uptime/weekly`（週タイムライン、`week_start` は日曜始まり）
+  - `week_start` 未指定時は、`tz` 基準の当週日曜を自動採用する
 
 ## 運用時の注意点
 

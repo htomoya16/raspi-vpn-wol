@@ -179,6 +179,79 @@
   gap: 16px;
 }
 
+.desktop-stage {
+  position: relative;
+  overflow: hidden;
+}
+
+.desktop-stage__track {
+  width: 200%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.desktop-stage--uptime .desktop-stage__track {
+  transform: translateX(-50%);
+}
+
+.desktop-stage__page {
+  min-width: 0;
+}
+
+.desktop-stage__page > .panel {
+  height: 100%;
+}
+
+.desktop-uptime-switch {
+  position: fixed;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 62px;
+  height: 62px;
+  border-radius: 999px;
+  border: 1px solid rgba(95, 133, 192, 0.45);
+  background: linear-gradient(135deg, #18458e 0%, #2563eb 100%);
+  color: #ffffff;
+  box-shadow: 0 14px 32px rgba(9, 37, 90, 0.45);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 30;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.desktop-uptime-switch:hover {
+  transform: translateY(-50%) translateX(-2px);
+  box-shadow: 0 18px 36px rgba(9, 37, 90, 0.5);
+}
+
+.desktop-uptime-switch--back {
+  background: linear-gradient(135deg, #143364 0%, #1d4ed8 100%);
+}
+
+.desktop-uptime-switch--left {
+  left: 20px;
+  right: auto;
+}
+
+.desktop-uptime-switch__icon {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  filter: brightness(0) saturate(100%) invert(100%);
+}
+
+.desktop-uptime-switch__icon--right {
+  transform: rotate(-90deg);
+}
+
+.desktop-uptime-switch__icon--left {
+  transform: rotate(90deg);
+}
+
 .workspace-grid__left,
 .workspace-grid__right {
   display: grid;

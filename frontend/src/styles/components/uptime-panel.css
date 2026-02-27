@@ -1,0 +1,546 @@
+.uptime-toolbar {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr) auto;
+  gap: 10px;
+}
+
+.uptime-toolbar label {
+  display: grid;
+  gap: 5px;
+  color: var(--text-sub);
+  font-weight: 600;
+}
+
+.uptime-toolbar__mock-toggle {
+  align-self: end;
+  white-space: nowrap;
+}
+
+.uptime-section {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(8, 22, 44, 0.72);
+}
+
+.uptime-section__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.uptime-section__header--with-nav {
+  align-items: center;
+}
+
+.uptime-section__header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.uptime-section__header p {
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 0.86rem;
+}
+
+.uptime-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.uptime-nav__arrow {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uptime-nav__glyph {
+  font-size: 1.2rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.uptime-nav--summary .uptime-nav__arrow {
+  border-color: rgba(97, 137, 205, 0.7);
+}
+
+.uptime-nav--weekly .uptime-nav__arrow {
+  border-color: rgba(92, 174, 220, 0.6);
+}
+
+.uptime-chart {
+  margin-top: 12px;
+  min-height: 280px;
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.uptime-chart__axis {
+  position: relative;
+  min-height: 0;
+  height: 236px;
+  border-right: 1px solid rgba(79, 114, 170, 0.35);
+}
+
+.uptime-chart__axis::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-bottom: 1px solid rgba(79, 114, 170, 0.45);
+}
+
+.uptime-chart__axis-label {
+  position: absolute;
+  right: 6px;
+  color: #8fa6cf;
+  font-size: 0.68rem;
+  transform: translateY(-50%);
+}
+
+.uptime-chart__axis-label--max {
+  transform: translateY(0);
+}
+
+.uptime-chart__axis-label--min {
+  transform: translateY(-100%);
+}
+
+.uptime-chart__main {
+  min-width: 0;
+}
+
+.uptime-chart__scroller {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.uptime-chart__plot {
+  position: relative;
+  height: 236px;
+  min-height: 236px;
+  border-radius: 12px;
+  border: 1px solid rgba(99, 128, 179, 0.36);
+  background:
+    linear-gradient(180deg, rgba(126, 159, 211, 0.2) 1px, transparent 1px) 0 0 / 100% 25%,
+    rgba(7, 19, 38, 0.76);
+}
+
+.uptime-chart__plot::after {
+  content: '';
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  bottom: 0;
+  border-bottom: 1px solid rgba(79, 114, 170, 0.45);
+  pointer-events: none;
+}
+
+.uptime-chart__avg-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.uptime-chart__avg-line::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  border-top: 2px dashed rgba(72, 197, 133, 0.9);
+}
+
+.uptime-chart__avg-label {
+  position: absolute;
+  right: 8px;
+  top: -18px;
+  font-size: 0.68rem;
+  color: #82e2b2;
+  background: rgba(9, 26, 44, 0.92);
+  border: 1px solid rgba(72, 197, 133, 0.5);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.uptime-chart__bars {
+  height: 236px;
+  min-height: 236px;
+  width: max-content;
+  min-width: 100%;
+  display: grid;
+  align-items: end;
+  padding-top: 0;
+}
+
+.uptime-chart__bar-cell {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  height: 100%;
+  padding: 0 8px;
+}
+
+.uptime-chart__bar-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.uptime-chart__bar {
+  width: 50%;
+  border-radius: 8px 8px 3px 3px;
+  min-height: 0;
+  background: #4f93ff;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28);
+  transition: height 0.25s ease;
+}
+
+.uptime-chart__bar--grow {
+  animation: uptime-bar-grow 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.uptime-chart__bar--grow-prev {
+  transform-origin: bottom right;
+}
+
+.uptime-chart__bar--grow-next {
+  transform-origin: bottom left;
+}
+
+.uptime-chart__meta {
+  margin-top: 6px;
+  width: max-content;
+  min-width: 100%;
+  display: grid;
+}
+
+.uptime-chart__meta-item {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  padding: 0 8px;
+}
+
+.uptime-chart__label {
+  margin: 0;
+  color: #9fb2d9;
+  font-size: 0.75rem;
+  line-height: 1.1;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uptime-chart__value {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.1;
+  text-align: center;
+  color: #c8d8f3;
+}
+
+.uptime-week-calendar {
+  margin-top: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.uptime-week-calendar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.uptime-week-calendar__head {
+  display: grid;
+  grid-template-columns: 54px repeat(7, minmax(96px, 1fr));
+  min-width: 780px;
+}
+
+.uptime-week-calendar__axis-spacer {
+  border-bottom: 1px solid rgba(85, 117, 171, 0.4);
+}
+
+.uptime-week-calendar__day-head {
+  border-bottom: 1px solid rgba(85, 117, 171, 0.4);
+  padding: 8px 6px;
+  display: grid;
+  gap: 2px;
+  text-align: center;
+}
+
+.uptime-week-calendar__day-head + .uptime-week-calendar__day-head {
+  border-left: 1px solid rgba(79, 114, 170, 0.35);
+}
+
+.uptime-week-calendar__day-head p {
+  margin: 0;
+  color: #d8e5ff;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.uptime-week-calendar__day-head span {
+  color: #9ad5ff;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.uptime-week-calendar__body {
+  margin-top: 0;
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  min-width: 780px;
+}
+
+.uptime-week-calendar__axis {
+  position: relative;
+  min-height: 520px;
+  border-right: 1px solid rgba(79, 114, 170, 0.35);
+}
+
+.uptime-week-calendar__axis-label {
+  position: absolute;
+  left: 0;
+  transform: translateY(-50%);
+  color: #8fa6cf;
+  font-size: 0.7rem;
+}
+
+.uptime-week-calendar__axis-label--start {
+  transform: translateY(0);
+}
+
+.uptime-week-calendar__axis-label--end {
+  transform: translateY(-100%);
+}
+
+.uptime-week-calendar__columns {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(96px, 1fr));
+}
+
+.uptime-week-calendar__column {
+  position: relative;
+  min-height: 520px;
+  overflow: hidden;
+  background: rgba(9, 22, 42, 0.88);
+}
+
+.uptime-week-calendar__column + .uptime-week-calendar__column {
+  border-left: 1px solid rgba(79, 114, 170, 0.35);
+}
+
+.uptime-week-calendar__hour-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(79, 114, 170, 0.32);
+  pointer-events: none;
+}
+
+.uptime-week-calendar__event {
+  position: absolute;
+  left: 3%;
+  right: 3%;
+  border-radius: 8px;
+  background: rgba(59, 130, 246, 0.95);
+  box-shadow: 0 8px 16px rgba(15, 42, 86, 0.42);
+  padding: 4px 5px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 4px;
+  color: #f5f9ff;
+  font-size: 0.66rem;
+  line-height: 1.1;
+  font-weight: 700;
+  overflow: hidden;
+}
+
+.uptime-week-calendar--expand-prev .uptime-week-calendar__event,
+.uptime-week-calendar--expand-next .uptime-week-calendar__event {
+  animation: uptime-week-expand 0.34s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+.uptime-week-calendar__event-start {
+  text-align: left;
+}
+
+.uptime-week-calendar__event-end {
+  text-align: right;
+  margin-top: auto;
+}
+
+.uptime-week-calendar__event--compact {
+  justify-content: center;
+  align-items: center;
+  padding: 1px 3px;
+  font-size: 0.62rem;
+}
+
+.uptime-week-calendar__event-range {
+  text-align: center;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.uptime-week-calendar__event--minimal {
+  padding: 0;
+  min-height: 2px;
+}
+
+.uptime-slide-surface {
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease;
+}
+
+.uptime-slide-surface--prev {
+  animation: uptime-slide-prev 0.28s ease both;
+}
+
+.uptime-slide-surface--next {
+  animation: uptime-slide-next 0.28s ease both;
+}
+
+@keyframes uptime-slide-prev {
+  from {
+    opacity: 0.45;
+    transform: translateX(-22px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes uptime-slide-next {
+  from {
+    opacity: 0.45;
+    transform: translateX(22px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes uptime-bar-grow {
+  from {
+    transform: scaleY(0);
+    opacity: 0.5;
+  }
+
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes uptime-week-expand {
+  from {
+    transform: scale(0.25, 0.2);
+    opacity: 0.35;
+  }
+
+  to {
+    transform: scale(1, 1);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 760px) {
+  .uptime-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .uptime-toolbar__mock-toggle {
+    width: 100%;
+  }
+
+  .uptime-section__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .uptime-chart {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .uptime-chart__axis,
+  .uptime-chart__plot,
+  .uptime-chart__bars {
+    height: 206px;
+    min-height: 206px;
+  }
+
+  .uptime-chart__axis {
+    height: 206px;
+  }
+
+  .uptime-chart__avg-label {
+    right: 4px;
+    top: -16px;
+    font-size: 0.62rem;
+    padding: 1px 6px;
+  }
+
+  .uptime-chart__bar-wrap {
+    height: 100%;
+  }
+
+  .uptime-chart__bar {
+    width: 46%;
+  }
+
+  .uptime-chart__label {
+    font-size: 0.66rem;
+  }
+
+  .uptime-chart__value {
+    font-size: 0.64rem;
+  }
+
+  .uptime-week-calendar__head {
+    grid-template-columns: 44px repeat(7, minmax(84px, 1fr));
+    min-width: 680px;
+  }
+
+  .uptime-week-calendar__body {
+    grid-template-columns: 44px minmax(0, 1fr);
+    min-width: 680px;
+  }
+
+  .uptime-week-calendar__columns {
+    grid-template-columns: repeat(7, minmax(84px, 1fr));
+  }
+
+  .uptime-week-calendar__axis,
+  .uptime-week-calendar__column {
+    min-height: 440px;
+  }
+}

@@ -67,15 +67,18 @@
 - note: `status_refresh_all` が `queued/running` の場合は新規作成せず既存ジョブIDを返す
 - note: バックエンドでは同等の全体更新ジョブを60秒ごとに自動投入する
 
-### `GET /api/pcs/{pc_id}/uptime/daily`
+### `GET /api/pcs/{pc_id}/uptime/summary`
 
-- operationId: `getPcDailyUptime`
-- summary: PCの日次オンライン集計（グラフ表示向け）
-- query: `from`, `to`, `tz`（任意, default: `Asia/Tokyo`）
+- operationId: `getPcUptimeSummary`
+- summary: PCのオンライン集計取得（日/週/月/年グラフ向け）
+- query: `from`, `to`, `bucket`, `tz`（任意, default: `bucket=day`, `tz=Asia/Tokyo`）
 - responses: `200`, `400`, `404`, `422`
 - note: `from/to` は `YYYY-MM-DD`
-- note: 取得期間は最大366日
+- note: `bucket` は `day|week|month|year`
 - note: 集計では `online` のみをオンライン時間として扱い、`offline/unknown/booting/unreachable` はオフライン扱い
+- note: 週/月/年の集計は日次集計テーブルを再集約して返す
+- note: API契約上、`day` バケットは `from/to` 指定日をそのまま日次で返す（週開始曜日の制約はない）
+- note: 現行フロントのグラフ表示は `day`(1週間) / `month`(12か月) / `year`(5年) を利用
 
 ### `GET /api/pcs/{pc_id}/uptime/weekly`
 
@@ -83,7 +86,8 @@
 - summary: 週タイムライン（1日ごとのオンライン区間）取得（カレンダー表示向け）
 - query: `week_start`, `tz`（任意, default: `Asia/Tokyo`）
 - responses: `200`, `400`, `404`, `422`
-- note: `week_start` は週の開始日（`YYYY-MM-DD`）
+- note: `week_start` は日曜始まりの週開始日（`YYYY-MM-DD`）
+- note: `week_start` 省略時は `tz` 基準の当週日曜を使用
 - note: 週タイムライン用の状態履歴は1年保持。保持範囲外の週指定は `400`
 - note: 区間は1日内ローカル時刻で返却し、UI側でカレンダー表示へマッピングする
 
@@ -120,55 +124,6 @@
 - `WolRequest`: `broadcast`, `port`, `repeat`
 - `JobAccepted`, `Job`, `JobState`: 非同期処理
 - `LogEntry`, `LogListResponse`, `LogClearResponse`: 監査ログ
-- `PcDailyUptimeResponse`: 日次オンライン秒数一覧（グラフ向け）
+- `PcUptimeSummaryResponse`: オンライン集計一覧（日/週/月/年グラフ向け）
 - `PcWeeklyTimelineResponse`: 週タイムライン（1日ごとのオンライン区間）
 - `Error`: 共通エラー（`code`, `message`, `details`）
-
-## 追加スキーマ（uptime）
-
-### `PcDailyUptimeResponse`
-
-```json
-{
-  "pc_id": "pc-main",
-  "from": "2026-02-01",
-  "to": "2026-02-07",
-  "tz": "Asia/Tokyo",
-  "items": [
-    {
-      "date": "2026-02-01",
-      "online_seconds": 28800,
-      "online_ratio": 0.3333
-    }
-  ]
-}
-```
-
-### `PcWeeklyTimelineResponse`
-
-```json
-{
-  "pc_id": "pc-main",
-  "week_start": "2026-02-23",
-  "week_end": "2026-03-01",
-  "tz": "Asia/Tokyo",
-  "days": [
-    {
-      "date": "2026-02-24",
-      "online_seconds": 39600,
-      "intervals": [
-        {
-          "start": "04:00",
-          "end": "08:00",
-          "duration_seconds": 14400
-        },
-        {
-          "start": "16:00",
-          "end": "23:00",
-          "duration_seconds": 25200
-        }
-      ]
-    }
-  ]
-}
-```

@@ -48,6 +48,18 @@ def test_pcs_crud_flow(client: TestClient) -> None:
     assert patched["name"] == "Main Desktop"
     assert patched["note"] == "updated"
 
+    uptime_summary_response = client.get(
+        "/api/pcs/pc-main/uptime/summary",
+        params={"from": "2026-02-01", "to": "2026-02-03", "bucket": "day", "tz": "Asia/Tokyo"},
+    )
+    assert uptime_summary_response.status_code == 200
+
+    uptime_weekly_response = client.get(
+        "/api/pcs/pc-main/uptime/weekly",
+        params={"week_start": "2026-02-01", "tz": "Asia/Tokyo"},
+    )
+    assert uptime_weekly_response.status_code == 200
+
     delete_response = client.delete("/api/pcs/pc-main")
     assert delete_response.status_code == 204
 

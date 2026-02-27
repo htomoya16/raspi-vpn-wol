@@ -1,4 +1,13 @@
-import type { JobAccepted, PcCreatePayload, PcListResponse, PcResponse, PcUpdatePayload } from '../types/models'
+import type {
+  JobAccepted,
+  PcCreatePayload,
+  PcListResponse,
+  PcResponse,
+  PcUptimeSummaryResponse,
+  PcUpdatePayload,
+  PcWeeklyTimelineResponse,
+  UptimeBucket,
+} from '../types/models'
 import { request } from './http'
 
 function toQueryString(params: object): string {
@@ -76,4 +85,32 @@ export function sendPcWol(
   }
 
   return request<JobAccepted>(`/api/pcs/${encodeURIComponent(pcId)}/wol`, options)
+}
+
+export interface GetPcUptimeSummaryParams {
+  from?: string
+  to?: string
+  bucket?: UptimeBucket
+  tz?: string
+}
+
+export function getPcUptimeSummary(
+  pcId: string,
+  params: GetPcUptimeSummaryParams = {},
+): Promise<PcUptimeSummaryResponse> {
+  const query = toQueryString(params)
+  return request<PcUptimeSummaryResponse>(`/api/pcs/${encodeURIComponent(pcId)}/uptime/summary${query}`)
+}
+
+export interface GetPcWeeklyTimelineParams {
+  week_start?: string
+  tz?: string
+}
+
+export function getPcWeeklyTimeline(
+  pcId: string,
+  params: GetPcWeeklyTimelineParams = {},
+): Promise<PcWeeklyTimelineResponse> {
+  const query = toQueryString(params)
+  return request<PcWeeklyTimelineResponse>(`/api/pcs/${encodeURIComponent(pcId)}/uptime/weekly${query}`)
 }

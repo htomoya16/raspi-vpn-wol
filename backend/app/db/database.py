@@ -98,6 +98,39 @@ def init_db() -> None:
             """
         )
         conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS status_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pc_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                is_online INTEGER NOT NULL CHECK (is_online IN (0, 1)),
+                changed_at TEXT NOT NULL,
+                source TEXT,
+                note TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (pc_id) REFERENCES pcs(id) ON DELETE CASCADE
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS uptime_daily_summary (
+                pc_id TEXT NOT NULL,
+                date TEXT NOT NULL,
+                tz TEXT NOT NULL DEFAULT 'Asia/Tokyo',
+                online_seconds INTEGER NOT NULL DEFAULT 0 CHECK (online_seconds BETWEEN 0 AND 86400),
+                online_count INTEGER NOT NULL DEFAULT 0,
+                offline_count INTEGER NOT NULL DEFAULT 0,
+                first_online_at TEXT,
+                last_online_at TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (pc_id, date, tz),
+                FOREIGN KEY (pc_id) REFERENCES pcs(id) ON DELETE CASCADE
+            )
+            """
+        )
+        conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_pcs_status ON pcs(status)"
         )
         conn.execute(
@@ -111,6 +144,18 @@ def init_db() -> None:
         )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_jobs_state_created_at ON jobs(state, created_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_status_history_pc_changed_at ON status_history(pc_id, changed_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_status_history_changed_at ON status_history(changed_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_uptime_daily_summary_date ON uptime_daily_summary(date DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_uptime_daily_summary_pc_date ON uptime_daily_summary(pc_id, date DESC)"
         )
 
         pc_rows = conn.execute(

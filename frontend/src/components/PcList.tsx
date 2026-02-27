@@ -25,6 +25,7 @@ export interface PcListProps {
   onSendWol: (pcId: string) => Promise<void> | void
   onDelete: (pcId: string) => Promise<void>
   onUpdate: (pcId: string, payload: PcUpdatePayload) => Promise<Pc>
+  onSelectPc?: (pcId: string) => void
   busyById: BusyById
   rowErrorById: RowErrorById
   lastSyncedAt: string
@@ -45,6 +46,7 @@ function PcList({
   onSendWol,
   onDelete,
   onUpdate,
+  onSelectPc,
   busyById,
   rowErrorById,
   lastSyncedAt,
@@ -127,6 +129,7 @@ function PcList({
       return
     }
     setSelectedPcId(pcId)
+    onSelectPc?.(pcId)
     setDetailOpen(true)
     setIsEditing(false)
     setEditError('')
@@ -310,8 +313,14 @@ function PcList({
                 statusLabel={STATUS_LABELS[pc.status]}
                 rowError={rowErrorById[pc.id]}
                 onOpenDetail={openDetail}
-                onSendWol={onSendWol}
-                onRefreshStatus={onRefreshStatus}
+                onSendWol={async (pcId) => {
+                  onSelectPc?.(pcId)
+                  await onSendWol(pcId)
+                }}
+                onRefreshStatus={async (pcId) => {
+                  onSelectPc?.(pcId)
+                  await onRefreshStatus(pcId)
+                }}
               />
             )
           })}

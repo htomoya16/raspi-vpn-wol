@@ -48,6 +48,30 @@ class JobRow(TypedDict):
     updated_at: str
 
 
+class PcStatusHistoryRow(TypedDict):
+    id: int
+    pc_id: str
+    status: PcStatus
+    is_online: int
+    changed_at: str
+    source: str | None
+    note: str | None
+    created_at: str
+
+
+class PcUptimeDailySummaryRow(TypedDict):
+    pc_id: str
+    date: str
+    tz: str
+    online_seconds: int
+    online_count: int
+    offline_count: int
+    first_online_at: str | None
+    last_online_at: str | None
+    created_at: str
+    updated_at: str
+
+
 class WolResult(TypedDict):
     message: str
 

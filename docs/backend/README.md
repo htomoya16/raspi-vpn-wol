@@ -7,6 +7,7 @@
 
 ## 変更内容
 
+- 2026-02-27: uptime weekly API の週開始日を「日曜始まり」に統一。
 - 2026-02-21: API/DBを vNext 契約ベースへ再設計（`pcs`/`jobs`/`events` を追加）。
 - 2026-02-11: `docs/backend` を機能別ドキュメント構成へ再編。
 - 2026-02-11: 初期機能ページを追加し、以後 vNext 構成へ更新。
@@ -27,7 +28,10 @@
 - `POST /api/pcs/{pc_id}/wol`: WOL送信ジョブ受付（202）。
 - `POST /api/pcs/{pc_id}/status/refresh`: 単体ステータス更新。
 - `POST /api/pcs/status/refresh`: 全PCステータス更新ジョブ受付（202）。
+- `GET /api/pcs/{pc_id}/uptime/summary`: 稼働集計（`day/week/month/year`）。
+- `GET /api/pcs/{pc_id}/uptime/weekly`: 週タイムライン取得（`week_start` は日曜始まり）。
 - `GET /api/logs`: 操作ログ取得（`pc_id`/`action`/`ok`/`since`/`until`/`cursor`）。
+- `DELETE /api/logs`: 操作ログ全削除。
 - `GET /api/jobs/{job_id}`: 非同期ジョブ状態取得。
 - `GET /api/events`: SSEイベントストリーム。
 - `pytest` で最小回帰テストを実行可能（health/pcs/logs/jobs）。

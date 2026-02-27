@@ -9,7 +9,7 @@ from uuid import uuid4
 
 from app.models.pcs import PcCreate, PcStatus, PcUpdate
 from app.repositories import pc_repository
-from app.services import pc_registry_service, status_service, wol_service
+from app.services import pc_registry_service, status_service, uptime_service, wol_service
 from app.types import PcRow
 
 STATUS_VALUES: set[PcStatus] = {"online", "offline", "unknown", "booting", "unreachable"}
@@ -291,3 +291,33 @@ def send_wol(
         "poll_interval_seconds": BOOTING_POLL_INTERVAL_SECONDS,
         "poll_attempts": attempts,
     }
+
+
+def get_uptime_summary(
+    *,
+    pc_id: str,
+    from_date: str | None,
+    to_date: str | None,
+    bucket: str,
+    tz: str | None,
+) -> dict[str, object]:
+    return uptime_service.get_pc_uptime_summary(
+        pc_id=pc_id,
+        from_date=from_date,
+        to_date=to_date,
+        bucket=bucket,
+        tz_name=tz,
+    )
+
+
+def get_weekly_timeline(
+    *,
+    pc_id: str,
+    week_start: str | None,
+    tz: str | None,
+) -> dict[str, object]:
+    return uptime_service.get_pc_weekly_timeline(
+        pc_id=pc_id,
+        week_start=week_start,
+        tz_name=tz,
+    )
