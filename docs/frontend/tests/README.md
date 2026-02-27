@@ -19,6 +19,7 @@
 - Components:
   - `frontend/src/components/LogsPanel.test.tsx`
   - `frontend/src/components/PcList.test.tsx`
+  - `frontend/src/components/UptimePanel.test.tsx`
   - `frontend/src/components/pc-list/utils.test.ts`
 - Utils:
   - `frontend/src/utils/datetime.test.ts`
@@ -29,6 +30,7 @@
 - ジョブ追跡の成功・失敗・タイムアウト遷移
 - PC一覧の詳細表示、編集バリデーション、削除確認ダイアログ
 - ログ一覧の詳細展開、ログ削除確認フロー
+- 稼働時間パネルのAPI連携、週移動、エラー表示、モック切替
 - 日時変換（JST）と編集フォーム変換ロジック
 
 ## 実行方法

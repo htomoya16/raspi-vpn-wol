@@ -9,6 +9,8 @@
 
 - `status_history`（状態変化履歴）と `uptime_daily_summary`（日次集計）のDDLを定義。
 - インデックス方針と保持期間削除SQLの方針を追記。
+- 2026-02-27: 実クエリに合わせて `status_history` / `uptime_daily_summary` のインデックスを更新。
+- 2026-02-27: 保持期間削除で `datetime(...)` 比較をやめ、UTC ISO文字列との直接比較に統一。
 - 本ドキュメントは実装済みスキーマを正として扱う。
 
 ## DDL案
@@ -26,8 +28,8 @@ CREATE TABLE IF NOT EXISTS status_history (
     FOREIGN KEY (pc_id) REFERENCES pcs(id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_status_history_pc_changed_at
-ON status_history (pc_id, changed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_status_history_pc_changed_id
+ON status_history (pc_id, changed_at DESC, id DESC);
 
 CREATE INDEX IF NOT EXISTS idx_status_history_changed_at
 ON status_history (changed_at DESC);
@@ -49,11 +51,8 @@ CREATE TABLE IF NOT EXISTS uptime_daily_summary (
     FOREIGN KEY (pc_id) REFERENCES pcs(id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_uptime_daily_summary_date
-ON uptime_daily_summary (date DESC);
-
-CREATE INDEX IF NOT EXISTS idx_uptime_daily_summary_pc_date
-ON uptime_daily_summary (pc_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_uptime_daily_summary_pc_tz_date
+ON uptime_daily_summary (pc_id, tz, date ASC);
 ```
 
 ## 保存ルール（前提）
@@ -72,8 +71,11 @@ ON uptime_daily_summary (pc_id, date DESC);
 ```sql
 -- status_history の期限切れ削除（1年）
 DELETE FROM status_history
-WHERE datetime(changed_at) < datetime('now', '-365 days');
+WHERE changed_at < ?;
 ```
+
+- `?` にはアプリ側で計算した UTC ISO 時刻（例: `2025-02-27T00:00:00+00:00`）を渡す。
+- 列に `datetime(...)` 関数をかけずに比較することで、`idx_status_history_changed_at` を使いやすくする。
 
 ## APIとの対応
 

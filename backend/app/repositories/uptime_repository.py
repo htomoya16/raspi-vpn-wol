@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from typing import cast
 
 from app.db.database import connection
 from app.types import PcStatusHistoryRow, PcUptimeDailySummaryRow
 
 STATUS_HISTORY_RETENTION_DAYS = 365
+
+
+def _utc_cutoff_iso(days: int) -> str:
+    return (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
 
 def get_latest_status_before(pc_id: str, changed_before: str) -> PcStatusHistoryRow | None:
@@ -23,8 +28,8 @@ def get_latest_status_before(pc_id: str, changed_before: str) -> PcStatusHistory
                 created_at
             FROM status_history
             WHERE pc_id = ?
-              AND datetime(changed_at) < datetime(?)
-            ORDER BY datetime(changed_at) DESC, id DESC
+              AND changed_at < ?
+            ORDER BY changed_at DESC, id DESC
             LIMIT 1
             """,
             (pc_id, changed_before),
@@ -53,9 +58,9 @@ def list_status_history_between(
                 created_at
             FROM status_history
             WHERE pc_id = ?
-              AND datetime(changed_at) >= datetime(?)
-              AND datetime(changed_at) < datetime(?)
-            ORDER BY datetime(changed_at) ASC, id ASC
+              AND changed_at >= ?
+              AND changed_at < ?
+            ORDER BY changed_at ASC, id ASC
             """,
             (pc_id, changed_from, changed_to),
         ).fetchall()
@@ -81,9 +86,9 @@ def insert_status_history(
         conn.execute(
             """
             DELETE FROM status_history
-            WHERE datetime(changed_at) < datetime('now', ?)
+            WHERE changed_at < ?
             """,
-            (f"-{STATUS_HISTORY_RETENTION_DAYS} days",),
+            (_utc_cutoff_iso(STATUS_HISTORY_RETENTION_DAYS),),
         )
 
 
