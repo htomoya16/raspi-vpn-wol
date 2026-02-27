@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react'
 
 import { formatApiError } from '../api/http'
 import { getPcUptimeSummary, getPcWeeklyTimeline } from '../api/pcs'
+import { useMediaQuery } from '../hooks/useMediaQuery'
 import { buildMockUptimeSummary, buildMockWeeklyTimeline } from '../mocks/uptime'
 import type {
   Pc,
@@ -26,6 +27,10 @@ interface TimelineDay {
   date: string
   online_seconds: number
   intervals: TimelineInterval[]
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
 }
 
 interface UptimePanelProps {
@@ -53,7 +58,9 @@ const DATE_RANGE_FORMATTER = new Intl.DateTimeFormat('ja-JP', {
   day: '2-digit',
 })
 
-const HOUR_MARKERS = [0, 6, 12, 18, 24]
+const HOUR_MARKERS = Array.from({ length: 25 }, (_, hour) => hour)
+const SWIPE_THRESHOLD_PX = 44
+const SWIPE_MAX_VERTICAL_PX = 60
 
 function toIsoDateLocal(value: Date): string {
   const year = value.getFullYear()
@@ -332,6 +339,7 @@ function UptimePanel({
   dataVersion = '',
   embedded = false,
 }: UptimePanelProps) {
+  const isMobile = useMediaQuery('(max-width: 760px)')
   const [summaryBucket, setSummaryBucket] = useState<SummaryBucket>('day')
   const [summaryAnchor, setSummaryAnchor] = useState<Date>(() => new Date())
   const [summarySlide, setSummarySlide] = useState<SlideDirection>(null)
@@ -340,6 +348,11 @@ function UptimePanel({
   const [weekStart, setWeekStart] = useState(getCurrentWeekStart)
   const [weeklySlide, setWeeklySlide] = useState<SlideDirection>(null)
   const pendingWeeklySlideRef = useRef<SlideDirection>(null)
+  const summaryTouchStartRef = useRef<{ x: number; y: number } | null>(null)
+  const timelineTouchStartRef = useRef<{ x: number; y: number } | null>(null)
+  const [mobileDayIndex, setMobileDayIndex] = useState(() => new Date().getDay())
+  const pendingMobileDayIndexRef = useRef<number | null>(null)
+  const previousWeekStartRef = useRef('')
 
   const [useMockData, setUseMockData] = useState<boolean>(() => {
     if (!ENABLE_UPTIME_MOCK) {
@@ -460,6 +473,9 @@ function UptimePanel({
   )
 
   const summaryColumnMinWidth = useMemo(() => {
+    if (isMobile) {
+      return 0
+    }
     if (summaryBucket === 'month') {
       return 64
     }
@@ -467,7 +483,7 @@ function UptimePanel({
       return 90
     }
     return 76
-  }, [summaryBucket])
+  }, [isMobile, summaryBucket])
 
   const summaryGridStyle = useMemo(
     () => ({
@@ -651,12 +667,156 @@ function UptimePanel({
 
   const weeklyData = weekly || buildWeeklyFallback(weekStart)
   const timelineDays = useMemo(() => buildTimelineDays(weeklyData.days), [weeklyData.days])
+  const visibleTimelineDays = useMemo(() => {
+    if (!isMobile) {
+      return timelineDays
+    }
+    if (timelineDays.length === 0) {
+      return []
+    }
+    return [timelineDays[clamp(mobileDayIndex, 0, timelineDays.length - 1)]]
+  }, [isMobile, mobileDayIndex, timelineDays])
+  const activeTimelineDay = useMemo(() => {
+    if (visibleTimelineDays.length === 0) {
+      return null
+    }
+    return visibleTimelineDays[0]
+  }, [visibleTimelineDays])
+
+  useEffect(() => {
+    if (!isMobile) {
+      return
+    }
+    if (timelineDays.length === 0) {
+      setMobileDayIndex(0)
+      return
+    }
+
+    const pending = pendingMobileDayIndexRef.current
+    if (pending !== null) {
+      pendingMobileDayIndexRef.current = null
+      setMobileDayIndex(clamp(pending, 0, timelineDays.length - 1))
+      return
+    }
+
+    if (previousWeekStartRef.current === weekStart) {
+      setMobileDayIndex((prev) => clamp(prev, 0, timelineDays.length - 1))
+      return
+    }
+
+    previousWeekStartRef.current = weekStart
+    const nextIndex = weekStart === currentWeekStart ? new Date().getDay() : 0
+    setMobileDayIndex(clamp(nextIndex, 0, timelineDays.length - 1))
+  }, [currentWeekStart, isMobile, timelineDays, weekStart])
+
+  const isTimelineNextDisabled = useMemo(() => {
+    if (!isMobile) {
+      return isWeeklyNextDisabled
+    }
+    const isLastDay = mobileDayIndex >= timelineDays.length - 1
+    return isLastDay && isWeeklyNextDisabled
+  }, [isMobile, isWeeklyNextDisabled, mobileDayIndex, timelineDays.length])
+
+  function moveTimeline(direction: 1 | -1): void {
+    if (!isMobile) {
+      moveWeekly(direction)
+      return
+    }
+
+    const nextIndex = mobileDayIndex + direction
+    if (nextIndex >= 0 && nextIndex < timelineDays.length) {
+      setWeeklySlide(direction < 0 ? 'prev' : 'next')
+      setMobileDayIndex(nextIndex)
+      return
+    }
+
+    if (direction < 0) {
+      pendingMobileDayIndexRef.current = 6
+      moveWeekly(-1)
+      return
+    }
+
+    if (isWeeklyNextDisabled) {
+      return
+    }
+
+    pendingMobileDayIndexRef.current = 0
+    moveWeekly(1)
+  }
+
+  function handleSummaryTouchStart(event: TouchEvent<HTMLDivElement>): void {
+    if (!isMobile) {
+      return
+    }
+    const touch = event.touches[0]
+    if (!touch) {
+      return
+    }
+    summaryTouchStartRef.current = { x: touch.clientX, y: touch.clientY }
+  }
+
+  function handleSummaryTouchEnd(event: TouchEvent<HTMLDivElement>): void {
+    const start = summaryTouchStartRef.current
+    summaryTouchStartRef.current = null
+    if (!isMobile || !start) {
+      return
+    }
+    const touch = event.changedTouches[0]
+    if (!touch) {
+      return
+    }
+    const deltaX = touch.clientX - start.x
+    const deltaY = touch.clientY - start.y
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX || Math.abs(deltaY) > SWIPE_MAX_VERTICAL_PX) {
+      return
+    }
+    if (deltaX > 0) {
+      moveSummary(-1)
+      return
+    }
+    if (!isSummaryNextDisabled) {
+      moveSummary(1)
+    }
+  }
+
+  function handleTimelineTouchStart(event: TouchEvent<HTMLDivElement>): void {
+    if (!isMobile) {
+      return
+    }
+    const touch = event.touches[0]
+    if (!touch) {
+      return
+    }
+    timelineTouchStartRef.current = { x: touch.clientX, y: touch.clientY }
+  }
+
+  function handleTimelineTouchEnd(event: TouchEvent<HTMLDivElement>): void {
+    const start = timelineTouchStartRef.current
+    timelineTouchStartRef.current = null
+    if (!isMobile || !start) {
+      return
+    }
+    const touch = event.changedTouches[0]
+    if (!touch) {
+      return
+    }
+    const deltaX = touch.clientX - start.x
+    const deltaY = touch.clientY - start.y
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX || Math.abs(deltaY) > SWIPE_MAX_VERTICAL_PX) {
+      return
+    }
+    if (deltaX > 0) {
+      moveTimeline(-1)
+      return
+    }
+    moveTimeline(1)
+  }
 
   const content = (
     <>
       <div className="panel__header">
         <h2>稼働時間</h2>
-        <p>オンライン集計と週タイムラインを確認できます。</p>
+        <p>オンライン集計と稼働タイムラインを確認できます。</p>
       </div>
 
       {pcs.length === 0 ? (
@@ -719,35 +879,44 @@ function UptimePanel({
                 <p>{formatDateRange(summaryQuery.from, summaryQuery.to)}</p>
               </div>
 
-              <div className="uptime-nav uptime-nav--summary" aria-label="オンライン集計の移動">
-                <button
-                  type="button"
-                  className="btn btn--soft uptime-nav__arrow"
-                  onClick={() => moveSummary(-1)}
-                  aria-label="オンライン集計を前へ"
-                >
-                  <span className="uptime-nav__glyph" aria-hidden="true">
-                    {'<'}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className="btn btn--soft uptime-nav__arrow"
-                  onClick={() => moveSummary(1)}
-                  disabled={isSummaryNextDisabled}
-                  aria-label="オンライン集計を次へ"
-                >
-                  <span className="uptime-nav__glyph" aria-hidden="true">
-                    {'>'}
-                  </span>
-                </button>
-              </div>
+              {!isMobile ? (
+                <div className="uptime-nav uptime-nav--summary" aria-label="オンライン集計の移動">
+                  <button
+                    type="button"
+                    className="btn btn--soft uptime-nav__arrow"
+                    onClick={() => moveSummary(-1)}
+                    aria-label="オンライン集計を前へ"
+                  >
+                    <span className="uptime-nav__glyph" aria-hidden="true">
+                      {'<'}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn--soft uptime-nav__arrow"
+                    onClick={() => moveSummary(1)}
+                    disabled={isSummaryNextDisabled}
+                    aria-label="オンライン集計を次へ"
+                  >
+                    <span className="uptime-nav__glyph" aria-hidden="true">
+                      {'>'}
+                    </span>
+                  </button>
+                </div>
+              ) : null}
             </header>
 
             {!summaryLoading && summaryError ? <p className="feedback feedback--error">{summaryError}</p> : null}
 
             {!summaryError ? (
-              <div className="uptime-section__content uptime-section__content--summary">
+              <div
+                className="uptime-section__content uptime-section__content--summary"
+                onTouchStart={handleSummaryTouchStart}
+                onTouchEnd={handleSummaryTouchEnd}
+                onTouchCancel={() => {
+                  summaryTouchStartRef.current = null
+                }}
+              >
                 {summaryItems.length > 0 ? (
                   <div className={`uptime-slide-surface ${summarySlide ? `uptime-slide-surface--${summarySlide}` : ''}`}>
                     <div className={`uptime-chart uptime-chart--${summaryBucket}`}>
@@ -824,44 +993,61 @@ function UptimePanel({
           <section className="uptime-section">
             <header className="uptime-section__header uptime-section__header--with-nav">
               <div>
-                <h3>週タイムライン</h3>
-                <p>{`${weeklyData.week_start} - ${weeklyData.week_end}`}</p>
+                <h3>稼働タイムライン</h3>
+                <p>
+                  {isMobile && activeTimelineDay
+                    ? `${formatWeekDayLabel(activeTimelineDay.date)} / ${weeklyData.week_start} - ${weeklyData.week_end}`
+                    : `${weeklyData.week_start} - ${weeklyData.week_end}`}
+                </p>
               </div>
 
-              <div className="uptime-nav uptime-nav--weekly" aria-label="週タイムラインの移動">
-                <button
-                  type="button"
-                  className="btn btn--soft uptime-nav__arrow"
-                  onClick={() => moveWeekly(-1)}
-                  aria-label="週タイムラインを前へ"
-                >
-                  <span className="uptime-nav__glyph" aria-hidden="true">
-                    {'<'}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  className="btn btn--soft uptime-nav__arrow"
-                  onClick={() => moveWeekly(1)}
-                  disabled={isWeeklyNextDisabled}
-                  aria-label="週タイムラインを次へ"
-                >
-                  <span className="uptime-nav__glyph" aria-hidden="true">
-                    {'>'}
-                  </span>
-                </button>
-              </div>
+              {!isMobile ? (
+                <div className="uptime-nav uptime-nav--weekly" aria-label="稼働タイムラインの移動">
+                  <button
+                    type="button"
+                    className="btn btn--soft uptime-nav__arrow"
+                    onClick={() => moveTimeline(-1)}
+                    aria-label="稼働タイムラインを前へ"
+                  >
+                    <span className="uptime-nav__glyph" aria-hidden="true">
+                      {'<'}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn--soft uptime-nav__arrow"
+                    onClick={() => moveTimeline(1)}
+                    disabled={isTimelineNextDisabled}
+                    aria-label="稼働タイムラインを次へ"
+                  >
+                    <span className="uptime-nav__glyph" aria-hidden="true">
+                      {'>'}
+                    </span>
+                  </button>
+                </div>
+              ) : null}
             </header>
 
             {!weeklyLoading && weeklyError ? <p className="feedback feedback--error">{weeklyError}</p> : null}
 
             {!weeklyError ? (
-              <div className="uptime-section__content uptime-section__content--weekly">
+              <div
+                className="uptime-section__content uptime-section__content--weekly"
+                onTouchStart={handleTimelineTouchStart}
+                onTouchEnd={handleTimelineTouchEnd}
+                onTouchCancel={() => {
+                  timelineTouchStartRef.current = null
+                }}
+              >
                 <div className={`uptime-slide-surface ${weeklySlide ? `uptime-slide-surface--${weeklySlide}` : ''}`}>
-                  <div className={`uptime-week-calendar ${weeklySlide ? `uptime-week-calendar--expand-${weeklySlide}` : ''}`}>
+                  <div
+                    className={`uptime-week-calendar ${isMobile ? 'uptime-week-calendar--single-day' : ''} ${
+                      weeklySlide ? `uptime-week-calendar--expand-${weeklySlide}` : ''
+                    }`}
+                  >
                     <div className="uptime-week-calendar__head">
                       <div className="uptime-week-calendar__axis-spacer" />
-                      {timelineDays.map((day) => (
+                      {visibleTimelineDays.map((day) => (
                         <div key={`head-${day.date}`} className="uptime-week-calendar__day-head">
                           <p>{formatWeekDayLabel(day.date)}</p>
                           <span>{formatSecondsToHours(day.online_seconds)}</span>
@@ -879,7 +1065,7 @@ function UptimePanel({
                                 ? 'uptime-week-calendar__axis-label--start'
                                 : hour === 24
                                   ? 'uptime-week-calendar__axis-label--end'
-                                  : ''
+                                  : 'uptime-week-calendar__axis-label--hourly'
                             }`.trim()}
                             style={{ top: `${(hour / 24) * 100}%` }}
                           >
@@ -889,7 +1075,7 @@ function UptimePanel({
                       </div>
 
                       <div className="uptime-week-calendar__columns">
-                        {timelineDays.map((day) => (
+                        {visibleTimelineDays.map((day) => (
                           <div key={day.date} className="uptime-week-calendar__column">
                             {Array.from({ length: 23 }).map((_, index) => (
                               <span
@@ -934,7 +1120,7 @@ function UptimePanel({
 
                 {weeklyLoading ? (
                   <div className="uptime-loading-overlay">
-                    <LoadingDots label="週タイムラインを読み込み中です" />
+                    <LoadingDots label="稼働タイムラインを読み込み中です" />
                   </div>
                 ) : null}
               </div>

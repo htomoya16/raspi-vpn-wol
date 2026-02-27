@@ -34,7 +34,7 @@
 }
 
 .uptime-section__content--weekly {
-  min-height: 600px;
+  min-height: 780px;
 }
 
 .uptime-loading-overlay {
@@ -304,6 +304,8 @@
   margin-top: 12px;
   overflow-x: auto;
   overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-x;
   padding-bottom: 2px;
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -358,7 +360,7 @@
 
 .uptime-week-calendar__axis {
   position: relative;
-  min-height: 520px;
+  min-height: 700px;
   border-right: 1px solid rgba(79, 114, 170, 0.35);
 }
 
@@ -367,7 +369,12 @@
   left: 0;
   transform: translateY(-50%);
   color: #8fa6cf;
-  font-size: 0.7rem;
+  font-size: 0.66rem;
+}
+
+.uptime-week-calendar__axis-label--hourly {
+  color: rgba(155, 179, 221, 0.95);
+  font-size: 0.56rem;
 }
 
 .uptime-week-calendar__axis-label--start {
@@ -385,7 +392,7 @@
 
 .uptime-week-calendar__column {
   position: relative;
-  min-height: 520px;
+  min-height: 700px;
   overflow: hidden;
   background: rgba(9, 22, 42, 0.88);
 }
@@ -520,7 +527,7 @@
   }
 
   .uptime-section__content--weekly {
-    min-height: 520px;
+    min-height: 700px;
   }
 
   .uptime-summary-placeholder {
@@ -541,8 +548,22 @@
   }
 
   .uptime-chart {
-    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-columns: 38px minmax(0, 1fr);
     gap: 6px;
+  }
+
+  .uptime-chart__scroller {
+    overflow-x: hidden;
+  }
+
+  .uptime-chart__bars,
+  .uptime-chart__meta {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .uptime-chart__bar-cell {
+    padding: 0 1px;
   }
 
   .uptime-chart__axis,
@@ -568,15 +589,20 @@
   }
 
   .uptime-chart__bar {
-    width: 46%;
+    width: 58%;
   }
 
   .uptime-chart__label {
-    font-size: 0.66rem;
+    font-size: 0.58rem;
+    line-height: 1.05;
+    white-space: normal;
+    word-break: keep-all;
+    overflow: visible;
+    text-overflow: clip;
   }
 
   .uptime-chart__value {
-    font-size: 0.64rem;
+    font-size: 0.58rem;
   }
 
   .uptime-week-calendar__head {
@@ -595,6 +621,48 @@
 
   .uptime-week-calendar__axis,
   .uptime-week-calendar__column {
-    min-height: 440px;
+    min-height: 620px;
+  }
+
+  .uptime-week-calendar__axis-label {
+    font-size: 0.58rem;
+  }
+
+  .uptime-week-calendar__axis-label--hourly {
+    font-size: 0.52rem;
+  }
+
+  .uptime-week-calendar__axis-spacer,
+  .uptime-week-calendar__axis {
+    position: sticky;
+    left: 0;
+    background: rgba(8, 22, 44, 0.96);
+  }
+
+  .uptime-week-calendar__axis-spacer {
+    z-index: 3;
+  }
+
+  .uptime-week-calendar__axis {
+    z-index: 4;
+  }
+
+  .uptime-week-calendar--single-day {
+    overflow-x: hidden;
+    touch-action: pan-y;
+  }
+
+  .uptime-week-calendar--single-day .uptime-week-calendar__head {
+    grid-template-columns: 44px minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  .uptime-week-calendar--single-day .uptime-week-calendar__body {
+    grid-template-columns: 44px minmax(0, 1fr);
+    min-width: 0;
+  }
+
+  .uptime-week-calendar--single-day .uptime-week-calendar__columns {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
