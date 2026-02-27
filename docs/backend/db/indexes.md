@@ -7,12 +7,14 @@
 
 ## 変更内容
 
+- 2026-02-27: `GET /api/pcs` のDB側絞り込み対応に合わせ、`pcs(status, id)` インデックスを追加。
 - 2026-02-27: 現行のインデックス一覧と、対応クエリを整理。
 - 2026-02-27: `EXPLAIN QUERY PLAN` の確認手順を追加。
 
 ## インデックス一覧（現行）
 
 - `uq_pcs_mac_address` on `pcs(mac_address)` (UNIQUE)
+- `idx_pcs_status_id` on `pcs(status, id ASC)`
 - `idx_logs_pc_id_desc` on `logs(pc_id, id DESC)`
 - `idx_logs_action_id_desc` on `logs(action, id DESC)`
 - `idx_logs_ok_id_desc` on `logs(ok, id DESC)`
@@ -27,6 +29,10 @@
 - `uq_pcs_mac_address`
   - 対応: `backend/app/repositories/pc_repository.py` の `WHERE mac_address = ?`
   - 目的: MAC重複防止と単体検索高速化
+
+- `idx_pcs_status_id`
+  - 対応: `backend/app/repositories/pc_repository.py` の `WHERE status = ? AND id > ? ORDER BY id ASC LIMIT ?`
+  - 目的: statusフィルタ付き一覧での範囲走査を高速化
 
 - `idx_logs_pc_id_desc`
   - 対応: `backend/app/repositories/log_repository.py` の `WHERE pc_id = ?` + `ORDER BY id DESC`
@@ -89,6 +95,10 @@ LIMIT 50;
   - `SCAN ...` のみ: 全件走査の可能性が高い
 
 ## 実行結果メモ（2026-02-27）
+
+- 対象: pcs一覧カーソル取得（`id > ?`）
+  - 結果: `SEARCH pcs USING INDEX sqlite_autoindex_pcs_1 (id>?)`
+  - 判定: `pcs.id` (PRIMARY KEY) の自動インデックスが選択された
 
 - 対象: logs一覧（`pc_id` 指定 + `ORDER BY id DESC`）
   - 結果: `SEARCH logs USING INDEX idx_logs_pc_id_desc (pc_id=?)`

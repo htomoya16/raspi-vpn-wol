@@ -109,6 +109,8 @@ erDiagram
 
 ## 実クエリ整合インデックス（主要）
 
+- `pcs`
+  - `idx_pcs_status_id (status, id ASC)`: statusフィルタ + カーソルページング
 - `logs`
   - `idx_logs_pc_id_desc (pc_id, id DESC)`: `pc_id` 絞り込み + 新しい順
   - `idx_logs_action_id_desc (action, id DESC)`: `action` 絞り込み + 新しい順

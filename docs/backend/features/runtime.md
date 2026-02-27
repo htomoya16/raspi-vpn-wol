@@ -19,6 +19,7 @@
   - `uptime_daily_summary`: 日次稼働集計
 - `logs.pc_id` は `pcs.id` への外部キー（`ON DELETE SET NULL`）。
 - 主要インデックス:
+  - `pcs`: `status + id`
   - `logs`: `pc_id/action/ok + id DESC`、`created_at`
   - `jobs`: `job_type + state + created_at DESC`
   - `status_history`: `pc_id + changed_at + id`、`changed_at`

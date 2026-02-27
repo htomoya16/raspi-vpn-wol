@@ -87,34 +87,18 @@ def list_pcs(
     limit: int,
     cursor: str | None,
 ) -> tuple[list[dict[str, object]], str | None]:
-    rows = pc_repository.list_pcs()
+    normalized_q = q.strip() if q else None
+    normalized_tag = tag.strip() if tag else None
+    normalized_cursor = cursor.strip() if cursor else None
+
+    rows = pc_repository.list_pcs(
+        q=normalized_q or None,
+        status=status,
+        tag=normalized_tag or None,
+        cursor=normalized_cursor or None,
+        limit=limit + 1,
+    )
     pcs = [_row_to_pc(row) for row in rows]
-
-    if q:
-        term = q.strip().lower()
-        if term:
-            pcs = [
-                pc
-                for pc in pcs
-                if term in str(pc["id"]).lower()
-                or term in str(pc["name"]).lower()
-                or term in str(pc["mac"]).lower()
-                or term in str(pc["ip"] or "").lower()
-                or any(term in t.lower() for t in pc["tags"])
-            ]
-
-    if status is not None:
-        pcs = [pc for pc in pcs if pc["status"] == status]
-
-    if tag:
-        normalized_tag = tag.strip()
-        if normalized_tag:
-            pcs = [pc for pc in pcs if normalized_tag in pc["tags"]]
-
-    if cursor:
-        cursor_id = cursor.strip()
-        if cursor_id:
-            pcs = [pc for pc in pcs if str(pc["id"]) > cursor_id]
 
     has_more = len(pcs) > limit
     page = pcs[:limit]

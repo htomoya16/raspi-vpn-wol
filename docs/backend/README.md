@@ -61,6 +61,7 @@
 
 - `docs/backend/db/er.md`（DBスキーマの正）
 - `docs/backend/db/uptime-tables.md`（uptime機能向けDDL案）
+- `docs/backend/db/indexes.md`（実クエリとインデックス対応）
 
 ## 機能別ドキュメント
 

@@ -12,6 +12,7 @@
 - `GET /api/pcs/{pc_id}`: 指定PCの詳細を返す。
 - `PATCH /api/pcs/{pc_id}`: 指定PCを部分更新する。
 - `DELETE /api/pcs/{pc_id}`: 指定PCを削除する。
+- 一覧の `q/status/tag/cursor/limit` は repository のSQLで絞り込み・ページングする（Serviceでの全件後処理を廃止）。
 - 保存項目: `id`, `name`, `mac_address`, `ip_address`, `broadcast_ip`, `send_interface`, `wol_port`, `status_method`, `status_port`。
 - 入力検証:
   - `id` / `name` 必須。

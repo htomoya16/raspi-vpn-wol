@@ -140,6 +140,9 @@ def init_db() -> None:
         conn.execute("DROP INDEX IF EXISTS idx_uptime_daily_summary_pc_date")
 
         conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_pcs_status_id ON pcs(status, id ASC)"
+        )
+        conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_logs_pc_id_desc ON logs(pc_id, id DESC)"
         )
         conn.execute(
