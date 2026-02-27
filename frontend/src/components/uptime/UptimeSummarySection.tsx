@@ -152,7 +152,7 @@ function UptimeSummarySection({
 
           {summaryLoading ? (
             <div className="uptime-loading-overlay">
-              <LoadingDots label="集計データを読み込み中です" />
+              <LoadingDots ariaLabel="集計データを読み込み中です" />
             </div>
           ) : null}
         </div>

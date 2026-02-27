@@ -43,7 +43,7 @@ function UptimeTimelineSection({
           <h3>稼働タイムライン</h3>
           <p>
             {isMobile && activeTimelineDay
-              ? `${formatWeekDayLabel(activeTimelineDay.date)} / ${weeklyData.week_start} - ${weeklyData.week_end}`
+              ? formatWeekDayLabel(activeTimelineDay.date)
               : `${weeklyData.week_start} - ${weeklyData.week_end}`}
           </p>
         </div>
@@ -165,7 +165,7 @@ function UptimeTimelineSection({
 
           {weeklyLoading ? (
             <div className="uptime-loading-overlay">
-              <LoadingDots label="稼働タイムラインを読み込み中です" />
+              <LoadingDots ariaLabel="稼働タイムラインを読み込み中です" />
             </div>
           ) : null}
         </div>

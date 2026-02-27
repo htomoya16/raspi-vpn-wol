@@ -18,7 +18,6 @@ import {
   buildTimelineDays,
   buildWeeklyFallback,
   canMoveSummaryNext,
-  clamp,
   formatDateRange,
   getCurrentWeekStart,
   getSummaryQuery,
@@ -98,9 +97,7 @@ export function useUptimePanelState({
 
   const summaryTouchStartRef = useRef<{ x: number; y: number } | null>(null)
   const timelineTouchStartRef = useRef<{ x: number; y: number } | null>(null)
-  const [mobileDayIndex, setMobileDayIndex] = useState(() => new Date().getDay())
-  const pendingMobileDayIndexRef = useRef<number | null>(null)
-  const previousWeekStartRef = useRef('')
+  const [mobileCursorDate, setMobileCursorDate] = useState(() => toIsoDateLocal(new Date()))
 
   const [useMockData, setUseMockData] = useState<boolean>(() => {
     if (!ENABLE_UPTIME_MOCK || typeof window === 'undefined') {
@@ -138,6 +135,7 @@ export function useUptimePanelState({
     () => parseIsoDateLocal(weekStart) || currentWeekStartDate,
     [currentWeekStartDate, weekStart],
   )
+  const todayIsoDate = toIsoDateLocal(new Date())
 
   const isWeeklyNextDisabled = weekStartDate >= currentWeekStartDate
 
@@ -388,8 +386,15 @@ export function useUptimePanelState({
     if (timelineDays.length === 0) {
       return []
     }
-    return [timelineDays[clamp(mobileDayIndex, 0, timelineDays.length - 1)]]
-  }, [isMobile, mobileDayIndex, timelineDays])
+    const cursorIndex = timelineDays.findIndex((day) => day.date === mobileCursorDate)
+    if (cursorIndex >= 0) {
+      return [timelineDays[cursorIndex]]
+    }
+    if (mobileCursorDate <= timelineDays[0].date) {
+      return [timelineDays[0]]
+    }
+    return [timelineDays[timelineDays.length - 1]]
+  }, [isMobile, mobileCursorDate, timelineDays])
 
   const activeTimelineDay = useMemo(() => {
     if (visibleTimelineDays.length === 0) {
@@ -403,34 +408,28 @@ export function useUptimePanelState({
       return
     }
     if (timelineDays.length === 0) {
-      setMobileDayIndex(0)
       return
     }
-
-    const pending = pendingMobileDayIndexRef.current
-    if (pending !== null) {
-      pendingMobileDayIndexRef.current = null
-      setMobileDayIndex(clamp(pending, 0, timelineDays.length - 1))
+    if (timelineDays.some((day) => day.date === mobileCursorDate)) {
       return
     }
-
-    if (previousWeekStartRef.current === weekStart) {
-      setMobileDayIndex((prev) => clamp(prev, 0, timelineDays.length - 1))
+    if (mobileCursorDate <= timelineDays[0].date) {
+      setMobileCursorDate(timelineDays[0].date)
       return
     }
-
-    previousWeekStartRef.current = weekStart
-    const nextIndex = weekStart === currentWeekStart ? new Date().getDay() : 0
-    setMobileDayIndex(clamp(nextIndex, 0, timelineDays.length - 1))
-  }, [currentWeekStart, isMobile, timelineDays, weekStart])
+    setMobileCursorDate(timelineDays[timelineDays.length - 1].date)
+  }, [isMobile, mobileCursorDate, timelineDays])
 
   const isTimelineNextDisabled = useMemo(() => {
     if (!isMobile) {
       return isWeeklyNextDisabled
     }
-    const isLastDay = mobileDayIndex >= timelineDays.length - 1
-    return isLastDay && isWeeklyNextDisabled
-  }, [isMobile, isWeeklyNextDisabled, mobileDayIndex, timelineDays.length])
+    if (timelineDays.length === 0) {
+      return true
+    }
+    const activeDate = activeTimelineDay?.date || mobileCursorDate
+    return activeDate >= todayIsoDate
+  }, [activeTimelineDay?.date, isMobile, isWeeklyNextDisabled, mobileCursorDate, timelineDays.length, todayIsoDate])
 
   const moveSummary = (direction: 1 | -1): void => {
     pendingSummarySlideRef.current = direction < 0 ? 'prev' : 'next'
@@ -449,25 +448,25 @@ export function useUptimePanelState({
       return
     }
 
-    const nextIndex = mobileDayIndex + direction
-    if (nextIndex >= 0 && nextIndex < timelineDays.length) {
-      setWeeklySlide(direction < 0 ? 'prev' : 'next')
-      setMobileDayIndex(nextIndex)
+    const activeDate = activeTimelineDay?.date || mobileCursorDate
+    const activeDateObj = parseIsoDateLocal(activeDate)
+    if (!activeDateObj) {
       return
     }
 
-    if (direction < 0) {
-      pendingMobileDayIndexRef.current = 6
-      moveWeekly(-1)
+    const nextDateObj = addDays(activeDateObj, direction)
+    const nextDate = toIsoDateLocal(nextDateObj)
+    if (direction > 0 && nextDate > todayIsoDate) {
       return
     }
 
-    if (isWeeklyNextDisabled) {
-      return
+    setWeeklySlide(direction < 0 ? 'prev' : 'next')
+    setMobileCursorDate(nextDate)
+    const nextWeekStart = toIsoDateLocal(startOfWeekSunday(nextDateObj))
+    if (nextWeekStart !== weekStart) {
+      pendingWeeklySlideRef.current = direction < 0 ? 'prev' : 'next'
+      setWeekStart(nextWeekStart)
     }
-
-    pendingMobileDayIndexRef.current = 0
-    moveWeekly(1)
   }
 
   const handleToggleMockData = (): void => {
