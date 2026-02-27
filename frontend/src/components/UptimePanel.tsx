@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { formatApiError } from '../api/http'
 import { getPcUptimeSummary, getPcWeeklyTimeline } from '../api/pcs'
@@ -11,6 +11,7 @@ import type {
   UptimeSummaryItem,
   UptimeWeeklyInterval,
 } from '../types/models'
+import LoadingDots from './LoadingDots'
 
 const DEFAULT_TZ = 'Asia/Tokyo'
 const ENABLE_UPTIME_MOCK = Boolean(import.meta.env.DEV)
@@ -334,9 +335,11 @@ function UptimePanel({
   const [summaryBucket, setSummaryBucket] = useState<SummaryBucket>('day')
   const [summaryAnchor, setSummaryAnchor] = useState<Date>(() => new Date())
   const [summarySlide, setSummarySlide] = useState<SlideDirection>(null)
+  const pendingSummarySlideRef = useRef<SlideDirection>(null)
 
   const [weekStart, setWeekStart] = useState(getCurrentWeekStart)
   const [weeklySlide, setWeeklySlide] = useState<SlideDirection>(null)
+  const pendingWeeklySlideRef = useRef<SlideDirection>(null)
 
   const [useMockData, setUseMockData] = useState<boolean>(() => {
     if (!ENABLE_UPTIME_MOCK) {
@@ -355,6 +358,31 @@ function UptimePanel({
   const [weekly, setWeekly] = useState<PcWeeklyTimelineResponse | null>(null)
   const [weeklyLoading, setWeeklyLoading] = useState(false)
   const [weeklyError, setWeeklyError] = useState('')
+  const previousActivePcIdRef = useRef('')
+
+  function flushSummarySlideIfNeeded(): void {
+    const pending = pendingSummarySlideRef.current
+    if (!pending || typeof window === 'undefined') {
+      return
+    }
+    pendingSummarySlideRef.current = null
+    setSummarySlide(null)
+    window.requestAnimationFrame(() => {
+      setSummarySlide(pending)
+    })
+  }
+
+  function flushWeeklySlideIfNeeded(): void {
+    const pending = pendingWeeklySlideRef.current
+    if (!pending || typeof window === 'undefined') {
+      return
+    }
+    pendingWeeklySlideRef.current = null
+    setWeeklySlide(null)
+    window.requestAnimationFrame(() => {
+      setWeeklySlide(pending)
+    })
+  }
 
   const activePcId = useMemo(() => {
     if (pcs.length === 0) {
@@ -449,10 +477,26 @@ function UptimePanel({
   )
 
   useEffect(() => {
+    if (!activePcId) {
+      previousActivePcIdRef.current = ''
+      return
+    }
+    const previousPcId = previousActivePcIdRef.current
+    if (previousPcId && previousPcId !== activePcId) {
+      pendingSummarySlideRef.current = 'next'
+      pendingWeeklySlideRef.current = 'next'
+      setSummaryBucket('day')
+      setSummaryAnchor(new Date())
+    }
+    previousActivePcIdRef.current = activePcId
+  }, [activePcId])
+
+  useEffect(() => {
     let cancelled = false
 
     async function runSummaryFlow() {
       if (!activePcId) {
+        pendingSummarySlideRef.current = null
         if (!cancelled) {
           setSummary(null)
           setSummaryError('')
@@ -468,6 +512,7 @@ function UptimePanel({
           setSummary(buildMockUptimeSummary(activePcId, apiBucket, from, to, DEFAULT_TZ))
           setSummaryError('')
           setSummaryLoading(false)
+          flushSummarySlideIfNeeded()
         }
         return
       }
@@ -488,6 +533,7 @@ function UptimePanel({
           setSummary(data)
         }
       } catch (error) {
+        pendingSummarySlideRef.current = null
         if (!cancelled) {
           setSummary(null)
           setSummaryError(formatApiError(error))
@@ -495,6 +541,7 @@ function UptimePanel({
       } finally {
         if (!cancelled) {
           setSummaryLoading(false)
+          flushSummarySlideIfNeeded()
         }
       }
     }
@@ -510,6 +557,7 @@ function UptimePanel({
 
     async function runWeeklyFlow() {
       if (!activePcId) {
+        pendingWeeklySlideRef.current = null
         if (!cancelled) {
           setWeekly(null)
           setWeeklyError('')
@@ -523,6 +571,7 @@ function UptimePanel({
           setWeekly(buildMockWeeklyTimeline(activePcId, weekStart, DEFAULT_TZ))
           setWeeklyError('')
           setWeeklyLoading(false)
+          flushWeeklySlideIfNeeded()
         }
         return
       }
@@ -541,6 +590,7 @@ function UptimePanel({
           setWeekly(data)
         }
       } catch (error) {
+        pendingWeeklySlideRef.current = null
         if (!cancelled) {
           setWeekly(null)
           setWeeklyError(formatApiError(error))
@@ -548,6 +598,7 @@ function UptimePanel({
       } finally {
         if (!cancelled) {
           setWeeklyLoading(false)
+          flushWeeklySlideIfNeeded()
         }
       }
     }
@@ -588,12 +639,12 @@ function UptimePanel({
   }
 
   function moveSummary(direction: 1 | -1): void {
-    setSummarySlide(direction < 0 ? 'prev' : 'next')
+    pendingSummarySlideRef.current = direction < 0 ? 'prev' : 'next'
     setSummaryAnchor((prev) => moveSummaryAnchor(prev, summaryBucket, direction))
   }
 
   function moveWeekly(offset: number): void {
-    setWeeklySlide(offset < 0 ? 'prev' : 'next')
+    pendingWeeklySlideRef.current = offset < 0 ? 'prev' : 'next'
     const base = parseIsoDateLocal(weekStart) || weekStartDate
     setWeekStart(toIsoDateLocal(addDays(base, offset * 7)))
   }
@@ -615,7 +666,17 @@ function UptimePanel({
           <div className="uptime-toolbar">
             <label>
               対象PC
-              <select value={activePcId} onChange={(event) => onSelectPc(event.target.value)}>
+              <select
+                value={activePcId}
+                onChange={(event) => {
+                  const nextPcId = event.target.value
+                  if (nextPcId !== activePcId) {
+                    pendingSummarySlideRef.current = 'next'
+                    pendingWeeklySlideRef.current = 'next'
+                  }
+                  onSelectPc(nextPcId)
+                }}
+              >
                 {pcs.map((pc) => (
                   <option key={pc.id} value={pc.id}>
                     {pc.name} ({pc.id})
@@ -629,6 +690,7 @@ function UptimePanel({
               <select
                 value={summaryBucket}
                 onChange={(event) => {
+                  pendingSummarySlideRef.current = 'next'
                   setSummaryBucket(event.target.value as SummaryBucket)
                   setSummaryAnchor(new Date())
                 }}
@@ -682,69 +744,79 @@ function UptimePanel({
               </div>
             </header>
 
-            {summaryLoading ? <p className="empty-state">集計データを読み込み中です...</p> : null}
             {!summaryLoading && summaryError ? <p className="feedback feedback--error">{summaryError}</p> : null}
-            {!summaryLoading && !summaryError && summaryItems.length === 0 ? (
-              <p className="empty-state">集計データがありません。</p>
-            ) : null}
 
-            {!summaryLoading && !summaryError && summaryItems.length > 0 ? (
-              <div className={`uptime-slide-surface ${summarySlide ? `uptime-slide-surface--${summarySlide}` : ''}`}>
-                <div className={`uptime-chart uptime-chart--${summaryBucket}`}>
-                  <div className="uptime-chart__axis" aria-hidden="true">
-                    {summaryAxisTicks.map((tick) => (
-                      <span
-                        key={tick.key}
-                        className={`uptime-chart__axis-label ${tick.isMin ? 'uptime-chart__axis-label--min' : ''} ${tick.isMax ? 'uptime-chart__axis-label--max' : ''}`.trim()}
-                        style={{ top: `${(1 - tick.ratio) * 100}%` }}
-                      >
-                        {tick.label}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="uptime-chart__main">
-                    <div className="uptime-chart__scroller">
-                      <div className="uptime-chart__plot">
-                        <span className="uptime-chart__avg-line" style={{ bottom: `${summaryAveragePercent}%` }}>
-                          <span className="uptime-chart__avg-label">
-                            平均 {formatSecondsToAxisHours(summaryAverageSeconds)}
+            {!summaryError ? (
+              <div className="uptime-section__content uptime-section__content--summary">
+                {summaryItems.length > 0 ? (
+                  <div className={`uptime-slide-surface ${summarySlide ? `uptime-slide-surface--${summarySlide}` : ''}`}>
+                    <div className={`uptime-chart uptime-chart--${summaryBucket}`}>
+                      <div className="uptime-chart__axis" aria-hidden="true">
+                        {summaryAxisTicks.map((tick) => (
+                          <span
+                            key={tick.key}
+                            className={`uptime-chart__axis-label ${tick.isMin ? 'uptime-chart__axis-label--min' : ''} ${tick.isMax ? 'uptime-chart__axis-label--max' : ''}`.trim()}
+                            style={{ top: `${(1 - tick.ratio) * 100}%` }}
+                          >
+                            {tick.label}
                           </span>
-                        </span>
-
-                        <div className="uptime-chart__bars" style={summaryGridStyle}>
-                          {summaryItems.map((item, index) => (
-                            <div key={`${item.period_start}-${item.period_end}`} className="uptime-chart__bar-cell">
-                              <div className="uptime-chart__bar-wrap">
-                                <div
-                                  className={`uptime-chart__bar ${
-                                    summarySlide
-                                      ? `uptime-chart__bar--grow uptime-chart__bar--grow-${summarySlide}`
-                                      : ''
-                                  }`.trim()}
-                                  style={{
-                                    height: `${item.online_seconds <= 0 ? 0 : Math.max((item.online_seconds / summaryMaxSeconds) * 100, 2)}%`,
-                                    animationDelay: summarySlide ? `${Math.min(index, 24) * 22}ms` : undefined,
-                                  }}
-                                  title={`${item.label}: ${formatSecondsToHours(item.online_seconds)} (${Math.round(item.online_ratio * 100)}%)`}
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
+                        ))}
                       </div>
 
-                      <div className="uptime-chart__meta" style={summaryGridStyle}>
-                        {summaryItems.map((item) => (
-                          <div key={`meta-${item.period_start}-${item.period_end}`} className="uptime-chart__meta-item">
-                            <p className="uptime-chart__label">{formatSummaryLabel(item, summaryBucket)}</p>
-                            <p className="uptime-chart__value">{formatSecondsToHours(item.online_seconds)}</p>
+                      <div className="uptime-chart__main">
+                        <div className="uptime-chart__scroller">
+                          <div className="uptime-chart__plot">
+                            <span className="uptime-chart__avg-line" style={{ bottom: `${summaryAveragePercent}%` }}>
+                              <span className="uptime-chart__avg-label">
+                                平均 {formatSecondsToAxisHours(summaryAverageSeconds)}
+                              </span>
+                            </span>
+
+                            <div className="uptime-chart__bars" style={summaryGridStyle}>
+                              {summaryItems.map((item, index) => (
+                                <div key={`${item.period_start}-${item.period_end}`} className="uptime-chart__bar-cell">
+                                  <div className="uptime-chart__bar-wrap">
+                                    <div
+                                      className={`uptime-chart__bar ${
+                                        summarySlide
+                                          ? `uptime-chart__bar--grow uptime-chart__bar--grow-${summarySlide}`
+                                          : ''
+                                      }`.trim()}
+                                      style={{
+                                        height: `${item.online_seconds <= 0 ? 0 : Math.max((item.online_seconds / summaryMaxSeconds) * 100, 2)}%`,
+                                        animationDelay: summarySlide ? `${Math.min(index, 24) * 22}ms` : undefined,
+                                      }}
+                                      title={`${item.label}: ${formatSecondsToHours(item.online_seconds)} (${Math.round(item.online_ratio * 100)}%)`}
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        ))}
+
+                          <div className="uptime-chart__meta" style={summaryGridStyle}>
+                            {summaryItems.map((item) => (
+                              <div key={`meta-${item.period_start}-${item.period_end}`} className="uptime-chart__meta-item">
+                                <p className="uptime-chart__label">{formatSummaryLabel(item, summaryBucket)}</p>
+                                <p className="uptime-chart__value">{formatSecondsToHours(item.online_seconds)}</p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="uptime-summary-placeholder">
+                    <p className="empty-state">集計データがありません。</p>
+                  </div>
+                )}
+
+                {summaryLoading ? (
+                  <div className="uptime-loading-overlay">
+                    <LoadingDots label="集計データを読み込み中です" />
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </section>
@@ -781,83 +853,90 @@ function UptimePanel({
               </div>
             </header>
 
-            {weeklyLoading ? <p className="empty-state">週タイムラインを読み込み中です...</p> : null}
             {!weeklyLoading && weeklyError ? <p className="feedback feedback--error">{weeklyError}</p> : null}
 
-            {!weeklyLoading && !weeklyError ? (
-              <div className={`uptime-slide-surface ${weeklySlide ? `uptime-slide-surface--${weeklySlide}` : ''}`}>
-                <div className={`uptime-week-calendar ${weeklySlide ? `uptime-week-calendar--expand-${weeklySlide}` : ''}`}>
-                  <div className="uptime-week-calendar__head">
-                    <div className="uptime-week-calendar__axis-spacer" />
-                    {timelineDays.map((day) => (
-                      <div key={`head-${day.date}`} className="uptime-week-calendar__day-head">
-                        <p>{formatWeekDayLabel(day.date)}</p>
-                        <span>{formatSecondsToHours(day.online_seconds)}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="uptime-week-calendar__body">
-                    <div className="uptime-week-calendar__axis">
-                      {HOUR_MARKERS.map((hour) => (
-                        <span
-                          key={`axis-${hour}`}
-                          className={`uptime-week-calendar__axis-label ${
-                            hour === 0
-                              ? 'uptime-week-calendar__axis-label--start'
-                              : hour === 24
-                                ? 'uptime-week-calendar__axis-label--end'
-                                : ''
-                          }`.trim()}
-                          style={{ top: `${(hour / 24) * 100}%` }}
-                        >
-                          {String(hour).padStart(2, '0')}:00
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="uptime-week-calendar__columns">
+            {!weeklyError ? (
+              <div className="uptime-section__content uptime-section__content--weekly">
+                <div className={`uptime-slide-surface ${weeklySlide ? `uptime-slide-surface--${weeklySlide}` : ''}`}>
+                  <div className={`uptime-week-calendar ${weeklySlide ? `uptime-week-calendar--expand-${weeklySlide}` : ''}`}>
+                    <div className="uptime-week-calendar__head">
+                      <div className="uptime-week-calendar__axis-spacer" />
                       {timelineDays.map((day) => (
-                        <div key={day.date} className="uptime-week-calendar__column">
-                          {Array.from({ length: 23 }).map((_, index) => (
-                            <span
-                              key={`${day.date}-${index}`}
-                              className="uptime-week-calendar__hour-line"
-                              style={{ top: `${((index + 1) / 24) * 100}%` }}
-                            />
-                          ))}
-                          {day.intervals.map((interval, index) => {
-                            const position = intervalToVertical(interval)
-                            const mode = getIntervalDisplayMode(interval.duration_seconds)
-                            return (
-                              <span
-                                key={`${day.date}-${interval.start}-${interval.end}-${index}`}
-                                className={`uptime-week-calendar__event uptime-week-calendar__event--${mode}`}
-                                style={{
-                                  top: `${position.top}%`,
-                                  height: `${position.height}%`,
-                                }}
-                                title={`${day.date} ${interval.start} - ${interval.end} (${formatSecondsToHours(interval.duration_seconds)})`}
-                              >
-                                {mode === 'full' ? (
-                                  <>
-                                    <span className="uptime-week-calendar__event-start">{interval.start}</span>
-                                    <span className="uptime-week-calendar__event-end">{interval.end}</span>
-                                  </>
-                                ) : null}
-                                {mode === 'compact' ? (
-                                  <span className="uptime-week-calendar__event-range">
-                                    {interval.start} - {interval.end}
-                                  </span>
-                                ) : null}
-                              </span>
-                            )
-                          })}
+                        <div key={`head-${day.date}`} className="uptime-week-calendar__day-head">
+                          <p>{formatWeekDayLabel(day.date)}</p>
+                          <span>{formatSecondsToHours(day.online_seconds)}</span>
                         </div>
                       ))}
                     </div>
+
+                    <div className="uptime-week-calendar__body">
+                      <div className="uptime-week-calendar__axis">
+                        {HOUR_MARKERS.map((hour) => (
+                          <span
+                            key={`axis-${hour}`}
+                            className={`uptime-week-calendar__axis-label ${
+                              hour === 0
+                                ? 'uptime-week-calendar__axis-label--start'
+                                : hour === 24
+                                  ? 'uptime-week-calendar__axis-label--end'
+                                  : ''
+                            }`.trim()}
+                            style={{ top: `${(hour / 24) * 100}%` }}
+                          >
+                            {String(hour).padStart(2, '0')}:00
+                          </span>
+                        ))}
+                      </div>
+
+                      <div className="uptime-week-calendar__columns">
+                        {timelineDays.map((day) => (
+                          <div key={day.date} className="uptime-week-calendar__column">
+                            {Array.from({ length: 23 }).map((_, index) => (
+                              <span
+                                key={`${day.date}-${index}`}
+                                className="uptime-week-calendar__hour-line"
+                                style={{ top: `${((index + 1) / 24) * 100}%` }}
+                              />
+                            ))}
+                            {day.intervals.map((interval, index) => {
+                              const position = intervalToVertical(interval)
+                              const mode = getIntervalDisplayMode(interval.duration_seconds)
+                              return (
+                                <span
+                                  key={`${day.date}-${interval.start}-${interval.end}-${index}`}
+                                  className={`uptime-week-calendar__event uptime-week-calendar__event--${mode}`}
+                                  style={{
+                                    top: `${position.top}%`,
+                                    height: `${position.height}%`,
+                                  }}
+                                  title={`${day.date} ${interval.start} - ${interval.end} (${formatSecondsToHours(interval.duration_seconds)})`}
+                                >
+                                  {mode === 'full' ? (
+                                    <>
+                                      <span className="uptime-week-calendar__event-start">{interval.start}</span>
+                                      <span className="uptime-week-calendar__event-end">{interval.end}</span>
+                                    </>
+                                  ) : null}
+                                  {mode === 'compact' ? (
+                                    <span className="uptime-week-calendar__event-range">
+                                      {interval.start} - {interval.end}
+                                    </span>
+                                  ) : null}
+                                </span>
+                              )
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
+
+                {weeklyLoading ? (
+                  <div className="uptime-loading-overlay">
+                    <LoadingDots label="週タイムラインを読み込み中です" />
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </section>

@@ -61,6 +61,12 @@ describe('PcList', () => {
     expect(screen.getByText('該当するPCがありません。')).toBeInTheDocument()
   })
 
+  it('keeps list layout while loading and shows loading overlay', () => {
+    renderPcList({ loading: true })
+    expect(screen.getByText('Main PC')).toBeInTheDocument()
+    expect(screen.getByText(/PC一覧を読み込み中/)).toBeInTheDocument()
+  })
+
   it('opens detail dialog when row is tapped', async () => {
     const user = userEvent.setup()
     renderPcList()

@@ -41,6 +41,11 @@ pip install -r requirements-dev.txt
 pytest -q
 ```
 
+```bash
+cd backend
+python scripts/seed_dev_data.py
+```
+
 ## 運用時の注意点
 
 - API仕様変更時は `docs/backend/api/openapi.md` とあわせて該当テスト/テストドキュメントを更新する。

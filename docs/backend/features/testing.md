@@ -27,6 +27,8 @@
   - `lifespan` の起動/終了で監視タスクが適切に管理されることを検証。
 - `docs/backend/tests/` を追加。
   - テストファイルごとの目的・ケース一覧・更新時注意点を文書化。
+- `backend/scripts/seed_dev_data.py` を追加。
+  - 開発用の `pcs` / `status_history` / `uptime_daily_summary` / `logs` を再投入できるようにした。
 
 ## 実行方法
 
@@ -34,6 +36,11 @@
 cd backend
 pip install -r requirements-dev.txt
 pytest -q
+```
+
+```bash
+cd backend
+python scripts/seed_dev_data.py
 ```
 
 ## 運用時の注意点

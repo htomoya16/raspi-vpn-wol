@@ -35,6 +35,7 @@
 - `GET /api/jobs/{job_id}`: 非同期ジョブ状態取得。
 - `GET /api/events`: SSEイベントストリーム。
 - `pytest` で最小回帰テストを実行可能（health/pcs/logs/jobs）。
+- `python scripts/seed_dev_data.py` で開発用シードデータを再投入可能。
 
 ## 運用時の注意点
 

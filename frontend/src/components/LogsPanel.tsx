@@ -1,5 +1,6 @@
 import { Fragment, useState, type KeyboardEvent } from 'react'
 
+import LoadingDots from './LoadingDots'
 import type { LogEntry } from '../types/models'
 import { formatJstDateParts } from '../utils/datetime'
 
@@ -104,7 +105,7 @@ function LogsPanel({
 
       <div className="logs-toolbar">
         <button type="button" className="btn btn--soft" onClick={onReload} disabled={loading || clearLoading}>
-          {loading ? '読み込み中...' : '再読込'}
+          {loading ? <LoadingDots label="読み込み中" /> : '再読込'}
         </button>
         <button
           type="button"
@@ -221,7 +222,7 @@ function LogsPanel({
                 キャンセル
               </button>
               <button type="button" className="btn btn--danger" onClick={confirmClear} disabled={clearLoading}>
-                {clearLoading ? '消去中...' : '消去する'}
+                {clearLoading ? <LoadingDots label="消去中" /> : '消去する'}
               </button>
             </div>
           </div>

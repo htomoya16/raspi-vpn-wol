@@ -25,6 +25,48 @@
   background: rgba(8, 22, 44, 0.72);
 }
 
+.uptime-section__content {
+  position: relative;
+}
+
+.uptime-section__content--summary {
+  min-height: 320px;
+}
+
+.uptime-section__content--weekly {
+  min-height: 600px;
+}
+
+.uptime-loading-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d6e5ff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  background: rgba(7, 19, 38, 0.46);
+  backdrop-filter: blur(1px);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.uptime-summary-placeholder {
+  margin-top: 12px;
+  min-height: 280px;
+  border: 1px dashed rgba(95, 133, 192, 0.38);
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(7, 19, 38, 0.6);
+}
+
+.uptime-summary-placeholder .empty-state {
+  margin: 0;
+}
+
 .uptime-section__header {
   display: flex;
   align-items: baseline;
@@ -473,6 +515,18 @@
 }
 
 @media (max-width: 760px) {
+  .uptime-section__content--summary {
+    min-height: 272px;
+  }
+
+  .uptime-section__content--weekly {
+    min-height: 520px;
+  }
+
+  .uptime-summary-placeholder {
+    min-height: 228px;
+  }
+
   .uptime-toolbar {
     grid-template-columns: 1fr;
   }
