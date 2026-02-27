@@ -98,19 +98,76 @@ def init_db() -> None:
             """
         )
         conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_pcs_status ON pcs(status)"
+            """
+            CREATE TABLE IF NOT EXISTS status_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pc_id TEXT NOT NULL,
+                status TEXT NOT NULL,
+                is_online INTEGER NOT NULL CHECK (is_online IN (0, 1)),
+                changed_at TEXT NOT NULL,
+                source TEXT,
+                note TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (pc_id) REFERENCES pcs(id) ON DELETE CASCADE
+            )
+            """
         )
         conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_pcs_name ON pcs(name)"
+            """
+            CREATE TABLE IF NOT EXISTS uptime_daily_summary (
+                pc_id TEXT NOT NULL,
+                date TEXT NOT NULL,
+                tz TEXT NOT NULL DEFAULT 'Asia/Tokyo',
+                online_seconds INTEGER NOT NULL DEFAULT 0 CHECK (online_seconds BETWEEN 0 AND 86400),
+                online_count INTEGER NOT NULL DEFAULT 0,
+                offline_count INTEGER NOT NULL DEFAULT 0,
+                first_online_at TEXT,
+                last_online_at TEXT,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (pc_id, date, tz),
+                FOREIGN KEY (pc_id) REFERENCES pcs(id) ON DELETE CASCADE
+            )
+            """
+        )
+        conn.execute("DROP INDEX IF EXISTS idx_pcs_status")
+        conn.execute("DROP INDEX IF EXISTS idx_pcs_name")
+        conn.execute("DROP INDEX IF EXISTS idx_logs_pc_created_at")
+        conn.execute("DROP INDEX IF EXISTS idx_logs_action_created_at")
+        conn.execute("DROP INDEX IF EXISTS idx_jobs_state_created_at")
+        conn.execute("DROP INDEX IF EXISTS idx_status_history_pc_changed_at")
+        conn.execute("DROP INDEX IF EXISTS idx_uptime_daily_summary_date")
+        conn.execute("DROP INDEX IF EXISTS idx_uptime_daily_summary_pc_date")
+
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_pcs_status_id ON pcs(status, id ASC)"
         )
         conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_logs_pc_created_at ON logs(pc_id, created_at DESC)"
+            "CREATE INDEX IF NOT EXISTS idx_logs_pc_id_desc ON logs(pc_id, id DESC)"
         )
         conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_logs_action_created_at ON logs(action, created_at DESC)"
+            "CREATE INDEX IF NOT EXISTS idx_logs_action_id_desc ON logs(action, id DESC)"
         )
         conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_jobs_state_created_at ON jobs(state, created_at DESC)"
+            "CREATE INDEX IF NOT EXISTS idx_logs_ok_id_desc ON logs(ok, id DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_logs_created_at ON logs(created_at)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_jobs_job_type_state_created_at "
+            "ON jobs(job_type, state, created_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_status_history_pc_changed_id "
+            "ON status_history(pc_id, changed_at DESC, id DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_status_history_changed_at ON status_history(changed_at DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_uptime_daily_summary_pc_tz_date "
+            "ON uptime_daily_summary(pc_id, tz, date ASC)"
         )
 
         pc_rows = conn.execute(

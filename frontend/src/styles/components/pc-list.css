@@ -45,10 +45,36 @@
 
 .pc-row-list {
   list-style: none;
-  margin: 14px 0 0;
+  margin: 0;
   padding: 0;
   display: grid;
   gap: 8px;
+}
+
+.pc-list__content {
+  position: relative;
+  margin-top: 14px;
+  min-height: 188px;
+}
+
+.pc-list__empty {
+  margin: 0;
+  display: grid;
+  place-items: center;
+  min-height: 188px;
+}
+
+.pc-list__loading-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  border: 1px dashed rgba(95, 133, 192, 0.4);
+  background: rgba(7, 19, 38, 0.6);
+  backdrop-filter: blur(1px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
 }
 
 .pc-row {
@@ -349,6 +375,11 @@
 }
 
 @media (max-width: 760px) {
+  .pc-list__content,
+  .pc-list__empty {
+    min-height: 160px;
+  }
+
   .pc-list__header {
     display: grid;
     gap: 8px;

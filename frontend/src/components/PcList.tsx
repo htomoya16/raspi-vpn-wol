@@ -10,6 +10,7 @@ import PcDetailDialog from './pc-list/PcDetailDialog'
 import PcRowItem from './pc-list/PcRowItem'
 import { EMPTY_EDIT_FORM, STATUS_LABELS, type PcEditFormState } from './pc-list/constants'
 import { toEditForm, toUpdatePayload } from './pc-list/utils'
+import LoadingDots from './LoadingDots'
 
 export interface PcListProps {
   items: Pc[]
@@ -25,6 +26,7 @@ export interface PcListProps {
   onSendWol: (pcId: string) => Promise<void> | void
   onDelete: (pcId: string) => Promise<void>
   onUpdate: (pcId: string, payload: PcUpdatePayload) => Promise<Pc>
+  onSelectPc?: (pcId: string) => void
   busyById: BusyById
   rowErrorById: RowErrorById
   lastSyncedAt: string
@@ -45,6 +47,7 @@ function PcList({
   onSendWol,
   onDelete,
   onUpdate,
+  onSelectPc,
   busyById,
   rowErrorById,
   lastSyncedAt,
@@ -127,6 +130,7 @@ function PcList({
       return
     }
     setSelectedPcId(pcId)
+    onSelectPc?.(pcId)
     setDetailOpen(true)
     setIsEditing(false)
     setEditError('')
@@ -283,7 +287,7 @@ function PcList({
               クリア
             </button>
             <button type="button" className="btn btn--soft" onClick={onReload} disabled={loading}>
-              {loading ? '読み込み中...' : '再読み込み'}
+              {loading ? <LoadingDots label="読み込み中" /> : '再読み込み'}
             </button>
           </div>
         ) : null}
@@ -291,32 +295,46 @@ function PcList({
 
       {error ? <p className="feedback feedback--error">{error}</p> : null}
 
-      {loading ? (
-        <p className="empty-state">PC一覧を読み込んでいます...</p>
-      ) : items.length === 0 ? (
-        <p className="empty-state">{hasActiveFilter ? '該当するPCがありません。' : 'PCがまだ登録されていません。'}</p>
-      ) : (
-        <ul className="pc-row-list">
-          {items.map((pc) => {
-            const isBusy: PcBusyState = busyById[pc.id] || {}
-            const isActive = detailOpen && pc.id === selectedPcId
+      <div className="pc-list__content" aria-busy={loading}>
+        {items.length === 0 ? (
+          <p className="empty-state pc-list__empty">
+            {hasActiveFilter ? '該当するPCがありません。' : 'PCがまだ登録されていません。'}
+          </p>
+        ) : (
+          <ul className="pc-row-list">
+            {items.map((pc) => {
+              const isBusy: PcBusyState = busyById[pc.id] || {}
+              const isActive = detailOpen && pc.id === selectedPcId
 
-            return (
-              <PcRowItem
-                key={pc.id}
-                pc={pc}
-                isActive={isActive}
-                isBusy={isBusy}
-                statusLabel={STATUS_LABELS[pc.status]}
-                rowError={rowErrorById[pc.id]}
-                onOpenDetail={openDetail}
-                onSendWol={onSendWol}
-                onRefreshStatus={onRefreshStatus}
-              />
-            )
-          })}
-        </ul>
-      )}
+              return (
+                <PcRowItem
+                  key={pc.id}
+                  pc={pc}
+                  isActive={isActive}
+                  isBusy={isBusy}
+                  statusLabel={STATUS_LABELS[pc.status]}
+                  rowError={rowErrorById[pc.id]}
+                  onOpenDetail={openDetail}
+                  onSendWol={async (pcId) => {
+                    onSelectPc?.(pcId)
+                    await onSendWol(pcId)
+                  }}
+                  onRefreshStatus={async (pcId) => {
+                    onSelectPc?.(pcId)
+                    await onRefreshStatus(pcId)
+                  }}
+                />
+              )
+            })}
+          </ul>
+        )}
+
+        {loading ? (
+          <div className="pc-list__loading-overlay">
+            <LoadingDots label="PC一覧を読み込み中" />
+          </div>
+        ) : null}
+      </div>
     </>
   )
 

@@ -1,6 +1,9 @@
 @import './styles/base.css';
 @import './styles/components/dialog.css';
 @import './styles/components/pc-list.css';
+@import './styles/components/uptime-panel.css';
+@import './styles/components/uptime-summary.css';
+@import './styles/components/uptime-timeline.css';
 @import './styles/components/job-queue.css';
 @import './styles/components/logs-panel.css';
 @import './styles/responsive.css';

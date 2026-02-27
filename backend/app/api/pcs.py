@@ -6,6 +6,7 @@ from fastapi import APIRouter, Body, HTTPException, Query, status
 
 from app.models.jobs import JobAccepted
 from app.models.pcs import PcCreate, PcListResponse, PcResponse, PcStatus, PcUpdate
+from app.models.uptime import PcUptimeSummaryResponse, PcWeeklyTimelineResponse, UptimeBucket
 from app.models.wol import WolRequest
 from app.services import event_service, job_service, pc_service
 from app.services.pc_service import PcConflictError
@@ -193,3 +194,63 @@ async def refresh_all_statuses() -> JobAccepted:
     asyncio.create_task(job_service.run_job(job["id"], pc_service.refresh_all_statuses))
     await event_service.event_broker.publish("job", {"job_id": job["id"], "state": "queued"})
     return JobAccepted(job_id=job["id"], state=job["state"])
+
+
+@router.get(
+    "/pcs/{pc_id}/uptime/summary",
+    response_model=PcUptimeSummaryResponse,
+    summary="オンライン集計取得",
+    responses={
+        400: {"description": "入力値不正"},
+        404: {"description": "対象が存在しない"},
+        422: {"description": "リクエスト形式エラー"},
+    },
+)
+def get_uptime_summary(
+    pc_id: str,
+    from_date: str | None = Query(default=None, alias="from"),
+    to_date: str | None = Query(default=None, alias="to"),
+    bucket: UptimeBucket = Query(default="day"),
+    tz: str | None = Query(default="Asia/Tokyo"),
+) -> PcUptimeSummaryResponse:
+    try:
+        response = pc_service.get_uptime_summary(
+            pc_id=pc_id,
+            from_date=from_date,
+            to_date=to_date,
+            bucket=bucket,
+            tz=tz,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return PcUptimeSummaryResponse.model_validate(response)
+
+
+@router.get(
+    "/pcs/{pc_id}/uptime/weekly",
+    response_model=PcWeeklyTimelineResponse,
+    summary="週タイムライン取得",
+    responses={
+        400: {"description": "入力値不正"},
+        404: {"description": "対象が存在しない"},
+        422: {"description": "リクエスト形式エラー"},
+    },
+)
+def get_weekly_timeline(
+    pc_id: str,
+    week_start: str | None = Query(default=None),
+    tz: str | None = Query(default="Asia/Tokyo"),
+) -> PcWeeklyTimelineResponse:
+    try:
+        response = pc_service.get_weekly_timeline(
+            pc_id=pc_id,
+            week_start=week_start,
+            tz=tz,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return PcWeeklyTimelineResponse.model_validate(response)

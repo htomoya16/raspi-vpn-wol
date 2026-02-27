@@ -2,6 +2,7 @@ import type { FormEvent } from 'react'
 
 import type { Pc } from '../../types/models'
 import { formatLocalDateTime } from '../../utils/datetime'
+import LoadingDots from '../LoadingDots'
 import type { PcEditFormState } from './constants'
 
 interface PcDetailDialogProps {
@@ -112,7 +113,7 @@ function PcDetailDialog({
 
             <div className="pc-detail__actions">
               <button type="submit" className="btn btn--primary" disabled={editLoading}>
-                {editLoading ? '保存中...' : '保存'}
+                {editLoading ? <LoadingDots label="保存中" /> : '保存'}
               </button>
               <button type="button" className="btn btn--soft" onClick={onCancelEdit} disabled={editLoading}>
                 キャンセル
@@ -158,7 +159,7 @@ function PcDetailDialog({
                 onClick={() => onOpenDeleteDialog(selectedPc.id, selectedPc.name)}
                 disabled={deleteBusy}
               >
-                {deleteBusy ? '削除中...' : '削除'}
+                {deleteBusy ? <LoadingDots label="削除中" /> : '削除'}
               </button>
             </div>
           </>

@@ -1,3 +1,5 @@
+import LoadingDots from '../LoadingDots'
+
 interface PendingDeleteState {
   id: string
   name: string
@@ -39,7 +41,7 @@ function PcDeleteDialog({
             キャンセル
           </button>
           <button type="button" className="btn btn--danger" onClick={onConfirmDelete} disabled={confirmLoading}>
-            {confirmLoading ? '削除中...' : '削除する'}
+            {confirmLoading ? <LoadingDots label="削除中" /> : '削除する'}
           </button>
         </div>
       </div>

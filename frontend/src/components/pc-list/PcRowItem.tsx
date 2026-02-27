@@ -1,5 +1,6 @@
 import type { Pc, PcBusyState } from '../../types/models'
 import { formatLocalDateTime } from '../../utils/datetime'
+import LoadingDots from '../LoadingDots'
 
 interface PcRowItemProps {
   pc: Pc
@@ -63,7 +64,7 @@ function PcRowItem({
             }}
             disabled={Boolean(isBusy.wol)}
           >
-            {isBusy.wol ? '起動中...' : '起動'}
+            {isBusy.wol ? <LoadingDots label="起動中" /> : '起動'}
           </button>
           <button
             type="button"
@@ -74,7 +75,7 @@ function PcRowItem({
             }}
             disabled={Boolean(isBusy.status)}
           >
-            {isBusy.status ? '状態確認中...' : '状態確認'}
+            {isBusy.status ? <LoadingDots label="状態確認中" /> : '状態確認'}
           </button>
         </div>
       </div>

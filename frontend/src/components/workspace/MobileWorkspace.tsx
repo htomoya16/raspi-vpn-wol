@@ -2,15 +2,18 @@ import JobQueue from '../JobQueue'
 import LogsPanel from '../LogsPanel'
 import PcForm from '../PcForm'
 import PcList from '../PcList'
+import UptimePanel from '../UptimePanel'
 import homeIcon from '../icons/home.svg'
 import logIcon from '../icons/log.svg'
 import registerIcon from '../icons/register.svg'
+import uptimeIcon from '../icons/uptime.svg'
 import type { JobQueueProps } from '../JobQueue'
 import type { LogsPanelProps } from '../LogsPanel'
 import type { PcFormProps } from '../PcForm'
 import type { PcListProps } from '../PcList'
+import type { Pc } from '../../types/models'
 
-export type MobileView = 'pcs' | 'create' | 'logs'
+export type MobileView = 'pcs' | 'create' | 'logs' | 'uptime'
 
 interface MobileWorkspaceProps {
   mobileView: MobileView
@@ -21,6 +24,10 @@ interface MobileWorkspaceProps {
   onCreatePc: PcFormProps['onCreate']
   jobs: JobQueueProps['jobs']
   logsPanelProps: LogsPanelProps
+  pcs: Pc[]
+  selectedPcId: string
+  onSelectPc: (pcId: string) => void
+  uptimeDataVersion?: string
 }
 
 function MobileWorkspace({
@@ -32,6 +39,10 @@ function MobileWorkspace({
   onCreatePc,
   jobs,
   logsPanelProps,
+  pcs,
+  selectedPcId,
+  onSelectPc,
+  uptimeDataVersion,
 }: MobileWorkspaceProps) {
   return (
     <>
@@ -49,6 +60,15 @@ function MobileWorkspace({
               <LogsPanel {...logsPanelProps} embedded />
             </section>
           </div>
+        ) : null}
+
+        {mobileView === 'uptime' ? (
+          <UptimePanel
+            pcs={pcs}
+            selectedPcId={selectedPcId}
+            onSelectPc={onSelectPc}
+            dataVersion={uptimeDataVersion}
+          />
         ) : null}
       </section>
 
@@ -78,6 +98,14 @@ function MobileWorkspace({
         >
           <img src={logIcon} alt="" aria-hidden="true" className="mobile-bottom-nav__icon" />
           <span className="mobile-bottom-nav__label">ログ</span>
+        </button>
+        <button
+          type="button"
+          className={`mobile-bottom-nav__btn mobile-bottom-nav__btn--stack ${mobileView === 'uptime' ? 'mobile-bottom-nav__btn--active' : ''}`}
+          onClick={() => onChangeMobileView('uptime')}
+        >
+          <img src={uptimeIcon} alt="" aria-hidden="true" className="mobile-bottom-nav__icon" />
+          <span className="mobile-bottom-nav__label">稼働時間</span>
         </button>
       </nav>
     </>

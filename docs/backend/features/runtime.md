@@ -9,12 +9,21 @@
 
 - `app.main` の `lifespan` で起動時に `init_db()` を実行。
 - `lifespan` で 60秒間隔の定期ステータス監視タスクを起動する。
-- `init_db()` で `pcs` / `logs` / `jobs` を `CREATE TABLE IF NOT EXISTS`。
+- `init_db()` で `pcs` / `logs` / `jobs` / `status_history` / `uptime_daily_summary` を `CREATE TABLE IF NOT EXISTS`。
+- `init_db()` で、実クエリに合わせたインデックスを再作成する（不要インデックスは `DROP INDEX IF EXISTS` で整理）。
 - 初期スキーマ方針:
   - `pcs`: PC設定 + 状態保持
   - `logs`: 操作履歴
   - `jobs`: 非同期ジョブ状態
+  - `status_history`: 状態変化履歴
+  - `uptime_daily_summary`: 日次稼働集計
 - `logs.pc_id` は `pcs.id` への外部キー（`ON DELETE SET NULL`）。
+- 主要インデックス:
+  - `pcs`: `status + id`
+  - `logs`: `pc_id/action/ok + id DESC`、`created_at`
+  - `jobs`: `job_type + state + created_at DESC`
+  - `status_history`: `pc_id + changed_at + id`、`changed_at`
+  - `uptime_daily_summary`: `pc_id + tz + date`
 - `GET /api/health` を提供し、`{"status":"ok"}` を返す。
 
 ## 運用時の注意点

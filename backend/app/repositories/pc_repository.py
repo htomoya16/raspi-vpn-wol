@@ -7,6 +7,10 @@ from app.db.database import connection
 from app.types import PcRow
 
 
+def _escape_like(value: str) -> str:
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 def get_pc_by_id(pc_id: str) -> PcRow | None:
     with connection() as conn:
         row = conn.execute(
@@ -69,7 +73,46 @@ def get_pc_by_mac(mac_address: str) -> PcRow | None:
     return cast(PcRow, dict(row))
 
 
-def list_pcs() -> list[PcRow]:
+def list_pcs(
+    *,
+    q: str | None = None,
+    status: str | None = None,
+    tag: str | None = None,
+    cursor: str | None = None,
+    limit: int | None = None,
+) -> list[PcRow]:
+    clauses: list[str] = []
+    params: list[object] = []
+
+    if status:
+        clauses.append("status = ?")
+        params.append(status)
+    if cursor:
+        clauses.append("id > ?")
+        params.append(cursor)
+    if tag:
+        # tags_json is a JSON array string (e.g. ["desk","lab"]), so filter by quoted token.
+        clauses.append("tags_json LIKE ? ESCAPE '\\'")
+        params.append(f'%"{_escape_like(tag)}"%')
+    if q:
+        escaped = _escape_like(q.lower())
+        pattern = f"%{escaped}%"
+        clauses.append(
+            "("
+            "LOWER(id) LIKE ? ESCAPE '\\' "
+            "OR LOWER(name) LIKE ? ESCAPE '\\' "
+            "OR LOWER(mac_address) LIKE ? ESCAPE '\\' "
+            "OR LOWER(COALESCE(ip_address, '')) LIKE ? ESCAPE '\\' "
+            "OR LOWER(tags_json) LIKE ? ESCAPE '\\'"
+            ")"
+        )
+        params.extend([pattern, pattern, pattern, pattern, pattern])
+
+    where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    limit_sql = "LIMIT ?" if limit is not None else ""
+    if limit is not None:
+        params.append(limit)
+
     with connection() as conn:
         rows = conn.execute(
             """
@@ -90,8 +133,13 @@ def list_pcs() -> list[PcRow]:
                 created_at,
                 updated_at
             FROM pcs
+            """
+            + where_sql
+            + """
             ORDER BY id ASC
             """
+            + limit_sql,
+            params,
         ).fetchall()
 
     return [cast(PcRow, dict(row)) for row in rows]

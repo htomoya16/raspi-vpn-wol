@@ -1,3 +1,5 @@
+import LoadingDots from './LoadingDots'
+
 interface AppHeaderProps {
   totalCount: number
   onlineCount: number
@@ -39,7 +41,7 @@ function AppHeader({
           onClick={onRefreshAllStatuses}
           disabled={refreshAllLoading}
         >
-          {refreshAllLoading ? '更新ジョブ投入中...' : '全PCステータス更新'}
+          {refreshAllLoading ? <LoadingDots label="更新ジョブ投入中" /> : '全PCステータス更新'}
         </button>
       </div>
     </header>

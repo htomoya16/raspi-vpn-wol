@@ -107,3 +107,42 @@ export interface PcBusyState {
 
 export type BusyById = Record<string, PcBusyState>
 export type RowErrorById = Record<string, string>
+
+export type UptimeBucket = 'day' | 'week' | 'month' | 'year'
+
+export interface UptimeSummaryItem {
+  label: string
+  period_start: string
+  period_end: string
+  online_seconds: number
+  online_ratio: number
+}
+
+export interface PcUptimeSummaryResponse {
+  pc_id: string
+  from: string
+  to: string
+  bucket: UptimeBucket
+  tz: string
+  items: UptimeSummaryItem[]
+}
+
+export interface UptimeWeeklyInterval {
+  start: string
+  end: string
+  duration_seconds: number
+}
+
+export interface UptimeWeeklyDay {
+  date: string
+  online_seconds: number
+  intervals: UptimeWeeklyInterval[]
+}
+
+export interface PcWeeklyTimelineResponse {
+  pc_id: string
+  week_start: string
+  week_end: string
+  tz: string
+  days: UptimeWeeklyDay[]
+}

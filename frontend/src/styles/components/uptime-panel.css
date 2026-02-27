@@ -1,0 +1,183 @@
+.uptime-toolbar {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr) auto;
+  gap: 10px;
+}
+
+.uptime-toolbar label {
+  display: grid;
+  gap: 5px;
+  color: var(--text-sub);
+  font-weight: 600;
+}
+
+.uptime-toolbar__mock-toggle {
+  align-self: end;
+  white-space: nowrap;
+}
+
+.uptime-section {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(8, 22, 44, 0.72);
+}
+
+.uptime-section__content {
+  position: relative;
+}
+
+.uptime-section__content--summary {
+  min-height: 320px;
+}
+
+.uptime-section__content--weekly {
+  min-height: 780px;
+}
+
+.uptime-loading-overlay {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d6e5ff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  background: rgba(7, 19, 38, 0.46);
+  backdrop-filter: blur(1px);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.uptime-summary-placeholder {
+  margin-top: 12px;
+  min-height: 280px;
+  border: 1px dashed rgba(95, 133, 192, 0.38);
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(7, 19, 38, 0.6);
+}
+
+.uptime-summary-placeholder .empty-state {
+  margin: 0;
+}
+
+.uptime-section__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.uptime-section__header--with-nav {
+  align-items: center;
+}
+
+.uptime-section__header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.uptime-section__header p {
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 0.86rem;
+}
+
+.uptime-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.uptime-nav__arrow {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uptime-nav__glyph {
+  font-size: 1.2rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.uptime-nav--summary .uptime-nav__arrow {
+  border-color: rgba(97, 137, 205, 0.7);
+}
+
+.uptime-nav--weekly .uptime-nav__arrow {
+  border-color: rgba(92, 174, 220, 0.6);
+}
+
+.uptime-slide-surface {
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease;
+}
+
+.uptime-slide-surface--prev {
+  animation: uptime-slide-prev 0.28s ease both;
+}
+
+.uptime-slide-surface--next {
+  animation: uptime-slide-next 0.28s ease both;
+}
+
+@keyframes uptime-slide-prev {
+  from {
+    opacity: 0.45;
+    transform: translateX(-22px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes uptime-slide-next {
+  from {
+    opacity: 0.45;
+    transform: translateX(22px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 760px) {
+  .uptime-section__content--summary {
+    min-height: 272px;
+  }
+
+  .uptime-section__content--weekly {
+    min-height: 700px;
+  }
+
+  .uptime-summary-placeholder {
+    min-height: 228px;
+  }
+
+  .uptime-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .uptime-toolbar__mock-toggle {
+    width: 100%;
+  }
+
+  .uptime-section__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

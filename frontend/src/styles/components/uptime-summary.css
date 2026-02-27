@@ -1,0 +1,252 @@
+.uptime-chart {
+  margin-top: 12px;
+  min-height: 280px;
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.uptime-chart__axis {
+  position: relative;
+  min-height: 0;
+  height: 236px;
+  border-right: 1px solid rgba(79, 114, 170, 0.35);
+}
+
+.uptime-chart__axis::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-bottom: 1px solid rgba(79, 114, 170, 0.45);
+}
+
+.uptime-chart__axis-label {
+  position: absolute;
+  right: 6px;
+  color: #8fa6cf;
+  font-size: 0.68rem;
+  transform: translateY(-50%);
+}
+
+.uptime-chart__axis-label--max {
+  transform: translateY(0);
+}
+
+.uptime-chart__axis-label--min {
+  transform: translateY(-100%);
+}
+
+.uptime-chart__main {
+  min-width: 0;
+}
+
+.uptime-chart__scroller {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+}
+
+.uptime-chart__plot {
+  position: relative;
+  height: 236px;
+  min-height: 236px;
+  border-radius: 12px;
+  border: 1px solid rgba(99, 128, 179, 0.36);
+  background:
+    linear-gradient(180deg, rgba(126, 159, 211, 0.2) 1px, transparent 1px) 0 0 / 100% 25%,
+    rgba(7, 19, 38, 0.76);
+}
+
+.uptime-chart__plot::after {
+  content: '';
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  bottom: 0;
+  border-bottom: 1px solid rgba(79, 114, 170, 0.45);
+  pointer-events: none;
+}
+
+.uptime-chart__avg-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.uptime-chart__avg-line::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  border-top: 2px dashed rgba(72, 197, 133, 0.9);
+}
+
+.uptime-chart__avg-label {
+  position: absolute;
+  right: 8px;
+  top: -18px;
+  font-size: 0.68rem;
+  color: #82e2b2;
+  background: rgba(9, 26, 44, 0.92);
+  border: 1px solid rgba(72, 197, 133, 0.5);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.uptime-chart__bars {
+  height: 236px;
+  min-height: 236px;
+  width: max-content;
+  min-width: 100%;
+  display: grid;
+  align-items: end;
+  padding-top: 0;
+}
+
+.uptime-chart__bar-cell {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  height: 100%;
+  padding: 0 8px;
+}
+
+.uptime-chart__bar-wrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.uptime-chart__bar {
+  width: 50%;
+  border-radius: 8px 8px 3px 3px;
+  min-height: 0;
+  background: #4f93ff;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28);
+  transition: height 0.25s ease;
+}
+
+.uptime-chart__bar--grow {
+  animation: uptime-bar-grow 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.uptime-chart__bar--grow-prev {
+  transform-origin: bottom right;
+}
+
+.uptime-chart__bar--grow-next {
+  transform-origin: bottom left;
+}
+
+.uptime-chart__meta {
+  margin-top: 6px;
+  width: max-content;
+  min-width: 100%;
+  display: grid;
+}
+
+.uptime-chart__meta-item {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  padding: 0 8px;
+}
+
+.uptime-chart__label {
+  margin: 0;
+  color: #9fb2d9;
+  font-size: 0.75rem;
+  line-height: 1.1;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uptime-chart__value {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.1;
+  text-align: center;
+  color: #c8d8f3;
+}
+
+@keyframes uptime-bar-grow {
+  from {
+    transform: scaleY(0);
+    opacity: 0.5;
+  }
+
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@media (max-width: 760px) {
+  .uptime-chart {
+    grid-template-columns: 38px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .uptime-chart__scroller {
+    overflow-x: hidden;
+  }
+
+  .uptime-chart__bars,
+  .uptime-chart__meta {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .uptime-chart__bar-cell {
+    padding: 0 1px;
+  }
+
+  .uptime-chart__axis,
+  .uptime-chart__plot,
+  .uptime-chart__bars {
+    height: 206px;
+    min-height: 206px;
+  }
+
+  .uptime-chart__axis {
+    height: 206px;
+  }
+
+  .uptime-chart__avg-label {
+    right: 4px;
+    top: -16px;
+    font-size: 0.62rem;
+    padding: 1px 6px;
+  }
+
+  .uptime-chart__bar-wrap {
+    height: 100%;
+  }
+
+  .uptime-chart__bar {
+    width: 58%;
+  }
+
+  .uptime-chart__label {
+    font-size: 0.58rem;
+    line-height: 1.05;
+    white-space: normal;
+    word-break: keep-all;
+    overflow: visible;
+    text-overflow: clip;
+  }
+
+  .uptime-chart__value {
+    font-size: 0.58rem;
+  }
+}

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 
+import LoadingDots from './LoadingDots'
 import type { PcCreatePayload } from '../types/models'
 
 const INITIAL_FORM = {
@@ -107,7 +108,7 @@ function PcForm({ loading, error, onCreate, embedded = false }: PcFormProps) {
         </label>
 
         <button type="submit" className="btn btn--primary" disabled={loading}>
-          {loading ? '登録中...' : 'PCを登録'}
+          {loading ? <LoadingDots label="登録中" /> : 'PCを登録'}
         </button>
       </form>
 
