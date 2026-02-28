@@ -132,8 +132,14 @@ export function useDashboardData(): UseDashboardDataResult {
     await Promise.all([loadPcs(), loadLogs()])
   }, [loadLogs, loadPcs])
 
+  const refreshLogsDuringProgress = useCallback(async () => {
+    invalidateLogsCache()
+    await loadLogs()
+  }, [loadLogs])
+
   const { jobs, trackJob } = useJobTracker({
     onTerminal: refreshFromTerminal,
+    onProgress: refreshLogsDuringProgress,
   })
 
   const sendPcWolEntry = useCallback(

@@ -46,6 +46,17 @@
   gap: 8px;
 }
 
+.job-meta__time {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+
+.job-elapsed {
+  font-size: 0.75rem;
+  color: #a9c2ec;
+}
+
 .job-state {
   border-radius: 999px;
   padding: 4px 8px;
@@ -83,5 +94,9 @@
   .job-meta {
     justify-content: flex-start;
     flex-wrap: wrap;
+  }
+
+  .job-meta__time {
+    justify-items: start;
   }
 }

@@ -177,6 +177,42 @@ def test_pc_service_send_wol_fails_immediately_when_probe_returns_unknown(monkey
     assert updates == [("booting", False), ("unknown", False)]
 
 
+def test_pc_service_send_wol_uses_wall_clock_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        pc_service.pc_repository,
+        "get_pc_by_id",
+        lambda _: _pc_row(last_seen_at="2026-01-01T00:00:00+00:00"),
+    )
+    monkeypatch.setattr(
+        pc_service.wol_service,
+        "send_wol",
+        lambda **kwargs: {"message": "sent"},
+    )
+    monkeypatch.setattr(
+        pc_service.status_service,
+        "get_pc_status",
+        lambda _: {"pc_id": "pc-1", "status": "offline"},
+    )
+    monkeypatch.setattr(pc_service.time, "sleep", lambda _: None)
+    monkeypatch.setattr(pc_service, "BOOTING_POLL_MAX_ATTEMPTS", 50)
+    monkeypatch.setattr(pc_service, "BOOTING_CONFIRM_TIMEOUT_SECONDS", 60)
+
+    monotonic_values = iter([0.0, 0.0, 61.0, 61.0])
+    monkeypatch.setattr(pc_service.time, "monotonic", lambda: next(monotonic_values))
+
+    updates: list[tuple[str, bool]] = []
+    monkeypatch.setattr(
+        pc_service.pc_registry_service,
+        "update_runtime_status",
+        lambda _pc_id, status, mark_seen=False: updates.append((status, mark_seen)) or _pc_row(status=status),
+    )
+
+    with pytest.raises(RuntimeError, match="status=offline"):
+        pc_service.send_wol("pc-1")
+
+    assert updates[-1] == ("offline", False)
+
+
 def test_pc_service_send_wol_marks_unreachable_when_packet_send_fails(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         pc_service.pc_repository,

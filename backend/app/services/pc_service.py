@@ -17,6 +17,7 @@ from app.types import PcRow
 STATUS_VALUES: set[PcStatus] = {"online", "offline", "unknown", "booting", "unreachable"}
 BOOTING_POLL_INTERVAL_SECONDS = 3
 BOOTING_POLL_MAX_ATTEMPTS = 20
+BOOTING_CONFIRM_TIMEOUT_SECONDS = 60
 PCS_LIST_CACHE_TTL_SECONDS = 30
 UPTIME_SUMMARY_CACHE_TTL_SECONDS = 120
 UPTIME_WEEKLY_CACHE_TTL_SECONDS = 120
@@ -297,10 +298,18 @@ def send_wol(
     _invalidate_pc_related_cache(normalized_id)
     now_iso = datetime.now(timezone.utc).isoformat()
 
+    started_at = time.monotonic()
     attempts = 0
     for attempt in range(BOOTING_POLL_MAX_ATTEMPTS):
+        elapsed = time.monotonic() - started_at
+        if elapsed >= BOOTING_CONFIRM_TIMEOUT_SECONDS:
+            break
+
         attempts = attempt + 1
-        time.sleep(BOOTING_POLL_INTERVAL_SECONDS)
+        remaining = BOOTING_CONFIRM_TIMEOUT_SECONDS - elapsed
+        sleep_seconds = min(BOOTING_POLL_INTERVAL_SECONDS, max(0.0, remaining))
+        if sleep_seconds > 0:
+            time.sleep(sleep_seconds)
         try:
             probe = status_service.get_pc_status(normalized_id)
             probe_status = str(probe["status"])
@@ -329,6 +338,9 @@ def send_wol(
                 "wol status probe returned non-retriable status: "
                 f"{probe_status} (pc_id={normalized_id}, attempts={attempts})"
             )
+
+        if (time.monotonic() - started_at) >= BOOTING_CONFIRM_TIMEOUT_SECONDS:
+            break
 
     final_status: PcStatus = "offline" if had_seen_before else "unknown"
     pc_registry_service.update_runtime_status(normalized_id, status=final_status, mark_seen=False)
