@@ -1,3 +1,5 @@
+import type { KeyboardEvent, MouseEvent } from 'react'
+
 import type { Pc, PcBusyState } from '../../types/models'
 import { formatLocalDateTime } from '../../utils/datetime'
 import LoadingDots from '../LoadingDots'
@@ -23,13 +25,34 @@ function PcRowItem({
   onSendWol,
   onRefreshStatus,
 }: PcRowItemProps) {
+  function openDetailFromRow(): void {
+    onOpenDetail(pc.id)
+  }
+
+  function handleRowClick(event: MouseEvent<HTMLDivElement>): void {
+    const target = event.target as HTMLElement
+    if (target.closest('.pc-row__list-actions')) {
+      return
+    }
+    openDetailFromRow()
+  }
+
+  function handleSummaryKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return
+    }
+    event.preventDefault()
+    openDetailFromRow()
+  }
+
   return (
     <li className={`pc-row ${isActive ? 'pc-row--active' : ''}`}>
-      <div className="pc-row__summary">
-        <button
-          type="button"
+      <div className="pc-row__summary" onClick={handleRowClick}>
+        <div
           className="pc-row__summary-trigger"
-          onClick={() => onOpenDetail(pc.id)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={handleSummaryKeyDown}
           aria-pressed={isActive}
           aria-label={`${pc.name} の詳細を開く`}
         >
@@ -46,7 +69,7 @@ function PcRowItem({
               最終確認: {formatLocalDateTime(pc.last_seen_at, { fallback: '未記録' })}
             </p>
           </div>
-        </button>
+        </div>
         <div className="pc-row__list-actions">
           <button
             type="button"
@@ -68,7 +91,7 @@ function PcRowItem({
             }}
             disabled={Boolean(isBusy.status)}
           >
-            {isBusy.status ? <LoadingDots label="状態確認中" /> : '状態確認'}
+            {isBusy.status ? <LoadingDots label="ステータス確認中" /> : 'ステータス確認'}
           </button>
         </div>
       </div>

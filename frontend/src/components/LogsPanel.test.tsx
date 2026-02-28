@@ -111,7 +111,7 @@ describe('LogsPanel', () => {
             id: 3,
             job_id: 'job-1',
             details: { source: 'status' },
-            action: 'status',
+            action: 'pc_delete',
             ok: false,
             message: 'third',
           }),
@@ -141,6 +141,7 @@ describe('LogsPanel', () => {
           createLogEntry({
             id: 1,
             job_id: 'job-1',
+            action: 'wol',
             details: { source: 'wol' },
             message: 'grouped message',
           }),
@@ -210,5 +211,68 @@ describe('LogsPanel', () => {
     expect(groupButtons[0]).toHaveTextContent('通常ログ')
     expect(groupButtons[1]).toHaveTextContent('ID: job-a')
     expect(groupButtons[2]).toHaveTextContent('通常ログ')
+  })
+
+  it('shows periodic status logs as collapsed by default', async () => {
+    const user = userEvent.setup()
+    render(
+      <LogsPanel
+        items={[
+          createLogEntry({
+            id: 30,
+            job_id: 'job-status-1',
+            action: 'status',
+            message: 'status by scheduler',
+          }),
+        ]}
+        loading={false}
+        error=""
+        onReload={vi.fn()}
+        onClear={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    expect(screen.getAllByText('定期ステータス確認').length).toBeGreaterThan(0)
+    expect(screen.queryByText('status by scheduler')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /定期ステータス確認/ }))
+    expect(screen.getByText('status by scheduler')).toBeInTheDocument()
+  })
+
+  it('merges periodic status logs across different job ids into one group', () => {
+    render(
+      <LogsPanel
+        items={[
+          createLogEntry({
+            id: 40,
+            job_id: 'job-status-1',
+            action: 'status',
+            ok: true,
+            message: 'scheduled status 1',
+          }),
+          createLogEntry({
+            id: 39,
+            job_id: 'job-status-2',
+            action: 'status',
+            ok: false,
+            message: 'scheduled status 2',
+          }),
+        ]}
+        loading={false}
+        error=""
+        onReload={vi.fn()}
+        onClear={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    const groupButtons = screen.getAllByRole('button', {
+      name: /OK \d.*NG \d.*件/,
+    })
+    expect(groupButtons).toHaveLength(1)
+    expect(groupButtons[0]).toHaveTextContent('定期ステータス確認')
+    expect(groupButtons[0]).toHaveTextContent('定期ジョブ 2件')
+    expect(groupButtons[0]).toHaveTextContent('OK 1')
+    expect(groupButtons[0]).toHaveTextContent('NG 1')
+    expect(groupButtons[0]).toHaveTextContent('2件')
   })
 })

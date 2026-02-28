@@ -45,6 +45,7 @@ export interface UptimePanelState {
   enableUptimeMock: boolean
   useMockData: boolean
   activePcId: string
+  referenceDate: string
   summaryBucket: SummaryBucket
   summaryQuery: { from: string; to: string; apiBucket: UptimeBucket }
   summaryDateRangeLabel: string
@@ -69,6 +70,7 @@ export interface UptimePanelState {
   isMobile: boolean
   hourMarkers: number[]
   changeSummaryBucket: (next: SummaryBucket) => void
+  changeReferenceDate: (nextIsoDate: string) => void
   handleToggleMockData: () => void
   moveSummary: (direction: 1 | -1) => void
   moveTimeline: (direction: 1 | -1) => void
@@ -90,6 +92,7 @@ export function useUptimePanelState({
 }: UseUptimePanelStateInput): UptimePanelState {
   const [summaryBucket, setSummaryBucket] = useState<SummaryBucket>('day')
   const [summaryAnchor, setSummaryAnchor] = useState<Date>(() => new Date())
+  const [referenceDate, setReferenceDate] = useState(() => toIsoDateLocal(new Date()))
   const [summarySlide, setSummarySlide] = useState<SlideDirection>(null)
   const pendingSummarySlideRef = useRef<SlideDirection>(null)
 
@@ -100,6 +103,7 @@ export function useUptimePanelState({
   const summaryTouchStartRef = useRef<{ x: number; y: number } | null>(null)
   const timelineTouchStartRef = useRef<{ x: number; y: number } | null>(null)
   const [mobileCursorDate, setMobileCursorDate] = useState(() => toIsoDateLocal(new Date()))
+  const pendingMobileCursorRef = useRef<string | null>(null)
 
   const [useMockData, setUseMockData] = useState<boolean>(() => {
     if (!ENABLE_UPTIME_MOCK || typeof window === 'undefined') {
@@ -234,10 +238,16 @@ export function useUptimePanelState({
     }
     const previousPcId = previousActivePcIdRef.current
     if (previousPcId && previousPcId !== activePcId) {
+      const today = new Date()
+      const todayIso = toIsoDateLocal(today)
       pendingSummarySlideRef.current = 'next'
       pendingWeeklySlideRef.current = 'next'
+      pendingMobileCursorRef.current = todayIso
       setSummaryBucket('day')
-      setSummaryAnchor(new Date())
+      setSummaryAnchor(today)
+      setReferenceDate(todayIso)
+      setWeekStart(toIsoDateLocal(startOfWeekSunday(today)))
+      setMobileCursorDate(todayIso)
     }
     previousActivePcIdRef.current = activePcId
   }, [activePcId])
@@ -313,6 +323,7 @@ export function useUptimePanelState({
   useEffect(() => {
     if (!enabled) {
       pendingWeeklySlideRef.current = null
+      pendingMobileCursorRef.current = null
       setWeekly(null)
       setWeeklyError('')
       setWeeklyLoading(false)
@@ -423,9 +434,20 @@ export function useUptimePanelState({
 
   useEffect(() => {
     if (!isMobile) {
+      pendingMobileCursorRef.current = null
       return
     }
     if (timelineDays.length === 0) {
+      return
+    }
+    const pendingCursor = pendingMobileCursorRef.current
+    if (pendingCursor) {
+      if (timelineDays.some((day) => day.date === pendingCursor)) {
+        if (mobileCursorDate !== pendingCursor) {
+          setMobileCursorDate(pendingCursor)
+        }
+        pendingMobileCursorRef.current = null
+      }
       return
     }
     if (timelineDays.some((day) => day.date === mobileCursorDate)) {
@@ -482,6 +504,7 @@ export function useUptimePanelState({
     setMobileCursorDate(nextDate)
     const nextWeekStart = toIsoDateLocal(startOfWeekSunday(nextDateObj))
     if (nextWeekStart !== weekStart) {
+      pendingMobileCursorRef.current = nextDate
       pendingWeeklySlideRef.current = direction < 0 ? 'prev' : 'next'
       setWeekStart(nextWeekStart)
     }
@@ -512,6 +535,24 @@ export function useUptimePanelState({
     pendingSummarySlideRef.current = 'next'
     setSummaryBucket(next)
     setSummaryAnchor(new Date())
+  }
+
+  const changeReferenceDate = (nextIsoDate: string): void => {
+    const parsed = parseIsoDateLocal(nextIsoDate)
+    if (!parsed) {
+      return
+    }
+
+    const today = parseIsoDateLocal(toIsoDateLocal(new Date())) || new Date()
+    const normalized = parsed > today ? today : parsed
+    const normalizedIso = toIsoDateLocal(normalized)
+    pendingSummarySlideRef.current = 'next'
+    pendingWeeklySlideRef.current = 'next'
+    pendingMobileCursorRef.current = normalizedIso
+    setReferenceDate(normalizedIso)
+    setSummaryAnchor(normalized)
+    setWeekStart(toIsoDateLocal(startOfWeekSunday(normalized)))
+    setMobileCursorDate(normalizedIso)
   }
 
   const handleSummaryTouchStart = (event: TouchEvent<HTMLDivElement>): void => {
@@ -586,6 +627,7 @@ export function useUptimePanelState({
     enableUptimeMock: ENABLE_UPTIME_MOCK,
     useMockData,
     activePcId,
+    referenceDate,
     summaryBucket,
     summaryQuery,
     summaryDateRangeLabel,
@@ -610,6 +652,7 @@ export function useUptimePanelState({
     isMobile,
     hourMarkers: HOUR_MARKERS,
     changeSummaryBucket,
+    changeReferenceDate,
     handleToggleMockData,
     moveSummary,
     moveTimeline,

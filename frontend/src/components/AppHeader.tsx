@@ -19,7 +19,7 @@ function AppHeader({
         <p className="hero__eyebrow">VPN LAN POWER DASHBOARD</p>
         <h1>WOL Control Center</h1>
         <p className="hero__description">
-          VPN内からPCを安全に起動し、状態確認と操作ログをまとめて管理します。
+          VPN内からPCを安全に起動し、ステータス確認と操作ログをまとめて管理します。
         </p>
       </div>
 

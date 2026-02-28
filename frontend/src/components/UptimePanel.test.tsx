@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -208,5 +208,124 @@ describe('UptimePanel', () => {
       expect(screen.getByRole('button', { name: 'モック表示: ON' })).toBeInTheDocument()
     })
     expect(window.localStorage.getItem('uptime:mock')).toBe('1')
+  })
+
+  it('keeps month bucket on date change and still moves timeline week', async () => {
+    const user = userEvent.setup()
+    getPcUptimeSummary.mockResolvedValue({
+      pc_id: 'pc-1',
+      from: '2025-03-01',
+      to: '2026-02-28',
+      bucket: 'month',
+      tz: 'Asia/Tokyo',
+      items: [],
+    })
+    getPcWeeklyTimeline.mockResolvedValue({
+      pc_id: 'pc-1',
+      week_start: '2026-02-01',
+      week_end: '2026-02-07',
+      tz: 'Asia/Tokyo',
+      days: [],
+    })
+
+    render(
+      <UptimePanel
+        pcs={[createPc()]}
+        selectedPcId="pc-1"
+        onSelectPc={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => expect(getPcUptimeSummary).toHaveBeenCalled())
+    await user.selectOptions(screen.getByLabelText('集計単位'), 'month')
+    await waitFor(() => expect(screen.getByLabelText('集計単位')).toHaveValue('month'))
+
+    fireEvent.change(screen.getByLabelText('表示する日付'), { target: { value: '2026-02-18' } })
+
+    await waitFor(() => {
+      expect(getPcUptimeSummary).toHaveBeenLastCalledWith(
+        'pc-1',
+        expect.objectContaining({
+          from: '2025-03-01',
+          to: '2026-02-28',
+          bucket: 'month',
+          tz: 'Asia/Tokyo',
+        }),
+      )
+    })
+    await waitFor(() => {
+      expect(getPcWeeklyTimeline).toHaveBeenLastCalledWith(
+        'pc-1',
+        expect.objectContaining({
+          week_start: '2026-02-15',
+          tz: 'Asia/Tokyo',
+        }),
+      )
+    })
+    expect(screen.getByLabelText('集計単位')).toHaveValue('month')
+  })
+
+  it('requests the selected date week and renders single-day timeline on mobile', async () => {
+    const originalMatchMedia = window.matchMedia
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: query === '(max-width: 760px)',
+      media: query,
+      onchange: null,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      dispatchEvent: () => false,
+    }))
+
+    getPcUptimeSummary.mockResolvedValue({
+      pc_id: 'pc-1',
+      from: '2026-02-16',
+      to: '2026-02-22',
+      bucket: 'day',
+      tz: 'Asia/Tokyo',
+      items: [],
+    })
+    getPcWeeklyTimeline.mockResolvedValue({
+      pc_id: 'pc-1',
+      week_start: '2026-02-16',
+      week_end: '2026-02-22',
+      tz: 'Asia/Tokyo',
+      days: [
+        { date: '2026-02-16', online_seconds: 3600, intervals: [] },
+        { date: '2026-02-17', online_seconds: 3600, intervals: [] },
+        { date: '2026-02-18', online_seconds: 3600, intervals: [] },
+        { date: '2026-02-19', online_seconds: 3600, intervals: [] },
+        { date: '2026-02-20', online_seconds: 3600, intervals: [] },
+        { date: '2026-02-21', online_seconds: 3600, intervals: [] },
+        { date: '2026-02-22', online_seconds: 3600, intervals: [] },
+      ],
+    })
+
+    try {
+      render(
+        <UptimePanel
+          pcs={[createPc()]}
+          selectedPcId="pc-1"
+          onSelectPc={vi.fn()}
+        />,
+      )
+
+      await waitFor(() => expect(getPcWeeklyTimeline).toHaveBeenCalled())
+      fireEvent.change(screen.getByLabelText('表示する日付'), { target: { value: '2026-02-19' } })
+
+      await waitFor(() => {
+        expect(getPcWeeklyTimeline).toHaveBeenLastCalledWith(
+          'pc-1',
+          expect.objectContaining({
+            week_start: '2026-02-15',
+            tz: 'Asia/Tokyo',
+          }),
+        )
+      })
+      expect(document.querySelectorAll('.uptime-week-calendar__day-head').length).toBe(1)
+    } finally {
+      window.matchMedia = originalMatchMedia
+    }
   })
 })

@@ -1,7 +1,7 @@
 .uptime-toolbar {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr) auto;
+  grid-template-columns: minmax(0, 1.1fr) minmax(170px, 0.9fr) minmax(0, 0.8fr) auto;
   gap: 10px;
 }
 
@@ -15,6 +15,18 @@
 .uptime-toolbar__mock-toggle {
   align-self: end;
   white-space: nowrap;
+}
+
+.uptime-toolbar__date-input {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.uptime-toolbar__date-input:focus,
+.uptime-toolbar__date-input:focus-visible,
+.uptime-toolbar__date-input:active {
+  border-color: var(--line);
+  outline: none;
+  box-shadow: none;
 }
 
 .uptime-section {

@@ -43,6 +43,13 @@
   white-space: nowrap;
 }
 
+.pc-list__status-help {
+  margin: 6px 0 0;
+  color: #b8c9e8;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 .pc-row-list {
   list-style: none;
   margin: 0;
@@ -95,16 +102,17 @@
   justify-content: space-between;
   align-items: center;
   gap: 10px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  border-radius: 10px;
+  transition: background-color 0.12s ease;
 }
 
 .pc-row__summary-trigger {
   flex: 1 1 auto;
   min-width: 0;
   width: 100%;
-  border: 0;
-  margin: 0;
-  padding: 0;
-  background: transparent;
+  border-radius: 10px;
   color: inherit;
   text-align: left;
   display: flex;
@@ -112,9 +120,10 @@
   align-items: center;
   gap: 10px;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.pc-row__summary-trigger:hover {
+.pc-row__summary:hover {
   background: rgba(13, 28, 52, 0.8);
 }
 
@@ -138,6 +147,7 @@
   display: flex;
   gap: 6px;
   margin-left: auto;
+  cursor: default;
 }
 
 .pc-row__list-actions .btn {
@@ -452,6 +462,10 @@
     align-items: flex-start;
     gap: 10px;
     position: relative;
+  }
+
+  .pc-row__summary-trigger:focus-visible {
+    outline: none;
   }
 
   .pc-row__summary-main {

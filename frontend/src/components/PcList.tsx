@@ -242,6 +242,9 @@ function PcList({
         <div>
           <h2>PC一覧</h2>
           <p>PCを選択すると詳細を開き、編集・削除できます。</p>
+          <p className="pc-list__status-help">
+            ステータス: online=到達可 / offline=応答なし / unknown=未確認 / booting=起動中 / unreachable=到達不可
+          </p>
         </div>
         <p className="pc-list__sync">
           最終更新: {formatJstDateTime(lastSyncedAt, { fallback: '未同期' })}
