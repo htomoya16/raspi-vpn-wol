@@ -21,7 +21,7 @@ erDiagram
         TEXT id PK
         TEXT name
         TEXT mac_address "UNIQUE"
-        TEXT ip_address
+        TEXT ip_address "NOT NULL"
         TEXT tags_json
         TEXT note
         TEXT status
@@ -125,6 +125,7 @@ erDiagram
 ## 運用時の注意点
 
 - `pcs.mac_address` は起動時マイグレーションで正規化される（`AA:BB:CC:DD:EE:FF` 形式）。
+- `pcs.ip_address` は必須（`NOT NULL`）。`NULL/空文字` 行がある状態では `3f2a6df9d4a1` マイグレーションが失敗するため、事前に補正または削除が必要。
 - 既存データに同一MACの重複があると、一意制約作成時に起動エラーになる。重複解消後に再起動する。
 - 保持期間方針:
   - `status_history`: 1年保持（定期削除）。

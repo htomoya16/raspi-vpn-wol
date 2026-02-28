@@ -12,7 +12,7 @@
 - 返却値:
   - `online`: 疎通成功
   - `offline`: 疎通失敗
-  - `unknown`: 判定前または判定不能（例: `ip_address` 未設定）
+  - `unknown`: 判定前または判定不能
   - `unreachable`: 判定処理自体が失敗
 - 判定方式:
   - `tcp`: `status_port` への TCP connect（timeout 1秒）
@@ -25,7 +25,6 @@
   - `status_method` / `status_port` 不正
   - `ping` コマンド未導入（`status_method=ping` 時）
 - 状態遷移ルール:
-  - `ip_address` 未設定時の単体状態確認は `unknown` を返す。
   - 既に `unreachable` のPCが `offline` 判定を受けても、状態は `unreachable` を維持する（`online` になった場合のみ解除）。
 
 ## 稼働時間可視化向けの確定方針（実装済み）

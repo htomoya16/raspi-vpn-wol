@@ -210,8 +210,9 @@ function PcList({
 
     const name = editForm.name.trim()
     const mac = editForm.mac.trim()
-    if (!name || !mac) {
-      setEditError('表示名とMACアドレスは必須です。')
+    const ip = editForm.ip.trim()
+    if (!name || !mac || !ip) {
+      setEditError('表示名・MACアドレス・IPアドレスは必須です。')
       return
     }
 
@@ -219,6 +220,7 @@ function PcList({
       ...editForm,
       name,
       mac,
+      ip,
     })
 
     setEditLoading(true)

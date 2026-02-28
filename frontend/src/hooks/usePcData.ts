@@ -53,7 +53,7 @@ function matchesPcFilters(pc: Pc, filters: PcFilterState): boolean {
       pc.id,
       pc.name,
       pc.mac,
-      pc.ip || '',
+      pc.ip,
       ...(pc.tags || []),
       pc.note || '',
     ].map((value) => value.toLowerCase())

@@ -69,6 +69,7 @@ python scripts/seed_dev_data.py
 ```
 
 - 稼働時間やログの確認に使う開発用シードデータを再投入する
+- `pcs` / `status_history` / `uptime_daily_summary` / `jobs` / `logs` を開発確認向けに投入する
 
 ## ドキュメント
 

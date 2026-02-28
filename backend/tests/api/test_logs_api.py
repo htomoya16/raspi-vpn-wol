@@ -9,10 +9,11 @@ def _create_pc(
     id: str,
     name: str,
     mac: str,
+    ip: str = "192.168.10.60",
 ) -> None:
     response = client.post(
         "/api/pcs",
-        json={"id": id, "name": name, "mac": mac},
+        json={"id": id, "name": name, "mac": mac, "ip": ip},
     )
     assert response.status_code == 201, response.text
 

@@ -16,11 +16,6 @@ def _status_offline(pc_id: str, message: str) -> PcStatusProbeResult:
     return {"pc_id": pc_id, "status": "offline"}
 
 
-def _status_unknown(pc_id: str, message: str) -> PcStatusProbeResult:
-    insert_log(action="status", pc_id=pc_id, status="unknown", message=message)
-    return {"pc_id": pc_id, "status": "unknown"}
-
-
 def _probe_ping(ip_value: ipaddress.IPv4Address, pc_id: str) -> PcStatusProbeResult:
     command = ["ping", "-c", "1", "-W", "1", str(ip_value)]
     try:
@@ -67,8 +62,9 @@ def get_pc_status(pc_id: str) -> PcStatusProbeResult:
 
     pc_ip = pc_row.get("ip_address")
     if not pc_ip:
-        message = f"ip_address is not configured for pc: {normalized_id}"
-        return _status_unknown(normalized_id, message)
+        message = f"ip_address is required for pc: {normalized_id}"
+        insert_log(action="status", pc_id=normalized_id, status="failed", message=message)
+        raise ValueError(message)
 
     ip_text = str(pc_ip).strip()
     try:

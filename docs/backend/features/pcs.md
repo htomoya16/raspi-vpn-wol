@@ -17,7 +17,8 @@
 - 入力検証:
   - `id` / `name` 必須。
   - `mac_address` は正規化して `AA:BB:CC:DD:EE:FF` 形式で保存。
-  - `ip_address` / `broadcast_ip` は IPv4 のみ許可。
+  - `ip_address` は必須（IPv4 のみ許可）。
+  - `broadcast_ip` は任意（指定時は IPv4 のみ許可）。
   - `wol_port` は `1..65535`。
   - `send_interface` は未指定時 `eth0`、`wg*` は拒否。
   - `status_method` は `tcp` / `ping`。

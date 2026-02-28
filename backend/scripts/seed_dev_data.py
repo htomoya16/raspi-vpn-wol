@@ -41,6 +41,19 @@ class StatusEvent:
     note: str
 
 
+@dataclass(frozen=True)
+class SeedJob:
+    id: str
+    job_type: str
+    state: str
+    payload: dict[str, object] | None
+    result: dict[str, object] | None
+    error: str | None
+    created_offset_min: int
+    started_offset_min: int | None
+    finished_offset_min: int | None
+
+
 SEED_PCS: tuple[SeedPc, ...] = (
     SeedPc(
         id="seed-pc-main",
@@ -234,6 +247,115 @@ def _clear_seed_data(conn: sqlite3.Connection) -> None:
     conn.execute(f"DELETE FROM status_history WHERE pc_id IN ({placeholders})", pc_ids)
     conn.execute(f"DELETE FROM uptime_daily_summary WHERE pc_id IN ({placeholders})", pc_ids)
     conn.execute(f"DELETE FROM logs WHERE pc_id IN ({placeholders}) AND action LIKE 'seed_%'", pc_ids)
+    conn.execute("DELETE FROM logs WHERE action LIKE 'seed_%' AND job_id LIKE 'seed-job-%'")
+    conn.execute("DELETE FROM jobs WHERE id LIKE 'seed-job-%'")
+
+
+def _insert_seed_jobs(conn: sqlite3.Connection, *, tz: ZoneInfo) -> dict[str, str]:
+    now_local = datetime.now(timezone.utc).astimezone(tz)
+    jobs: tuple[SeedJob, ...] = (
+        SeedJob(
+            id="seed-job-main-wol",
+            job_type="wol",
+            state="succeeded",
+            payload={"pc_id": "seed-pc-main", "repeat": 3},
+            result={"pc_id": "seed-pc-main", "final_status": "online"},
+            error=None,
+            created_offset_min=-58,
+            started_offset_min=-57,
+            finished_offset_min=-43,
+        ),
+        SeedJob(
+            id="seed-job-sub-wol-failed",
+            job_type="wol",
+            state="failed",
+            payload={"pc_id": "seed-pc-sub", "repeat": 3},
+            result=None,
+            error="boot confirmation timed out: seed-pc-sub",
+            created_offset_min=-37,
+            started_offset_min=-36,
+            finished_offset_min=-24,
+        ),
+        SeedJob(
+            id="seed-job-lab-status-running",
+            job_type="status_refresh_all",
+            state="running",
+            payload={"source": "seed"},
+            result=None,
+            error=None,
+            created_offset_min=-12,
+            started_offset_min=-11,
+            finished_offset_min=None,
+        ),
+        SeedJob(
+            id="seed-job-refresh-all-queued",
+            job_type="status_refresh_all",
+            state="queued",
+            payload={"source": "seed"},
+            result=None,
+            error=None,
+            created_offset_min=-4,
+            started_offset_min=None,
+            finished_offset_min=None,
+        ),
+    )
+
+    inserted_job_ids: dict[str, str] = {}
+    for job in jobs:
+        created_at = (now_local + timedelta(minutes=job.created_offset_min)).astimezone(timezone.utc)
+        started_at = (
+            (now_local + timedelta(minutes=job.started_offset_min)).astimezone(timezone.utc)
+            if job.started_offset_min is not None
+            else None
+        )
+        finished_at = (
+            (now_local + timedelta(minutes=job.finished_offset_min)).astimezone(timezone.utc)
+            if job.finished_offset_min is not None
+            else None
+        )
+        updated_at = finished_at or started_at or created_at
+
+        conn.execute(
+            """
+            INSERT INTO jobs (
+                id,
+                job_type,
+                state,
+                payload_json,
+                result_json,
+                error_message,
+                created_at,
+                started_at,
+                finished_at,
+                updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+                job_type = excluded.job_type,
+                state = excluded.state,
+                payload_json = excluded.payload_json,
+                result_json = excluded.result_json,
+                error_message = excluded.error_message,
+                created_at = excluded.created_at,
+                started_at = excluded.started_at,
+                finished_at = excluded.finished_at,
+                updated_at = excluded.updated_at
+            """,
+            (
+                job.id,
+                job.job_type,
+                job.state,
+                json.dumps(job.payload) if job.payload is not None else None,
+                json.dumps(job.result) if job.result is not None else None,
+                job.error,
+                created_at.isoformat(timespec="seconds"),
+                started_at.isoformat(timespec="seconds") if started_at is not None else None,
+                finished_at.isoformat(timespec="seconds") if finished_at is not None else None,
+                updated_at.isoformat(timespec="seconds"),
+            ),
+        )
+        inserted_job_ids[job.id] = job.id
+    return inserted_job_ids
 
 
 def _insert_events(conn: sqlite3.Connection, events: list[StatusEvent]) -> None:
@@ -287,13 +409,13 @@ def _update_current_pc_state(
         )
 
 
-def _insert_seed_logs(conn: sqlite3.Connection, *, start_day: date, tz: ZoneInfo) -> None:
+def _insert_seed_logs(conn: sqlite3.Connection, *, start_day: date, tz: ZoneInfo, job_ids: dict[str, str]) -> None:
     for index, pc in enumerate(SEED_PCS):
         local_time = datetime.combine(start_day + timedelta(days=14 + index), time(8 + index, 30), tzinfo=tz)
         conn.execute(
             """
-            INSERT INTO logs (pc_id, action, ok, status, message, details_json, created_at)
-            VALUES (?, 'seed_wol', 1, 'ok', 'seed wol dispatch', ?, ?)
+            INSERT INTO logs (pc_id, job_id, action, ok, status, message, details_json, created_at)
+            VALUES (?, NULL, 'seed_wol', 1, 'ok', 'seed wol dispatch', ?, ?)
             """,
             (
                 pc.id,
@@ -305,13 +427,135 @@ def _insert_seed_logs(conn: sqlite3.Connection, *, start_day: date, tz: ZoneInfo
         local_status_time = local_time + timedelta(minutes=45)
         conn.execute(
             """
-            INSERT INTO logs (pc_id, action, ok, status, message, details_json, created_at)
-            VALUES (?, 'seed_status', 1, 'online', 'seed status refresh', ?, ?)
+            INSERT INTO logs (pc_id, job_id, action, ok, status, message, details_json, created_at)
+            VALUES (?, NULL, 'seed_status', 1, 'online', 'seed status refresh', ?, ?)
             """,
             (
                 pc.id,
                 json.dumps({"source": "seed", "method": "tcp"}),
                 local_status_time.astimezone(timezone.utc).isoformat(timespec="seconds"),
+            ),
+        )
+
+    now_local = datetime.now(timezone.utc).astimezone(tz)
+    recent_logs: tuple[tuple[str, str | None, str, int, str, str, dict[str, object], int], ...] = (
+        (
+            "seed-pc-main",
+            job_ids["seed-job-main-wol"],
+            "seed_job",
+            0,
+            "running",
+            "wol job started",
+            {"step": "start", "source": "seed"},
+            -57,
+        ),
+        (
+            "seed-pc-main",
+            job_ids["seed-job-main-wol"],
+            "seed_wol",
+            1,
+            "sent",
+            "magic packet sent",
+            {"repeat": 3, "source": "seed"},
+            -56,
+        ),
+        (
+            "seed-pc-main",
+            job_ids["seed-job-main-wol"],
+            "seed_status",
+            1,
+            "online",
+            "target became online",
+            {"attempt": 3, "source": "seed"},
+            -43,
+        ),
+        (
+            "seed-pc-sub",
+            job_ids["seed-job-sub-wol-failed"],
+            "seed_job",
+            0,
+            "running",
+            "wol job started",
+            {"step": "start", "source": "seed"},
+            -36,
+        ),
+        (
+            "seed-pc-sub",
+            job_ids["seed-job-sub-wol-failed"],
+            "seed_wol",
+            1,
+            "sent",
+            "magic packet sent",
+            {"repeat": 3, "source": "seed"},
+            -35,
+        ),
+        (
+            "seed-pc-sub",
+            job_ids["seed-job-sub-wol-failed"],
+            "seed_status",
+            0,
+            "unreachable",
+            "tcp connect failed (445): timed out",
+            {"attempt": 6, "source": "seed"},
+            -24,
+        ),
+        (
+            "seed-pc-lab",
+            job_ids["seed-job-lab-status-running"],
+            "seed_status",
+            0,
+            "running",
+            "refreshing all pc status",
+            {"source": "seed", "pc_count": 3},
+            -11,
+        ),
+        (
+            "seed-pc-main",
+            job_ids["seed-job-lab-status-running"],
+            "seed_status",
+            1,
+            "online",
+            "status probe ok",
+            {"source": "seed", "method": "tcp"},
+            -10,
+        ),
+        (
+            "seed-pc-sub",
+            job_ids["seed-job-lab-status-running"],
+            "seed_status",
+            0,
+            "unreachable",
+            "status probe failed",
+            {"source": "seed", "method": "tcp"},
+            -9,
+        ),
+        (
+            "seed-pc-lab",
+            job_ids["seed-job-refresh-all-queued"],
+            "seed_job",
+            0,
+            "queued",
+            "status_refresh_all queued",
+            {"source": "seed"},
+            -4,
+        ),
+    )
+    for pc_id, job_id, action, ok, status, message, details, offset_min in recent_logs:
+        created_at = (now_local + timedelta(minutes=offset_min)).astimezone(timezone.utc)
+        conn.execute(
+            """
+            INSERT INTO logs (pc_id, job_id, action, ok, status, message, details_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                pc_id,
+                job_id,
+                action,
+                ok,
+                status,
+                message,
+                json.dumps(details),
+                created_at.isoformat(timespec="seconds"),
             ),
         )
 
@@ -334,7 +578,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--without-logs",
         action="store_true",
-        help="Skip inserting seed logs (status_history and uptime summaries are still seeded).",
+        help="Skip inserting seed logs/jobs (status_history and uptime summaries are still seeded).",
     )
     return parser.parse_args()
 
@@ -365,7 +609,8 @@ def main() -> int:
         _insert_events(conn, events)
         _update_current_pc_state(conn, events=events, intervals=intervals)
         if not args.without_logs:
-            _insert_seed_logs(conn, start_day=start_day, tz=tz)
+            job_ids = _insert_seed_jobs(conn, tz=tz)
+            _insert_seed_logs(conn, start_day=start_day, tz=tz, job_ids=job_ids)
 
     _precompute_daily_summary(start_day=start_day, end_day=end_day, tz_name=args.tz)
 

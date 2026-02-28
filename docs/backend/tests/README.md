@@ -46,6 +46,8 @@ cd backend
 python scripts/seed_dev_data.py
 ```
 
+- 開発確認用の `pcs/status_history/uptime_daily_summary/jobs/logs` が投入される。
+
 ## 運用時の注意点
 
 - API仕様変更時は `docs/backend/api/openapi.md` とあわせて該当テスト/テストドキュメントを更新する。

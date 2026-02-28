@@ -28,7 +28,7 @@
 - `docs/backend/tests/` を追加。
   - テストファイルごとの目的・ケース一覧・更新時注意点を文書化。
 - `backend/scripts/seed_dev_data.py` を追加。
-  - 開発用の `pcs` / `status_history` / `uptime_daily_summary` / `logs` を再投入できるようにした。
+  - 開発用の `pcs` / `status_history` / `uptime_daily_summary` / `jobs` / `logs` を再投入できるようにした。
 
 ## 実行方法
 

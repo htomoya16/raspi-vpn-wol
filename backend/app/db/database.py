@@ -42,6 +42,8 @@ def _build_alembic_config() -> Config:
     config = Config(str(ALEMBIC_INI_PATH))
     config.set_main_option("script_location", str(ALEMBIC_SCRIPT_LOCATION))
     config.set_main_option("sqlalchemy.url", f"sqlite:///{DB_PATH}")
+    # アプリ起動時の migration 実行では Uvicorn のロガー設定を上書きしない。
+    config.attributes["configure_logger"] = False
     return config
 
 
@@ -59,4 +61,3 @@ def run_migrations(revision: str = "head") -> None:
 def init_db() -> None:
     # 互換のため関数名は残し、中身はAlembic適用へ委譲する。
     run_migrations("head")
-

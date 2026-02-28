@@ -24,16 +24,6 @@ def upgrade() -> None:
         batch_op.add_column(sa.Column("job_id", sa.Text(), nullable=True))
 
     op.create_index("idx_logs_job_id_id_desc", "logs", ["job_id", "id"], unique=False)
-    op.execute(
-        """
-        UPDATE logs
-        SET job_id = json_extract(details_json, '$.job_id')
-        WHERE job_id IS NULL
-          AND details_json IS NOT NULL
-          AND json_valid(details_json) = 1
-          AND json_type(json_extract(details_json, '$.job_id')) = 'text'
-        """
-    )
 
 
 def downgrade() -> None:

@@ -45,9 +45,8 @@
 
 ## Status API
 
-- `test_status_refresh_without_ip_returns_unknown`
-  - `ip` 未設定PCの status refresh が `200` で `status=unknown` になること。
-  - 失敗ログが記録されること。
+- `test_create_pc_without_ip_returns_422`
+  - `ip` なしでPC登録した場合、`422` で拒否されること。
 
 - `test_status_refresh_http_error_mapping`
   - 未存在PCで `404`。

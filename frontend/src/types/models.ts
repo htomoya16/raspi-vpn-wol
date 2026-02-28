@@ -4,7 +4,7 @@ export interface Pc {
   id: string
   name: string
   mac: string
-  ip: string | null
+  ip: string
   tags: string[]
   note: string | null
   status: PcStatus
@@ -26,7 +26,7 @@ export interface PcCreatePayload {
   id?: string | null
   name: string
   mac: string
-  ip: string | null
+  ip: string
   tags: string[]
   note: string | null
 }
@@ -34,7 +34,7 @@ export interface PcCreatePayload {
 export interface PcUpdatePayload {
   name?: string | null
   mac?: string | null
-  ip?: string | null
+  ip?: string
   tags?: string[] | null
   note?: string | null
 }

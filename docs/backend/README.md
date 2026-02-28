@@ -9,6 +9,7 @@
 
 - 2026-02-27: キャッシュ方針を反映（DB集計 + APIメモリ + HTTP Cache-Control）。
 - 2026-02-27: uptime weekly API の週開始日を「日曜始まり」に統一。
+- 2026-03-01: `pcs.ip_address` を必須化（API入力 + DB `NOT NULL`）。
 - 2026-02-21: API/DBを vNext 契約ベースへ再設計（`pcs`/`jobs`/`events` を追加）。
 - 2026-02-11: `docs/backend` を機能別ドキュメント構成へ再編。
 - 2026-02-11: 初期機能ページを追加し、以後 vNext 構成へ更新。
@@ -36,7 +37,7 @@
 - `GET /api/jobs/{job_id}`: 非同期ジョブ状態取得。
 - `GET /api/events`: SSEイベントストリーム。
 - `pytest` で最小回帰テストを実行可能（health/pcs/logs/jobs）。
-- `python scripts/seed_dev_data.py` で開発用シードデータを再投入可能。
+- `python scripts/seed_dev_data.py` で開発用シードデータ（`pcs/status_history/uptime_daily_summary/jobs/logs`）を再投入可能。
 
 ## 運用時の注意点
 

@@ -12,7 +12,7 @@ def _pc_row(**overrides: object) -> dict[str, object]:
         "id": "pc-1",
         "name": "PC One",
         "mac_address": "AA:BB:CC:DD:EE:FF",
-        "ip_address": None,
+        "ip_address": "192.168.10.10",
         "tags_json": "[]",
         "note": None,
         "status": "unknown",

@@ -9,15 +9,13 @@ def _create_pc(
     id: str | None = None,
     name: str = "Main PC",
     mac: str = "AA:BB:CC:DD:EE:01",
-    ip: str | None = None,
+    ip: str = "192.168.10.20",
     tags: list[str] | None = None,
     note: str | None = None,
 ) -> dict[str, object]:
-    payload: dict[str, object] = {"name": name, "mac": mac}
+    payload: dict[str, object] = {"name": name, "mac": mac, "ip": ip}
     if id is not None:
         payload["id"] = id
-    if ip is not None:
-        payload["ip"] = ip
     if tags is not None:
         payload["tags"] = tags
     if note is not None:
@@ -39,15 +37,18 @@ def test_pcs_create_without_id_generates_unique_slug_ids(client: TestClient) -> 
 def test_pcs_create_validation_and_conflict(client: TestClient) -> None:
     bad_mac_response = client.post(
         "/api/pcs",
-        json={"id": "pc-bad", "name": "Bad", "mac": "ZZ:ZZ:ZZ:ZZ:ZZ:ZZ"},
+        json={"id": "pc-bad", "name": "Bad", "mac": "ZZ:ZZ:ZZ:ZZ:ZZ:ZZ", "ip": "192.168.10.40"},
     )
     assert bad_mac_response.status_code == 400
     assert "invalid mac address format" in bad_mac_response.json()["detail"]
 
-    missing_name_response = client.post("/api/pcs", json={"id": "pc-miss", "mac": "AA:BB:CC:DD:EE:FF"})
+    missing_name_response = client.post(
+        "/api/pcs",
+        json={"id": "pc-miss", "mac": "AA:BB:CC:DD:EE:FF", "ip": "192.168.10.43"},
+    )
     assert missing_name_response.status_code == 422
 
-    payload = {"id": "pc-dup", "name": "Dup", "mac": "00:11:22:33:44:55"}
+    payload = {"id": "pc-dup", "name": "Dup", "mac": "00:11:22:33:44:55", "ip": "192.168.10.41"}
     first = client.post("/api/pcs", json=payload)
     second = client.post("/api/pcs", json=payload)
     assert first.status_code == 201
@@ -55,7 +56,7 @@ def test_pcs_create_validation_and_conflict(client: TestClient) -> None:
 
     duplicate_mac_response = client.post(
         "/api/pcs",
-        json={"id": "pc-dup-mac", "name": "DupMac", "mac": "00:11:22:33:44:55"},
+        json={"id": "pc-dup-mac", "name": "DupMac", "mac": "00:11:22:33:44:55", "ip": "192.168.10.42"},
     )
     assert duplicate_mac_response.status_code == 409
 

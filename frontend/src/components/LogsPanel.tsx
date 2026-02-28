@@ -38,26 +38,6 @@ type LogGroup = {
   items: LogEntry[]
 }
 
-function parseDetailsObject(details: LogEntry['details']): Record<string, unknown> | null {
-  if (!details) {
-    return null
-  }
-  if (typeof details === 'object' && !Array.isArray(details)) {
-    return details as Record<string, unknown>
-  }
-  if (typeof details === 'string') {
-    try {
-      const parsed: unknown = JSON.parse(details)
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        return parsed as Record<string, unknown>
-      }
-    } catch {
-      return null
-    }
-  }
-  return null
-}
-
 function extractJobId(item: LogEntry): string | null {
   if (typeof item.job_id === 'string') {
     const normalized = item.job_id.trim()
@@ -65,18 +45,7 @@ function extractJobId(item: LogEntry): string | null {
       return normalized
     }
   }
-
-  const details = item.details
-  const detailObject = parseDetailsObject(details)
-  if (!detailObject) {
-    return null
-  }
-  const jobId = detailObject.job_id
-  if (typeof jobId !== 'string') {
-    return null
-  }
-  const normalized = jobId.trim()
-  return normalized ? normalized : null
+  return null
 }
 
 function buildLogGroups(items: LogEntry[]): LogGroup[] {

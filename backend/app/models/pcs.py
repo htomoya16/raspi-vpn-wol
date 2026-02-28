@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 PcStatus = Literal["online", "offline", "unknown", "booting", "unreachable"]
 
@@ -23,8 +23,8 @@ class Pc(BaseModel):
         description="MACアドレス。",
         json_schema_extra={"example": "AA:BB:CC:DD:EE:FF"},
     )
-    ip: str | None = Field(
-        default=None,
+    ip: str = Field(
+        ...,
         description="IPv4アドレス。",
         json_schema_extra={"example": "192.168.10.20"},
     )
@@ -75,8 +75,9 @@ class PcCreate(BaseModel):
         description="MACアドレス。",
         json_schema_extra={"example": "AA:BB:CC:DD:EE:FF"},
     )
-    ip: str | None = Field(
-        default=None,
+    ip: str = Field(
+        ...,
+        min_length=1,
         description="IPv4アドレス。",
         json_schema_extra={"example": "192.168.10.20"},
     )
@@ -93,9 +94,15 @@ class PcCreate(BaseModel):
 class PcUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1)
     mac: str | None = Field(default=None, min_length=2)
-    ip: str | None = Field(default=None)
+    ip: str | None = Field(default=None, min_length=1)
     tags: list[str] | None = Field(default=None)
     note: str | None = Field(default=None)
+
+    @model_validator(mode="after")
+    def validate_ip_not_null_when_provided(self) -> "PcUpdate":
+        if "ip" in self.model_fields_set and self.ip is None:
+            raise ValueError("ip is required")
+        return self
 
 
 class PcListResponse(BaseModel):

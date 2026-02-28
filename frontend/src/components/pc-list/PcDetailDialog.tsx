@@ -69,7 +69,7 @@ function PcDetailDialog({
         {isEditing ? (
           <form className="pc-edit-form" onSubmit={onSubmitEdit} noValidate>
             <label>
-              表示名
+              表示名（必須）
               <input
                 type="text"
                 value={editForm.name}
@@ -79,7 +79,7 @@ function PcDetailDialog({
             </label>
 
             <label>
-              MACアドレス
+              MACアドレス（必須）
               <input
                 type="text"
                 value={editForm.mac}
@@ -89,11 +89,12 @@ function PcDetailDialog({
             </label>
 
             <label>
-              IPアドレス（任意）
+              IPアドレス（必須）
               <input
                 type="text"
                 value={editForm.ip}
                 onChange={(event) => onUpdateEditField('ip', event.target.value)}
+                required
               />
             </label>
 
@@ -135,7 +136,7 @@ function PcDetailDialog({
               </div>
               <div className="pc-detail__item">
                 <dt>IP</dt>
-                <dd className="pc-row__cell">{selectedPc.ip || '未設定'}</dd>
+                <dd className="pc-row__cell">{selectedPc.ip}</dd>
               </div>
               <div className="pc-detail__item">
                 <dt>最終確認</dt>

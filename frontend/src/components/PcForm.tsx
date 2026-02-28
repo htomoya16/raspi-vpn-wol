@@ -36,7 +36,7 @@ function PcForm({ loading, error, onCreate, embedded = false }: PcFormProps) {
     const payload: PcCreatePayload = {
       name: form.name.trim(),
       mac: form.mac.trim(),
-      ip: form.ip.trim() || null,
+      ip: form.ip.trim(),
       tags: tagList,
       note: form.note.trim() || null,
     }
@@ -51,12 +51,12 @@ function PcForm({ loading, error, onCreate, embedded = false }: PcFormProps) {
     <>
       <div className="panel__header">
         <h2>PC登録</h2>
-        <p>必要な項目だけ入力すれば登録できます。IDはサーバー側で自動採番されます。</p>
+        <p>表示名・MACアドレス・IPアドレスは必須です。</p>
       </div>
 
       <form className="pc-form" onSubmit={handleSubmit}>
         <label>
-          表示名
+          表示名（必須）
           <input
             type="text"
             value={form.name}
@@ -67,7 +67,7 @@ function PcForm({ loading, error, onCreate, embedded = false }: PcFormProps) {
         </label>
 
         <label>
-          MACアドレス
+          MACアドレス（必須）
           <input
             type="text"
             value={form.mac}
@@ -78,12 +78,13 @@ function PcForm({ loading, error, onCreate, embedded = false }: PcFormProps) {
         </label>
 
         <label>
-          IPアドレス（任意）
+          IPアドレス（必須）
           <input
             type="text"
             value={form.ip}
             onChange={(event) => updateField('ip', event.target.value)}
             placeholder="192.168.10.20"
+            required
           />
         </label>
 

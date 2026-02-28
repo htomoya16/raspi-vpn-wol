@@ -52,7 +52,7 @@ def upsert_pc(
     pc_id: str,
     name: str,
     mac_address: str,
-    ip_address: str | None = None,
+    ip_address: str,
     tags: list[str] | None = None,
     note: str | None = None,
     status: str | None = None,
@@ -71,10 +71,12 @@ def upsert_pc(
         raise ValueError("name is required")
     if wol_port < 1 or wol_port > 65535:
         raise ValueError("wol_port must be between 1 and 65535")
-    if ip_address:
-        ip_value = ipaddress.ip_address(ip_address.strip())
-        if not isinstance(ip_value, ipaddress.IPv4Address):
-            raise ValueError("ip_address must be an IPv4 address")
+    normalized_ip_address = ip_address.strip()
+    if not normalized_ip_address:
+        raise ValueError("ip_address is required")
+    ip_value = ipaddress.ip_address(normalized_ip_address)
+    if not isinstance(ip_value, ipaddress.IPv4Address):
+        raise ValueError("ip_address must be an IPv4 address")
     if broadcast_ip:
         broadcast_value = ipaddress.ip_address(broadcast_ip.strip())
         if not isinstance(broadcast_value, ipaddress.IPv4Address):
@@ -108,7 +110,7 @@ def upsert_pc(
         pc_id=normalized_id,
         name=normalized_name,
         mac_address=normalize_mac_address(mac_address),
-        ip_address=ip_address.strip() if ip_address else None,
+        ip_address=normalized_ip_address,
         tags_json=json.dumps([tag.strip() for tag in persisted_tags if tag.strip()]),
         note=persisted_note.strip() if isinstance(persisted_note, str) and persisted_note.strip() else None,
         status=persisted_status,
