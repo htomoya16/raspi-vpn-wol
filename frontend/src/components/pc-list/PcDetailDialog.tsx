@@ -54,8 +54,14 @@ function PcDetailDialog({
           </div>
           <div className="pc-detail__header-side">
             <span className={`status-badge status-badge--${selectedPc.status}`}>{statusLabel}</span>
-            <button type="button" className="btn btn--soft" onClick={onClose} disabled={editLoading}>
-              閉じる
+            <button
+              type="button"
+              className="pc-detail__close-btn"
+              aria-label="PC詳細を閉じる"
+              onClick={onClose}
+              disabled={editLoading}
+            >
+              ✕
             </button>
           </div>
         </div>

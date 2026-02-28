@@ -7,6 +7,8 @@ from sqlite3 import IntegrityError
 from datetime import datetime, timezone
 from uuid import uuid4
 
+from app.cache import cache
+from app.cache import keys as cache_keys
 from app.models.pcs import PcCreate, PcStatus, PcUpdate
 from app.repositories import pc_repository
 from app.services import pc_registry_service, status_service, uptime_service, wol_service
@@ -15,10 +17,28 @@ from app.types import PcRow
 STATUS_VALUES: set[PcStatus] = {"online", "offline", "unknown", "booting", "unreachable"}
 BOOTING_POLL_INTERVAL_SECONDS = 3
 BOOTING_POLL_MAX_ATTEMPTS = 20
+BOOTING_CONFIRM_TIMEOUT_SECONDS = 60
+PCS_LIST_CACHE_TTL_SECONDS = 30
+UPTIME_SUMMARY_CACHE_TTL_SECONDS = 120
+UPTIME_WEEKLY_CACHE_TTL_SECONDS = 120
 
 
 class PcConflictError(ValueError):
     pass
+
+
+def _invalidate_pc_related_cache(pc_id: str | None = None) -> None:
+    cache.invalidate_prefix(cache_keys.PCS_LIST_PREFIX)
+    if pc_id is None:
+        cache.invalidate_prefix(cache_keys.UPTIME_SUMMARY_PREFIX)
+        cache.invalidate_prefix(cache_keys.UPTIME_WEEKLY_PREFIX)
+        return
+
+    normalized_id = pc_id.strip()
+    if not normalized_id:
+        return
+    cache.invalidate_prefix(cache_keys.uptime_summary_pc_prefix(normalized_id))
+    cache.invalidate_prefix(cache_keys.uptime_weekly_pc_prefix(normalized_id))
 
 
 def _ensure_mac_unique(mac_address: str, exclude_pc_id: str | None = None) -> None:
@@ -90,6 +110,19 @@ def list_pcs(
     normalized_q = q.strip() if q else None
     normalized_tag = tag.strip() if tag else None
     normalized_cursor = cursor.strip() if cursor else None
+    cache_key = cache_keys.pcs_list_key(
+        q=normalized_q or None,
+        status=status,
+        tag=normalized_tag or None,
+        limit=limit,
+        cursor=normalized_cursor or None,
+    )
+    cached = cache.get(cache_key)
+    if isinstance(cached, dict):
+        cached_items = cached.get("items")
+        cached_next_cursor = cached.get("next_cursor")
+        if isinstance(cached_items, list):
+            return cached_items, cached_next_cursor if isinstance(cached_next_cursor, str) else None
 
     rows = pc_repository.list_pcs(
         q=normalized_q or None,
@@ -103,6 +136,11 @@ def list_pcs(
     has_more = len(pcs) > limit
     page = pcs[:limit]
     next_cursor = str(page[-1]["id"]) if has_more and page else None
+    cache.set(
+        cache_key,
+        {"items": page, "next_cursor": next_cursor},
+        ttl_seconds=PCS_LIST_CACHE_TTL_SECONDS,
+    )
     return page, next_cursor
 
 
@@ -142,6 +180,7 @@ def create_pc(payload: PcCreate) -> dict[str, object]:
             normalized_mac = pc_registry_service.normalize_mac_address(payload.mac)
             raise PcConflictError(f"既に存在しています（MAC: {normalized_mac}）") from exc
         raise
+    _invalidate_pc_related_cache(pc_id)
     return _row_to_pc(pc_row)
 
 
@@ -174,21 +213,27 @@ def update_pc(pc_id: str, payload: PcUpdate) -> dict[str, object]:
             normalized_mac = pc_registry_service.normalize_mac_address(str(next_mac))
             raise PcConflictError(f"既に存在しています（MAC: {normalized_mac}）") from exc
         raise
+    _invalidate_pc_related_cache(str(existing["id"]))
     return _row_to_pc(pc_row)
 
 
 def delete_pc(pc_id: str) -> None:
-    pc_registry_service.delete_pc(pc_id)
+    normalized_id = pc_id.strip()
+    pc_registry_service.delete_pc(normalized_id)
+    _invalidate_pc_related_cache(normalized_id)
 
 
-def refresh_pc_status(pc_id: str) -> dict[str, object]:
+def _refresh_pc_status_internal(pc_id: str, *, invalidate_cache: bool) -> dict[str, object]:
     existing = pc_repository.get_pc_by_id(pc_id.strip())
     if existing is None:
         raise LookupError(f"pc not found: {pc_id}")
+    previous_status = str(existing.get("status") or "unknown")
     try:
         result = status_service.get_pc_status(pc_id)
         status_value = str(result["status"])
     except ValueError:
+        status_value = "unreachable"
+    if previous_status == "unreachable" and status_value == "offline":
         status_value = "unreachable"
     if status_value not in STATUS_VALUES:
         status_value = "unreachable"
@@ -198,7 +243,13 @@ def refresh_pc_status(pc_id: str) -> dict[str, object]:
         status=normalized_status,
         mark_seen=normalized_status == "online",
     )
+    if invalidate_cache:
+        _invalidate_pc_related_cache(str(existing["id"]))
     return get_pc(pc_id)
+
+
+def refresh_pc_status(pc_id: str) -> dict[str, object]:
+    return _refresh_pc_status_internal(pc_id, invalidate_cache=True)
 
 
 def refresh_all_statuses() -> dict[str, int]:
@@ -209,11 +260,12 @@ def refresh_all_statuses() -> dict[str, int]:
     for row in rows:
         pc_id = row["id"]
         try:
-            refresh_pc_status(pc_id)
+            _refresh_pc_status_internal(str(pc_id), invalidate_cache=False)
             succeeded += 1
         except ValueError:
             pc_registry_service.update_runtime_status(pc_id, status="unreachable", mark_seen=False)
             failed += 1
+    _invalidate_pc_related_cache()
     return {"total": total, "succeeded": succeeded, "failed": failed}
 
 
@@ -223,41 +275,54 @@ def send_wol(
     broadcast: str | None = None,
     port: int | None = None,
 ) -> dict[str, object]:
-    current = pc_repository.get_pc_by_id(pc_id.strip())
+    normalized_id = pc_id.strip()
+    current = pc_repository.get_pc_by_id(normalized_id)
     had_seen_before = bool(current and current.get("last_seen_at"))
 
     normalized_repeat = repeat if repeat > 0 else 1
     message = ""
-    for _ in range(normalized_repeat):
-        result = wol_service.send_wol(
-            pc_id=pc_id,
-            broadcast_ip_override=broadcast,
-            wol_port_override=port,
-        )
-        message = result["message"]
+    try:
+        for _ in range(normalized_repeat):
+            result = wol_service.send_wol(
+                pc_id=normalized_id,
+                broadcast_ip_override=broadcast,
+                wol_port_override=port,
+            )
+            message = result["message"]
+    except ValueError as exc:
+        pc_registry_service.update_runtime_status(normalized_id, status="unreachable", mark_seen=False)
+        _invalidate_pc_related_cache(normalized_id)
+        raise RuntimeError(f"wol packet send failed: {exc} (pc_id={normalized_id})") from exc
 
-    pc_registry_service.update_runtime_status(pc_id, status="booting", mark_seen=False)
+    pc_registry_service.update_runtime_status(normalized_id, status="booting", mark_seen=False)
+    _invalidate_pc_related_cache(normalized_id)
     now_iso = datetime.now(timezone.utc).isoformat()
 
+    started_at = time.monotonic()
     attempts = 0
     for attempt in range(BOOTING_POLL_MAX_ATTEMPTS):
+        elapsed = time.monotonic() - started_at
+        if elapsed >= BOOTING_CONFIRM_TIMEOUT_SECONDS:
+            break
+
         attempts = attempt + 1
-        time.sleep(BOOTING_POLL_INTERVAL_SECONDS)
+        remaining = BOOTING_CONFIRM_TIMEOUT_SECONDS - elapsed
+        sleep_seconds = min(BOOTING_POLL_INTERVAL_SECONDS, max(0.0, remaining))
+        if sleep_seconds > 0:
+            time.sleep(sleep_seconds)
         try:
-            probe = status_service.get_pc_status(pc_id)
+            probe = status_service.get_pc_status(normalized_id)
             probe_status = str(probe["status"])
-        except ValueError:
-            pc_registry_service.update_runtime_status(pc_id, status="unreachable", mark_seen=False)
-            return {
-                "message": message,
-                "requested_at": now_iso,
-                "final_status": "unreachable",
-                "poll_interval_seconds": BOOTING_POLL_INTERVAL_SECONDS,
-                "poll_attempts": attempts,
-            }
+        except ValueError as exc:
+            pc_registry_service.update_runtime_status(normalized_id, status="unreachable", mark_seen=False)
+            _invalidate_pc_related_cache(normalized_id)
+            raise RuntimeError(
+                f"wol status probe failed: {exc} (pc_id={normalized_id}, attempts={attempts})"
+            ) from exc
 
         if probe_status == "online":
-            pc_registry_service.update_runtime_status(pc_id, status="online", mark_seen=True)
+            pc_registry_service.update_runtime_status(normalized_id, status="online", mark_seen=True)
+            _invalidate_pc_related_cache(normalized_id)
             return {
                 "message": message,
                 "requested_at": now_iso,
@@ -266,15 +331,24 @@ def send_wol(
                 "poll_attempts": attempts,
             }
 
+        if probe_status in {"unknown", "unreachable"}:
+            pc_registry_service.update_runtime_status(normalized_id, status=probe_status, mark_seen=False)
+            _invalidate_pc_related_cache(normalized_id)
+            raise RuntimeError(
+                "wol status probe returned non-retriable status: "
+                f"{probe_status} (pc_id={normalized_id}, attempts={attempts})"
+            )
+
+        if (time.monotonic() - started_at) >= BOOTING_CONFIRM_TIMEOUT_SECONDS:
+            break
+
     final_status: PcStatus = "offline" if had_seen_before else "unknown"
-    pc_registry_service.update_runtime_status(pc_id, status=final_status, mark_seen=False)
-    return {
-        "message": message,
-        "requested_at": now_iso,
-        "final_status": final_status,
-        "poll_interval_seconds": BOOTING_POLL_INTERVAL_SECONDS,
-        "poll_attempts": attempts,
-    }
+    pc_registry_service.update_runtime_status(normalized_id, status=final_status, mark_seen=False)
+    _invalidate_pc_related_cache(normalized_id)
+    raise RuntimeError(
+        "wol boot confirmation timed out: "
+        f"status={final_status} (pc_id={normalized_id}, attempts={attempts}, requested_at={now_iso})"
+    )
 
 
 def get_uptime_summary(
@@ -285,13 +359,27 @@ def get_uptime_summary(
     bucket: str,
     tz: str | None,
 ) -> dict[str, object]:
-    return uptime_service.get_pc_uptime_summary(
-        pc_id=pc_id,
+    normalized_pc_id = pc_id.strip()
+    cache_key = cache_keys.uptime_summary_key(
+        pc_id=normalized_pc_id,
+        from_date=from_date,
+        to_date=to_date,
+        bucket=bucket,
+        tz=tz,
+    )
+    cached = cache.get(cache_key)
+    if isinstance(cached, dict):
+        return cached
+
+    response = uptime_service.get_pc_uptime_summary(
+        pc_id=normalized_pc_id,
         from_date=from_date,
         to_date=to_date,
         bucket=bucket,
         tz_name=tz,
     )
+    cache.set(cache_key, response, ttl_seconds=UPTIME_SUMMARY_CACHE_TTL_SECONDS)
+    return response
 
 
 def get_weekly_timeline(
@@ -300,8 +388,20 @@ def get_weekly_timeline(
     week_start: str | None,
     tz: str | None,
 ) -> dict[str, object]:
-    return uptime_service.get_pc_weekly_timeline(
-        pc_id=pc_id,
+    normalized_pc_id = pc_id.strip()
+    cache_key = cache_keys.uptime_weekly_key(
+        pc_id=normalized_pc_id,
+        week_start=week_start,
+        tz=tz,
+    )
+    cached = cache.get(cache_key)
+    if isinstance(cached, dict):
+        return cached
+
+    response = uptime_service.get_pc_weekly_timeline(
+        pc_id=normalized_pc_id,
         week_start=week_start,
         tz_name=tz,
     )
+    cache.set(cache_key, response, ttl_seconds=UPTIME_WEEKLY_CACHE_TTL_SECONDS)
+    return response

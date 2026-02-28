@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.models.pcs import PcCreate
 from app.services import pc_service
 
 
@@ -92,8 +93,8 @@ def test_pc_service_send_wol_poll_timeout_marks_offline_or_unknown(monkeypatch: 
         "update_runtime_status",
         lambda _pc_id, status, mark_seen=False: unknown_updates.append((status, mark_seen)) or _pc_row(status=status),
     )
-    unknown_result = pc_service.send_wol("pc-1")
-    assert unknown_result["final_status"] == "unknown"
+    with pytest.raises(RuntimeError, match="status=unknown"):
+        pc_service.send_wol("pc-1")
     assert unknown_updates[-1] == ("unknown", False)
 
     offline_updates: list[tuple[str, bool]] = []
@@ -108,8 +109,8 @@ def test_pc_service_send_wol_poll_timeout_marks_offline_or_unknown(monkeypatch: 
         "update_runtime_status",
         lambda _pc_id, status, mark_seen=False: offline_updates.append((status, mark_seen)) or _pc_row(status=status),
     )
-    offline_result = pc_service.send_wol("pc-1")
-    assert offline_result["final_status"] == "offline"
+    with pytest.raises(RuntimeError, match="status=offline"):
+        pc_service.send_wol("pc-1")
     assert offline_updates[-1] == ("offline", False)
 
 
@@ -139,8 +140,225 @@ def test_pc_service_send_wol_marks_unreachable_on_status_probe_error(monkeypatch
         lambda _pc_id, status, mark_seen=False: updates.append((status, mark_seen)) or _pc_row(status=status),
     )
 
-    result = pc_service.send_wol("pc-1")
-
-    assert result["final_status"] == "unreachable"
-    assert result["poll_attempts"] == 1
+    with pytest.raises(RuntimeError, match="wol status probe failed"):
+        pc_service.send_wol("pc-1")
     assert updates == [("booting", False), ("unreachable", False)]
+
+
+def test_pc_service_send_wol_fails_immediately_when_probe_returns_unknown(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        pc_service.pc_repository,
+        "get_pc_by_id",
+        lambda _: _pc_row(last_seen_at=None),
+    )
+    monkeypatch.setattr(
+        pc_service.wol_service,
+        "send_wol",
+        lambda **kwargs: {"message": "sent"},
+    )
+    monkeypatch.setattr(pc_service.time, "sleep", lambda _: None)
+    monkeypatch.setattr(pc_service, "BOOTING_POLL_MAX_ATTEMPTS", 20)
+    monkeypatch.setattr(
+        pc_service.status_service,
+        "get_pc_status",
+        lambda _: {"pc_id": "pc-1", "status": "unknown"},
+    )
+
+    updates: list[tuple[str, bool]] = []
+    monkeypatch.setattr(
+        pc_service.pc_registry_service,
+        "update_runtime_status",
+        lambda _pc_id, status, mark_seen=False: updates.append((status, mark_seen)) or _pc_row(status=status),
+    )
+
+    with pytest.raises(RuntimeError, match="non-retriable status: unknown"):
+        pc_service.send_wol("pc-1")
+
+    assert updates == [("booting", False), ("unknown", False)]
+
+
+def test_pc_service_send_wol_uses_wall_clock_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        pc_service.pc_repository,
+        "get_pc_by_id",
+        lambda _: _pc_row(last_seen_at="2026-01-01T00:00:00+00:00"),
+    )
+    monkeypatch.setattr(
+        pc_service.wol_service,
+        "send_wol",
+        lambda **kwargs: {"message": "sent"},
+    )
+    monkeypatch.setattr(
+        pc_service.status_service,
+        "get_pc_status",
+        lambda _: {"pc_id": "pc-1", "status": "offline"},
+    )
+    monkeypatch.setattr(pc_service.time, "sleep", lambda _: None)
+    monkeypatch.setattr(pc_service, "BOOTING_POLL_MAX_ATTEMPTS", 50)
+    monkeypatch.setattr(pc_service, "BOOTING_CONFIRM_TIMEOUT_SECONDS", 60)
+
+    monotonic_values = iter([0.0, 0.0, 61.0, 61.0])
+    monkeypatch.setattr(pc_service.time, "monotonic", lambda: next(monotonic_values))
+
+    updates: list[tuple[str, bool]] = []
+    monkeypatch.setattr(
+        pc_service.pc_registry_service,
+        "update_runtime_status",
+        lambda _pc_id, status, mark_seen=False: updates.append((status, mark_seen)) or _pc_row(status=status),
+    )
+
+    with pytest.raises(RuntimeError, match="status=offline"):
+        pc_service.send_wol("pc-1")
+
+    assert updates[-1] == ("offline", False)
+
+
+def test_pc_service_send_wol_marks_unreachable_when_packet_send_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        pc_service.pc_repository,
+        "get_pc_by_id",
+        lambda _: _pc_row(last_seen_at="2026-01-01T00:00:00+00:00"),
+    )
+
+    def _raise_send_error(**_: object) -> dict[str, object]:
+        raise ValueError("target ip is outside interface network")
+
+    monkeypatch.setattr(pc_service.wol_service, "send_wol", _raise_send_error)
+
+    updates: list[tuple[str, bool]] = []
+    monkeypatch.setattr(
+        pc_service.pc_registry_service,
+        "update_runtime_status",
+        lambda _pc_id, status, mark_seen=False: updates.append((status, mark_seen)) or _pc_row(status=status),
+    )
+
+    with pytest.raises(RuntimeError, match="wol packet send failed"):
+        pc_service.send_wol("pc-1")
+
+    assert updates == [("unreachable", False)]
+
+
+def test_refresh_pc_status_keeps_unreachable_when_probe_is_offline(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        pc_service.pc_repository,
+        "get_pc_by_id",
+        lambda _: _pc_row(status="unreachable"),
+    )
+    monkeypatch.setattr(
+        pc_service.status_service,
+        "get_pc_status",
+        lambda _: {"pc_id": "pc-1", "status": "offline"},
+    )
+
+    updates: list[tuple[str, bool]] = []
+    monkeypatch.setattr(
+        pc_service.pc_registry_service,
+        "update_runtime_status",
+        lambda _pc_id, status, mark_seen=False: updates.append((status, mark_seen)) or _pc_row(status=status),
+    )
+
+    result = pc_service.refresh_pc_status("pc-1")
+    assert result["status"] == "unreachable"
+    assert updates == [("unreachable", False)]
+
+
+def test_list_pcs_uses_memory_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+    pc_service.cache.clear()
+    call_count = {"list_pcs": 0}
+
+    def _list_pcs(**_: object) -> list[dict[str, object]]:
+        call_count["list_pcs"] += 1
+        return [_pc_row(id="pc-cache")]
+
+    monkeypatch.setattr(pc_service.pc_repository, "list_pcs", _list_pcs)
+
+    first_items, first_cursor = pc_service.list_pcs(
+        q=None,
+        status=None,
+        tag=None,
+        limit=50,
+        cursor=None,
+    )
+    second_items, second_cursor = pc_service.list_pcs(
+        q=None,
+        status=None,
+        tag=None,
+        limit=50,
+        cursor=None,
+    )
+
+    assert call_count["list_pcs"] == 1
+    assert first_cursor is None
+    assert second_cursor is None
+    assert [item["id"] for item in first_items] == ["pc-cache"]
+    assert [item["id"] for item in second_items] == ["pc-cache"]
+
+
+def test_create_pc_invalidates_list_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+    pc_service.cache.clear()
+    call_count = {"list_pcs": 0}
+
+    def _list_pcs(**_: object) -> list[dict[str, object]]:
+        call_count["list_pcs"] += 1
+        return [_pc_row(id="pc-before")]
+
+    monkeypatch.setattr(pc_service.pc_repository, "list_pcs", _list_pcs)
+    monkeypatch.setattr(pc_service.pc_repository, "get_pc_by_id", lambda _pc_id: None)
+    monkeypatch.setattr(pc_service.pc_repository, "get_pc_by_mac", lambda _mac: None)
+    monkeypatch.setattr(
+        pc_service.pc_registry_service,
+        "upsert_pc",
+        lambda **kwargs: _pc_row(
+            id=kwargs["pc_id"],
+            name=kwargs["name"],
+            mac_address=kwargs["mac_address"],
+        ),
+    )
+
+    pc_service.list_pcs(q=None, status=None, tag=None, limit=50, cursor=None)
+    pc_service.list_pcs(q=None, status=None, tag=None, limit=50, cursor=None)
+    assert call_count["list_pcs"] == 1
+
+    payload = PcCreate(id="pc-new", name="New PC", mac="AA:BB:CC:DD:EE:99")
+    created = pc_service.create_pc(payload)
+    assert created["id"] == "pc-new"
+
+    pc_service.list_pcs(q=None, status=None, tag=None, limit=50, cursor=None)
+    assert call_count["list_pcs"] == 2
+
+
+def test_get_uptime_summary_uses_memory_cache(monkeypatch: pytest.MonkeyPatch) -> None:
+    pc_service.cache.clear()
+    call_count = {"summary": 0}
+
+    def _get_summary(**_: object) -> dict[str, object]:
+        call_count["summary"] += 1
+        return {
+            "pc_id": "pc-1",
+            "from": "2026-02-01",
+            "to": "2026-02-07",
+            "bucket": "day",
+            "tz": "Asia/Tokyo",
+            "items": [],
+        }
+
+    monkeypatch.setattr(pc_service.uptime_service, "get_pc_uptime_summary", _get_summary)
+
+    first = pc_service.get_uptime_summary(
+        pc_id="pc-1",
+        from_date="2026-02-01",
+        to_date="2026-02-07",
+        bucket="day",
+        tz="Asia/Tokyo",
+    )
+    second = pc_service.get_uptime_summary(
+        pc_id="pc-1",
+        from_date="2026-02-01",
+        to_date="2026-02-07",
+        bucket="day",
+        tz="Asia/Tokyo",
+    )
+
+    assert call_count["summary"] == 1
+    assert first["pc_id"] == "pc-1"
+    assert second["pc_id"] == "pc-1"

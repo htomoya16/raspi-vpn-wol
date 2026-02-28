@@ -1,6 +1,9 @@
-import { Fragment, useState, type KeyboardEvent } from 'react'
+import { Fragment, useEffect, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { createPortal } from 'react-dom'
 
+import { useDelayedVisibility } from '../hooks/useDelayedVisibility'
 import LoadingDots from './LoadingDots'
+import LoadingSpinner from './LoadingSpinner'
 import type { LogEntry } from '../types/models'
 import { formatJstDateParts } from '../utils/datetime'
 
@@ -46,9 +49,50 @@ function LogsPanel({
   onClear,
   embedded = false,
 }: LogsPanelProps) {
+  const panelId = useMemo(
+    () => `logs-panel-${Math.random().toString(36).slice(2, 10)}`,
+    [],
+  )
+  const focusPanelId = `${panelId}-focus`
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [focusOpen, setFocusOpen] = useState(false)
   const [clearLoading, setClearLoading] = useState(false)
   const [expandedDetailIds, setExpandedDetailIds] = useState<Set<number>>(() => new Set())
+  const hasItems = items.length > 0
+  const showInitialLoading = loading && !hasItems
+  const showRefreshingSpinner = useDelayedVisibility(loading && hasItems, 200)
+
+  useEffect(() => {
+    if (typeof document === 'undefined') {
+      return undefined
+    }
+    if (!focusOpen) {
+      return undefined
+    }
+
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevOverflow
+    }
+  }, [focusOpen])
+
+  useEffect(() => {
+    if (!focusOpen) {
+      return undefined
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') {
+        return
+      }
+      setFocusOpen(false)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [focusOpen])
 
   function openConfirm() {
     setConfirmOpen(true)
@@ -59,6 +103,17 @@ function LogsPanel({
       return
     }
     setConfirmOpen(false)
+  }
+
+  function openFocus() {
+    setFocusOpen(true)
+  }
+
+  function closeFocus() {
+    if (clearLoading) {
+      return
+    }
+    setFocusOpen(false)
   }
 
   async function confirmClear() {
@@ -88,7 +143,7 @@ function LogsPanel({
     })
   }
 
-  function handleRowKeyDown(event: KeyboardEvent<HTMLTableRowElement>, id: number) {
+  function handleRowKeyDown(event: ReactKeyboardEvent<HTMLTableRowElement>, id: number) {
     if (event.key !== 'Enter' && event.key !== ' ') {
       return
     }
@@ -96,25 +151,37 @@ function LogsPanel({
     toggleDetails(id)
   }
 
-  const content = (
+  function renderContent(titleId: string, showFocusButton: boolean, showClearButton: boolean) {
+    return (
     <>
-      <div className="panel__header">
-        <h2>操作ログ</h2>
-        <p>最新ログを1シートで確認できます。</p>
+      <div className="panel__header logs-panel__header">
+        <div>
+          <h2 id={titleId}>操作ログ</h2>
+          <p>最新ログを1シートで確認できます。</p>
+        </div>
       </div>
 
       <div className="logs-toolbar">
         <button type="button" className="btn btn--soft" onClick={onReload} disabled={loading || clearLoading}>
-          {loading ? <LoadingDots label="読み込み中" /> : '再読込'}
+          {showInitialLoading ? (
+            <LoadingDots label="読み込み中" />
+          ) : (
+            <span className="btn__with-spinner">
+              {showRefreshingSpinner ? <LoadingSpinner ariaLabel="ログを更新中です" /> : null}
+              <span>再読込</span>
+            </span>
+          )}
         </button>
-        <button
-          type="button"
-          className="btn btn--danger"
-          onClick={openConfirm}
-          disabled={items.length === 0 || loading || clearLoading}
-        >
-          ログ消去
-        </button>
+        {showClearButton ? (
+          <button
+            type="button"
+            className="btn btn--danger"
+            onClick={openConfirm}
+            disabled={items.length === 0 || loading || clearLoading}
+          >
+            ログ消去
+          </button>
+        ) : null}
       </div>
 
       {error ? <p className="feedback feedback--error">{error}</p> : null}
@@ -130,7 +197,21 @@ function LogsPanel({
                 <th>操作</th>
                 <th>PC</th>
                 <th>結果</th>
-                <th>メッセージ</th>
+                <th>
+                  <span className="logs-table__head-with-action">
+                    <span>メッセージ</span>
+                    {showFocusButton ? (
+                      <button
+                        type="button"
+                        className="logs-table__icon-btn"
+                        aria-label="ログを前面表示"
+                        onClick={openFocus}
+                      >
+                        ⤢
+                      </button>
+                    ) : null}
+                  </span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -198,10 +279,43 @@ function LogsPanel({
       )}
     </>
   )
+  }
 
   return (
     <>
-      {embedded ? <div className="panel-embedded panel-embedded--logs">{content}</div> : <section className="panel">{content}</section>}
+      {embedded ? (
+        <div className="panel-embedded panel-embedded--logs">{renderContent(panelId, true, true)}</div>
+      ) : (
+        <section className="panel">{renderContent(panelId, true, true)}</section>
+      )}
+
+      {focusOpen && typeof document !== 'undefined'
+        ? createPortal(
+            <div className="logs-focus__backdrop" role="presentation" onClick={closeFocus}>
+              <section
+                className="panel logs-focus__panel"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={focusPanelId}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <div className="logs-focus__header">
+                  <p className="logs-focus__title">ログ前面表示</p>
+                  <button
+                    type="button"
+                    className="logs-focus__close-btn"
+                    aria-label="前面表示を閉じる"
+                    onClick={closeFocus}
+                  >
+                    ✕
+                  </button>
+                </div>
+                {renderContent(focusPanelId, false, false)}
+              </section>
+            </div>,
+            document.body,
+          )
+        : null}
 
       {confirmOpen ? (
         <div className="confirm-dialog__backdrop" role="presentation" onClick={closeConfirm}>

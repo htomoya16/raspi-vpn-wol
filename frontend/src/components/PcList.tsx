@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useMediaQuery } from '../hooks/useMediaQuery'
+import { useDelayedVisibility } from '../hooks/useDelayedVisibility'
 import type { BusyById, Pc, PcBusyState, PcFilterState, PcUpdatePayload, RowErrorById } from '../types/models'
 import { formatJstDateTime } from '../utils/datetime'
+import LoadingSpinner from './LoadingSpinner'
 import PcDeleteDialog from './pc-list/PcDeleteDialog'
 import type { PendingDeleteState } from './pc-list/PcDeleteDialog'
 import PcDetailDialog from './pc-list/PcDetailDialog'
@@ -71,6 +73,9 @@ function PcList({
 
   const activeFilters = appliedFilters || filters
   const hasActiveFilter = Boolean((activeFilters.q || '').trim() || activeFilters.status)
+  const hasItems = items.length > 0
+  const showInitialLoading = loading && !hasItems
+  const showRefreshingSpinner = useDelayedVisibility(loading && hasItems, 200)
 
   useEffect(() => {
     setShowFilters(!isMobile)
@@ -287,7 +292,14 @@ function PcList({
               クリア
             </button>
             <button type="button" className="btn btn--soft" onClick={onReload} disabled={loading}>
-              {loading ? <LoadingDots label="読み込み中" /> : '再読み込み'}
+              {showInitialLoading ? (
+                <LoadingDots label="読み込み中" />
+              ) : (
+                <span className="btn__with-spinner">
+                  {showRefreshingSpinner ? <LoadingSpinner ariaLabel="PC一覧を更新中です" /> : null}
+                  <span>再読み込み</span>
+                </span>
+              )}
             </button>
           </div>
         ) : null}
@@ -329,7 +341,7 @@ function PcList({
           </ul>
         )}
 
-        {loading ? (
+        {showInitialLoading ? (
           <div className="pc-list__loading-overlay">
             <LoadingDots label="PC一覧を読み込み中" />
           </div>

@@ -7,6 +7,7 @@
 
 ## 変更内容
 
+- 2026-02-27: キャッシュ方針を反映（DB集計 + APIメモリ + HTTP Cache-Control）。
 - 2026-02-27: uptime weekly API の週開始日を「日曜始まり」に統一。
 - 2026-02-21: API/DBを vNext 契約ベースへ再設計（`pcs`/`jobs`/`events` を追加）。
 - 2026-02-11: `docs/backend` を機能別ドキュメント構成へ再編。
@@ -68,6 +69,7 @@
 - `docs/backend/features/pcs.md`
 - `docs/backend/features/wol.md`
 - `docs/backend/features/status.md`
+- `docs/backend/features/cache.md`
 - `docs/backend/features/logs.md`
 - `docs/backend/features/runtime.md`
 - `docs/backend/features/types-and-models.md`

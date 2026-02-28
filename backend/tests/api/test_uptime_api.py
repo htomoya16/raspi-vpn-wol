@@ -21,6 +21,7 @@ def test_uptime_summary_day_bucket_returns_items(client: TestClient) -> None:
         params={"from": "2026-02-01", "to": "2026-02-03", "bucket": "day", "tz": "Asia/Tokyo"},
     )
     assert response.status_code == 200
+    assert response.headers["cache-control"] == "private, max-age=30, stale-while-revalidate=90"
 
     body = response.json()
     assert body["pc_id"] == "pc-uptime-day"
@@ -65,6 +66,7 @@ def test_uptime_weekly_timeline_returns_7_days(client: TestClient) -> None:
         params={"week_start": "2026-02-22", "tz": "Asia/Tokyo"},
     )
     assert response.status_code == 200
+    assert response.headers["cache-control"] == "private, max-age=30, stale-while-revalidate=90"
 
     body = response.json()
     assert body["week_start"] == "2026-02-22"

@@ -8,21 +8,18 @@ import type {
   PcWeeklyTimelineResponse,
   UptimeBucket,
 } from '../types/models'
-import { request } from './http'
-
-function toQueryString(params: object): string {
-  const search = new URLSearchParams()
-
-  Object.entries(params).forEach(([key, value]) => {
-    if (value === undefined || value === null || value === '') {
-      return
-    }
-    search.set(key, String(value))
-  })
-
-  const query = search.toString()
-  return query ? `?${query}` : ''
-}
+import {
+  buildPcsListCacheKey,
+  buildUptimeSummaryCacheKey,
+  buildUptimeSummaryPcPrefix,
+  buildUptimeWeeklyCacheKey,
+  buildUptimeWeeklyPcPrefix,
+  CACHE_PREFIX,
+  CACHE_TTL_MS,
+} from './cache-policy'
+import { invalidateCacheByPrefix } from './cache'
+import { request, requestCached } from './http'
+import { toQueryString } from './query'
 
 export interface ListPcsParams {
   q?: string
@@ -32,43 +29,79 @@ export interface ListPcsParams {
   cursor?: string
 }
 
-export function listPcs(params: ListPcsParams = {}): Promise<PcListResponse> {
-  const query = toQueryString(params)
-  return request<PcListResponse>(`/api/pcs${query}`)
+export function invalidatePcsAndUptimeCache(pcId?: string): void {
+  invalidateCacheByPrefix(CACHE_PREFIX.pcsList)
+  if (pcId && pcId.trim()) {
+    invalidateCacheByPrefix(buildUptimeSummaryPcPrefix(pcId))
+    invalidateCacheByPrefix(buildUptimeWeeklyPcPrefix(pcId))
+    return
+  }
+  invalidateCacheByPrefix(CACHE_PREFIX.uptimeSummary)
+  invalidateCacheByPrefix(CACHE_PREFIX.uptimeWeekly)
 }
 
-export function createPc(payload: PcCreatePayload): Promise<PcResponse> {
-  return request<PcResponse>('/api/pcs', {
+function invalidateLogCache(): void {
+  invalidateCacheByPrefix(CACHE_PREFIX.logsList)
+}
+
+export function listPcs(params: ListPcsParams = {}): Promise<PcListResponse> {
+  const query = toQueryString(params)
+  return requestCached<PcListResponse>(
+    `/api/pcs${query}`,
+    {
+      key: buildPcsListCacheKey(query),
+      ttlMs: CACHE_TTL_MS.pcsList,
+      staleWhileRevalidate: true,
+    },
+  )
+}
+
+export async function createPc(payload: PcCreatePayload): Promise<PcResponse> {
+  const response = await request<PcResponse>('/api/pcs', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
+  invalidatePcsAndUptimeCache(response.pc.id)
+  invalidateLogCache()
+  return response
 }
 
-export function deletePc(pcId: string): Promise<void> {
-  return request<void>(`/api/pcs/${encodeURIComponent(pcId)}`, {
+export async function deletePc(pcId: string): Promise<void> {
+  await request<void>(`/api/pcs/${encodeURIComponent(pcId)}`, {
     method: 'DELETE',
   })
+  invalidatePcsAndUptimeCache(pcId)
+  invalidateLogCache()
 }
 
-export function updatePc(pcId: string, payload: PcUpdatePayload): Promise<PcResponse> {
-  return request<PcResponse>(`/api/pcs/${encodeURIComponent(pcId)}`, {
+export async function updatePc(pcId: string, payload: PcUpdatePayload): Promise<PcResponse> {
+  const response = await request<PcResponse>(`/api/pcs/${encodeURIComponent(pcId)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
+  invalidatePcsAndUptimeCache(response.pc.id)
+  invalidateLogCache()
+  return response
 }
 
-export function refreshPcStatus(pcId: string): Promise<PcResponse> {
-  return request<PcResponse>(`/api/pcs/${encodeURIComponent(pcId)}/status/refresh`, {
+export async function refreshPcStatus(pcId: string): Promise<PcResponse> {
+  const response = await request<PcResponse>(`/api/pcs/${encodeURIComponent(pcId)}/status/refresh`, {
     method: 'POST',
   })
+  invalidatePcsAndUptimeCache(response.pc.id)
+  invalidateLogCache()
+  return response
 }
 
-export function refreshAllStatuses(): Promise<JobAccepted> {
-  return request<JobAccepted>('/api/pcs/status/refresh', {
+export async function refreshAllStatuses(): Promise<JobAccepted> {
+  const response = await request<JobAccepted>('/api/pcs/status/refresh', {
     method: 'POST',
   })
+  invalidatePcsAndUptimeCache()
+  invalidateLogCache()
+  return response
 }
 
 export function sendPcWol(
@@ -84,7 +117,11 @@ export function sendPcWol(
     options.body = JSON.stringify(payload)
   }
 
-  return request<JobAccepted>(`/api/pcs/${encodeURIComponent(pcId)}/wol`, options)
+  return request<JobAccepted>(`/api/pcs/${encodeURIComponent(pcId)}/wol`, options).then((response) => {
+    invalidatePcsAndUptimeCache(pcId)
+    invalidateLogCache()
+    return response
+  })
 }
 
 export interface GetPcUptimeSummaryParams {
@@ -99,7 +136,14 @@ export function getPcUptimeSummary(
   params: GetPcUptimeSummaryParams = {},
 ): Promise<PcUptimeSummaryResponse> {
   const query = toQueryString(params)
-  return request<PcUptimeSummaryResponse>(`/api/pcs/${encodeURIComponent(pcId)}/uptime/summary${query}`)
+  return requestCached<PcUptimeSummaryResponse>(
+    `/api/pcs/${encodeURIComponent(pcId)}/uptime/summary${query}`,
+    {
+      key: buildUptimeSummaryCacheKey(pcId, query),
+      ttlMs: CACHE_TTL_MS.uptimeSummary,
+      staleWhileRevalidate: true,
+    },
+  )
 }
 
 export interface GetPcWeeklyTimelineParams {
@@ -112,5 +156,12 @@ export function getPcWeeklyTimeline(
   params: GetPcWeeklyTimelineParams = {},
 ): Promise<PcWeeklyTimelineResponse> {
   const query = toQueryString(params)
-  return request<PcWeeklyTimelineResponse>(`/api/pcs/${encodeURIComponent(pcId)}/uptime/weekly${query}`)
+  return requestCached<PcWeeklyTimelineResponse>(
+    `/api/pcs/${encodeURIComponent(pcId)}/uptime/weekly${query}`,
+    {
+      key: buildUptimeWeeklyCacheKey(pcId, query),
+      ttlMs: CACHE_TTL_MS.uptimeWeekly,
+      staleWhileRevalidate: true,
+    },
+  )
 }

@@ -23,9 +23,12 @@
 - リクエスト上書き:
   - `broadcast`, `port`, `repeat` を指定した場合は送信時に上書き。
 - 起動待ちポーリング:
+  - WOL送信自体が失敗した場合は `unreachable` に更新し、ジョブは `failed` で終了する。
   - WOL送信後は `booting` に更新し、3秒間隔で起動確認を実行する。
+  - 起動確認で `unknown` / `unreachable` が返った場合は再試行せず、その状態でジョブを `failed` 終了する。
   - 最大20回（約60秒）まで確認し、成功時は `online` に更新する。
-  - タイムアウト時は、過去に到達実績があるPCは `offline`、未到達PCは `unknown` に更新する。
+  - タイムアウト時は、過去に到達実績があるPCは `offline`、未到達PCは `unknown` に更新し、ジョブは `failed` で終了する。
+  - 判定処理自体が例外になった場合は `unreachable` に更新し、ジョブは `failed` で終了する。
 - ログ:
   - 成功: `status=sent`
   - 失敗: `status=failed`（理由を `message` に格納）

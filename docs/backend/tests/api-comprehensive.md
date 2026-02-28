@@ -45,8 +45,8 @@
 
 ## Status API
 
-- `test_status_refresh_without_ip_returns_unreachable`
-  - `ip` 未設定PCの status refresh が `200` で `status=unreachable` になること。
+- `test_status_refresh_without_ip_returns_unknown`
+  - `ip` 未設定PCの status refresh が `200` で `status=unknown` になること。
   - 失敗ログが記録されること。
 
 - `test_status_refresh_http_error_mapping`

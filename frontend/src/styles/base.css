@@ -141,6 +141,12 @@
   border: 1px solid #6d2a3b;
 }
 
+.btn__with-spinner {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .loading-ellipsis {
   display: inline-flex;
   align-items: baseline;
@@ -164,6 +170,18 @@
 
 .loading-ellipsis__dot:nth-child(3) {
   animation-delay: 0.32s;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 999px;
+  border: 2px solid rgba(163, 190, 240, 0.35);
+  border-top-color: #8db8ff;
+  animation: loading-spinner-rotate 0.72s linear infinite;
+  vertical-align: middle;
+  flex-shrink: 0;
 }
 
 .feedback {
@@ -290,6 +308,16 @@
   45% {
     opacity: 1;
     transform: translateY(-0.06em);
+  }
+}
+
+@keyframes loading-spinner-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }
 

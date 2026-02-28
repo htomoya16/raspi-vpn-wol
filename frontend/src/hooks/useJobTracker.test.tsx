@@ -76,6 +76,28 @@ describe('useJobTracker', () => {
     expect(onTerminal).not.toHaveBeenCalled()
   })
 
+  it('triggers progress refresh while job is running', async () => {
+    const onTerminal = vi.fn().mockResolvedValue(undefined)
+    const onProgress = vi.fn().mockResolvedValue(undefined)
+    fetchJobMock
+      .mockResolvedValueOnce({ job: createJob('running') })
+      .mockResolvedValueOnce({ job: createJob('running') })
+      .mockResolvedValueOnce({ job: createJob('running') })
+      .mockResolvedValueOnce({ job: createJob('succeeded') })
+
+    const { result } = renderHook(() => useJobTracker({ onTerminal, onProgress }))
+
+    await act(async () => {
+      const tracking = result.current.trackJob('job-1', 'WOL送信')
+      await vi.advanceTimersByTimeAsync(4000)
+      await tracking
+    })
+
+    expect(fetchJobMock).toHaveBeenCalledTimes(4)
+    expect(onProgress).toHaveBeenCalledTimes(2)
+    expect(onTerminal).toHaveBeenCalledTimes(1)
+  })
+
   it('marks job as failed on timeout after polling limit', async () => {
     const onTerminal = vi.fn().mockResolvedValue(undefined)
     fetchJobMock.mockResolvedValue({ job: createJob('running') })
@@ -84,11 +106,11 @@ describe('useJobTracker', () => {
 
     await act(async () => {
       const tracking = result.current.trackJob('job-1', 'WOL送信')
-      await vi.advanceTimersByTimeAsync(30000)
+      await vi.advanceTimersByTimeAsync(90000)
       await tracking
     })
 
-    expect(fetchJobMock).toHaveBeenCalledTimes(30)
+    expect(fetchJobMock).toHaveBeenCalledTimes(90)
     expect(result.current.jobs[0]?.state).toBe('failed')
     expect(result.current.jobs[0]?.error).toBe('ジョブ監視がタイムアウトしました')
     expect(onTerminal).not.toHaveBeenCalled()

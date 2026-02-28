@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { openEvents } from '../api/events'
 import { formatApiError } from '../api/http'
-import { refreshAllStatuses, sendPcWol } from '../api/pcs'
+import { invalidateLogsCache } from '../api/logs'
+import { invalidatePcsAndUptimeCache, refreshAllStatuses, sendPcWol } from '../api/pcs'
 import type { PcCreatePayload, PcFilterState, PcStatus, PcUpdatePayload } from '../types/models'
 import { useJobTracker } from './useJobTracker'
 import { useLogsData } from './useLogsData'
@@ -30,6 +31,29 @@ function parseEventData(event: Event): Record<string, unknown> | null {
   } catch {
     return null
   }
+}
+
+function isTerminalJobState(value: unknown): value is 'succeeded' | 'failed' {
+  return value === 'succeeded' || value === 'failed'
+}
+
+function extractJobPcId(data: Record<string, unknown> | null): string | null {
+  if (!data) {
+    return null
+  }
+  if (typeof data.pc_id === 'string') {
+    return data.pc_id
+  }
+
+  const payload = data.payload
+  if (payload && typeof payload === 'object' && 'pc_id' in payload) {
+    const nestedPcId = (payload as { pc_id?: unknown }).pc_id
+    if (typeof nestedPcId === 'string') {
+      return nestedPcId
+    }
+  }
+
+  return null
 }
 
 export interface UseDashboardDataResult {
@@ -98,6 +122,7 @@ export function useDashboardData(): UseDashboardDataResult {
     updatePcEntry,
     refreshPcStatusEntry,
     applyPcStatusEvent,
+    setPcStatusLocal,
     handleFilterChange,
     handleApplyFilters,
     handleClearFilters,
@@ -107,8 +132,14 @@ export function useDashboardData(): UseDashboardDataResult {
     await Promise.all([loadPcs(), loadLogs()])
   }, [loadLogs, loadPcs])
 
+  const refreshLogsDuringProgress = useCallback(async () => {
+    invalidateLogsCache()
+    await loadLogs()
+  }, [loadLogs])
+
   const { jobs, trackJob } = useJobTracker({
     onTerminal: refreshFromTerminal,
+    onProgress: refreshLogsDuringProgress,
   })
 
   const sendPcWolEntry = useCallback(
@@ -118,6 +149,7 @@ export function useDashboardData(): UseDashboardDataResult {
 
       try {
         const job = await sendPcWol(pcId)
+        setPcStatusLocal(pcId, 'booting')
         setNotice(`WOLジョブを投入しました: ${pcId}`)
         await trackJob(job.job_id, 'WOL送信')
       } catch (error) {
@@ -126,7 +158,7 @@ export function useDashboardData(): UseDashboardDataResult {
         setBusy(pcId, 'wol', false)
       }
     },
-    [setBusy, setRowError, trackJob],
+    [setBusy, setPcStatusLocal, setRowError, trackJob],
   )
 
   const refreshAllStatusesEntry = useCallback(async () => {
@@ -181,10 +213,19 @@ export function useDashboardData(): UseDashboardDataResult {
         return
       }
       applyPcStatusEvent(pcId, status, updatedAt, normalizedLastSeenAt)
+      invalidatePcsAndUptimeCache(pcId)
+      invalidateLogsCache()
       void loadLogs()
     }
 
-    const refreshFromJobEvent = () => {
+    const refreshFromJobEvent = (event: Event) => {
+      const data = parseEventData(event)
+      if (!isTerminalJobState(data?.state)) {
+        return
+      }
+      const pcId = extractJobPcId(data)
+      invalidatePcsAndUptimeCache(pcId ?? undefined)
+      invalidateLogsCache()
       void loadPcs()
       void loadLogs()
     }

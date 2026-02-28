@@ -10,6 +10,13 @@
   max-height: 250px;
   overflow: auto;
   padding-right: 2px;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.job-list-wrap::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .job-row {
@@ -37,6 +44,17 @@
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+}
+
+.job-meta__time {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+
+.job-elapsed {
+  font-size: 0.75rem;
+  color: #a9c2ec;
 }
 
 .job-state {
@@ -76,5 +94,9 @@
   .job-meta {
     justify-content: flex-start;
     flex-wrap: wrap;
+  }
+
+  .job-meta__time {
+    justify-items: start;
   }
 }

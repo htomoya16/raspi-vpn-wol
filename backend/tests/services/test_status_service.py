@@ -121,3 +121,21 @@ def test_status_service_ping_paths(monkeypatch: pytest.MonkeyPatch) -> None:
         status_service.get_pc_status("pc-1")
 
     assert any(log["status"] == "failed" for log in logs)
+
+
+def test_status_service_returns_unknown_when_ip_is_not_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+    logs: list[dict[str, object]] = []
+
+    def _capture_log(**kwargs: object) -> None:
+        logs.append(dict(kwargs))
+
+    monkeypatch.setattr(status_service, "insert_log", _capture_log)
+    monkeypatch.setattr(
+        status_service.pc_repository,
+        "get_pc_by_id",
+        lambda _: _pc_row(ip_address=None),
+    )
+
+    result = status_service.get_pc_status("pc-1")
+    assert result == {"pc_id": "pc-1", "status": "unknown"}
+    assert logs[-1]["status"] == "unknown"

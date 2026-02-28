@@ -1,7 +1,9 @@
 import type { TouchEvent } from 'react'
 
+import { useDelayedVisibility } from '../../hooks/useDelayedVisibility'
 import type { PcWeeklyTimelineResponse } from '../../types/models'
 import LoadingDots from '../LoadingDots'
+import LoadingSpinner from '../LoadingSpinner'
 import type { SlideDirection, TimelineDay } from './types'
 import { formatSecondsToHours, formatWeekDayLabel, getIntervalDisplayMode, intervalToVertical } from './utils'
 
@@ -36,15 +38,22 @@ function UptimeTimelineSection({
   onTouchEnd,
   onTouchCancel,
 }: UptimeTimelineSectionProps) {
+  const hasTimelineContent = visibleTimelineDays.length > 0
+  const showInitialLoading = weeklyLoading && !hasTimelineContent
+  const showRefreshingSpinner = useDelayedVisibility(weeklyLoading && hasTimelineContent, 200)
+
   return (
     <section className="uptime-section">
       <header className="uptime-section__header uptime-section__header--with-nav">
         <div>
           <h3>稼働タイムライン</h3>
-          <p>
-            {isMobile && activeTimelineDay
-              ? formatWeekDayLabel(activeTimelineDay.date)
-              : `${weeklyData.week_start} - ${weeklyData.week_end}`}
+          <p className="uptime-section__subline">
+            <span>
+              {isMobile && activeTimelineDay
+                ? formatWeekDayLabel(activeTimelineDay.date)
+                : `${weeklyData.week_start} - ${weeklyData.week_end}`}
+            </span>
+            {showRefreshingSpinner ? <LoadingSpinner ariaLabel="稼働タイムラインを更新中です" /> : null}
           </p>
         </div>
 
@@ -163,7 +172,7 @@ function UptimeTimelineSection({
             </div>
           </div>
 
-          {weeklyLoading ? (
+          {showInitialLoading ? (
             <div className="uptime-loading-overlay">
               <LoadingDots ariaLabel="稼働タイムラインを読み込み中です" />
             </div>

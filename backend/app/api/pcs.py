@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
-from fastapi import APIRouter, Body, HTTPException, Query, status
+from fastapi import APIRouter, Body, HTTPException, Query, Response, status
 
 from app.models.jobs import JobAccepted
 from app.models.pcs import PcCreate, PcListResponse, PcResponse, PcStatus, PcUpdate
@@ -20,12 +20,14 @@ router = APIRouter()
     summary="PC一覧取得",
 )
 def list_pcs(
+    response: Response,
     q: str | None = Query(default=None),
     status_filter: PcStatus | None = Query(default=None, alias="status"),
     tag: str | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     cursor: str | None = Query(default=None),
 ) -> PcListResponse:
+    response.headers["Cache-Control"] = "private, max-age=10, stale-while-revalidate=20"
     items, next_cursor = pc_service.list_pcs(
         q=q,
         status=status_filter,
@@ -207,14 +209,16 @@ async def refresh_all_statuses() -> JobAccepted:
     },
 )
 def get_uptime_summary(
+    http_response: Response,
     pc_id: str,
     from_date: str | None = Query(default=None, alias="from"),
     to_date: str | None = Query(default=None, alias="to"),
     bucket: UptimeBucket = Query(default="day"),
     tz: str | None = Query(default="Asia/Tokyo"),
 ) -> PcUptimeSummaryResponse:
+    http_response.headers["Cache-Control"] = "private, max-age=30, stale-while-revalidate=90"
     try:
-        response = pc_service.get_uptime_summary(
+        data = pc_service.get_uptime_summary(
             pc_id=pc_id,
             from_date=from_date,
             to_date=to_date,
@@ -225,7 +229,7 @@ def get_uptime_summary(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return PcUptimeSummaryResponse.model_validate(response)
+    return PcUptimeSummaryResponse.model_validate(data)
 
 
 @router.get(
@@ -239,12 +243,14 @@ def get_uptime_summary(
     },
 )
 def get_weekly_timeline(
+    http_response: Response,
     pc_id: str,
     week_start: str | None = Query(default=None),
     tz: str | None = Query(default="Asia/Tokyo"),
 ) -> PcWeeklyTimelineResponse:
+    http_response.headers["Cache-Control"] = "private, max-age=30, stale-while-revalidate=90"
     try:
-        response = pc_service.get_weekly_timeline(
+        data = pc_service.get_weekly_timeline(
             pc_id=pc_id,
             week_start=week_start,
             tz=tz,
@@ -253,4 +259,4 @@ def get_weekly_timeline(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return PcWeeklyTimelineResponse.model_validate(response)
+    return PcWeeklyTimelineResponse.model_validate(data)
