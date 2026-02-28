@@ -29,10 +29,10 @@ CREATE TABLE IF NOT EXISTS status_history (
 );
 
 CREATE INDEX IF NOT EXISTS idx_status_history_pc_changed_id
-ON status_history (pc_id, changed_at DESC, id DESC);
+ON status_history (pc_id, changed_at, id);
 
 CREATE INDEX IF NOT EXISTS idx_status_history_changed_at
-ON status_history (changed_at DESC);
+ON status_history (changed_at);
 ```
 
 ```sql

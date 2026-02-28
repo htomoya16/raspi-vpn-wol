@@ -3,22 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { Pc, PcFilterState } from '../types/models'
+import { createPcFactory } from '../test/factories'
 import PcList, { type PcListProps } from './PcList'
 
 function createPc(overrides: Partial<Pc> = {}): Pc {
-  return {
-    id: 'pc-1',
-    name: 'Main PC',
-    mac: 'AA:BB:CC:DD:EE:FF',
-    ip: '192.168.10.10',
-    tags: ['desk'],
-    note: 'main machine',
-    status: 'online',
-    last_seen_at: '2026-02-24T00:00:00Z',
-    created_at: '2026-02-24T00:00:00Z',
-    updated_at: '2026-02-24T00:00:00Z',
-    ...overrides,
-  }
+  return createPcFactory(overrides)
 }
 
 function renderPcList(overrides: Partial<PcListProps> = {}) {

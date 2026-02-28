@@ -72,7 +72,7 @@
 - キャッシュ本体（Map + TTL + in-flight）: `frontend/src/api/cache.ts`
 - 共通実行（requestCached）: `frontend/src/api/http.ts`
 - 変異時invalidate: `frontend/src/api/pcs.ts`, `frontend/src/api/logs.ts`
-- SSE時invalidate: `frontend/src/hooks/useDashboardData.ts`
+- SSE時invalidate: `frontend/src/hooks/useDashboardSse.ts`
 - HTTPクライアント: `frontend/src/api/http.ts` で `fetch(..., { cache: 'no-store' })` を既定化し、ブラウザHTTPキャッシュによる古い一覧復元を防止
 
 ### フロント実装内容（2026-02-27）
@@ -82,6 +82,7 @@
 3. `src/api/pcs.ts` / `src/api/logs.ts` の `GET` を `requestCached` 化した。
 4. 変異系API成功時に prefix invalidate を呼ぶようにした。
 5. SSE受信時（`pc_status` / `job`）に `pcs/uptime/logs` のprefix invalidateを行うようにした。
+  - 実装配置は `useDashboardSse` に分離。
 6. `src/api/http.test.ts` / `src/api/pcs.test.ts` / `src/api/logs.test.ts` でキャッシュ挙動とinvalidateを検証する。
 7. `src/hooks/useDashboardData.test.tsx` で SSE (`pc_status` / `job`) 受信時の invalidate + 再読込を検証する。
 8. `src/api/cache-flow.test.ts` で「一覧表示 → 更新系API → invalidate → 再取得」の回帰を検証する。

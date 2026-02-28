@@ -84,7 +84,7 @@
   - ステータス判定処理が例外になった場合は `unreachable` に更新されること。
 
 - `test_refresh_pc_status_keeps_unreachable_when_probe_is_offline`
-  - 既に `unreachable` のPCは、状態確認結果が `offline` でも `unreachable` を維持すること。
+  - 既に `unreachable` のPCは、ステータス確認結果が `offline` でも `unreachable` を維持すること。
 
 ## 運用時の注意点
 

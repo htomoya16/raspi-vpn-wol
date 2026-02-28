@@ -1,70 +1,13 @@
-import { Fragment, useEffect, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useDelayedVisibility } from '../hooks/useDelayedVisibility'
 import LoadingDots from './LoadingDots'
-import LoadingSpinner from './LoadingSpinner'
+import LogsPanelContent from './log-panel/LogsPanelContent'
+import { buildLogGroups } from './log-panel/logGrouping'
+import { useLogsPanelState } from './log-panel/useLogsPanelState'
+import { useStickyGroupHeaders } from './log-panel/useStickyGroupHeaders'
 import type { LogEntry } from '../types/models'
-import { formatJstDateParts } from '../utils/datetime'
-
-function formatDetails(details: LogEntry['details']): string {
-  if (details === null || details === undefined || details === '') {
-    return '-'
-  }
-  if (typeof details === 'string') {
-    const trimmed = details.trim()
-    if (trimmed === '') {
-      return '-'
-    }
-    try {
-      const parsed = JSON.parse(trimmed)
-      if (parsed && typeof parsed === 'object') {
-        return JSON.stringify(parsed, null, 2)
-      }
-    } catch {
-      // noop: 文字列のまま表示する
-    }
-    return details.replace(/\r\n/g, '\n')
-  }
-  if (typeof details === 'object') {
-    return JSON.stringify(details, null, 2)
-  }
-  return String(details)
-}
-
-type LogGroup = {
-  key: string
-  label: string
-  items: LogEntry[]
-}
-
-function extractJobId(item: LogEntry): string | null {
-  if (typeof item.job_id === 'string') {
-    const normalized = item.job_id.trim()
-    if (normalized) {
-      return normalized
-    }
-  }
-  return null
-}
-
-function buildLogGroups(items: LogEntry[]): LogGroup[] {
-  const groupMap = new Map<string, LogGroup>()
-
-  for (const item of items) {
-    const jobId = extractJobId(item)
-    const key = jobId ? `job:${jobId}` : 'no-job'
-    const label = jobId ? `ジョブ ${jobId}` : '通常ログ'
-    const existing = groupMap.get(key)
-    if (existing) {
-      existing.items.push(item)
-      continue
-    }
-    groupMap.set(key, { key, label, items: [item] })
-  }
-
-  return Array.from(groupMap.values())
-}
 
 export interface LogsPanelProps {
   items: LogEntry[]
@@ -83,19 +26,46 @@ function LogsPanel({
   onClear,
   embedded = false,
 }: LogsPanelProps) {
-  const panelId = useMemo(
-    () => `logs-panel-${Math.random().toString(36).slice(2, 10)}`,
-    [],
-  )
+  const panelId = useMemo(() => `logs-panel-${Math.random().toString(36).slice(2, 10)}`, [])
   const focusPanelId = `${panelId}-focus`
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const [focusOpen, setFocusOpen] = useState(false)
-  const [clearLoading, setClearLoading] = useState(false)
-  const [expandedDetailIds, setExpandedDetailIds] = useState<Set<number>>(() => new Set())
+  const mainSheetRef = useRef<HTMLDivElement | null>(null)
+  const focusSheetRef = useRef<HTMLDivElement | null>(null)
+
+  const {
+    confirmOpen,
+    focusOpen,
+    clearLoading,
+    expandedDetailIds,
+    collapsedGroupKeys,
+    openConfirm,
+    closeConfirm,
+    openFocus,
+    closeFocus,
+    setClearLoading,
+    toggleDetail,
+    toggleGroup,
+    syncGroupKeys,
+  } = useLogsPanelState()
+
   const hasItems = items.length > 0
   const logGroups = useMemo(() => buildLogGroups(items), [items])
   const showInitialLoading = loading && !hasItems
   const showRefreshingSpinner = useDelayedVisibility(loading && hasItems, 200)
+  const stickySyncToken = useMemo(() => {
+    const groupKeys = logGroups.map((group) => group.key).join(',')
+    const collapsedKeys = Array.from(collapsedGroupKeys).sort().join(',')
+    return `${focusOpen ? 'focus-open' : 'focus-close'}|${groupKeys}|${collapsedKeys}`
+  }, [collapsedGroupKeys, focusOpen, logGroups])
+
+  useEffect(() => {
+    syncGroupKeys(new Set(logGroups.map((group) => group.key)))
+  }, [logGroups, syncGroupKeys])
+
+  useStickyGroupHeaders({
+    mainSheetRef,
+    focusSheetRef,
+    syncToken: stickySyncToken,
+  })
 
   useEffect(() => {
     if (typeof document === 'undefined') {
@@ -113,43 +83,36 @@ function LogsPanel({
   }, [focusOpen])
 
   useEffect(() => {
+    if (typeof document === 'undefined') {
+      return undefined
+    }
+    if (!confirmOpen) {
+      return undefined
+    }
+
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prevOverflow
+    }
+  }, [confirmOpen])
+
+  useEffect(() => {
     if (!focusOpen) {
       return undefined
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') {
+      if (event.key !== 'Escape' || clearLoading) {
         return
       }
-      setFocusOpen(false)
+      closeFocus()
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => {
       window.removeEventListener('keydown', handleKeyDown)
     }
-  }, [focusOpen])
-
-  function openConfirm() {
-    setConfirmOpen(true)
-  }
-
-  function closeConfirm() {
-    if (clearLoading) {
-      return
-    }
-    setConfirmOpen(false)
-  }
-
-  function openFocus() {
-    setFocusOpen(true)
-  }
-
-  function closeFocus() {
-    if (clearLoading) {
-      return
-    }
-    setFocusOpen(false)
-  }
+  }, [clearLoading, closeFocus, focusOpen])
 
   async function confirmClear() {
     if (clearLoading) {
@@ -158,7 +121,7 @@ function LogsPanel({
     setClearLoading(true)
     try {
       await onClear()
-      setConfirmOpen(false)
+      closeConfirm()
     } catch {
       // noop: エラー表示は親コンポーネント経由で描画される
     } finally {
@@ -166,179 +129,50 @@ function LogsPanel({
     }
   }
 
-  function toggleDetails(id: number) {
-    setExpandedDetailIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-  }
-
-  function handleRowKeyDown(event: ReactKeyboardEvent<HTMLTableRowElement>, id: number) {
-    if (event.key !== 'Enter' && event.key !== ' ') {
+  function handleCloseConfirm() {
+    if (clearLoading) {
       return
     }
-    event.preventDefault()
-    toggleDetails(id)
+    closeConfirm()
   }
 
-  function renderContent(titleId: string, showFocusButton: boolean, showClearButton: boolean) {
-    return (
-    <>
-      <div className="panel__header logs-panel__header">
-        <div>
-          <h2 id={titleId}>操作ログ</h2>
-          <p>最新ログを1シートで確認できます。</p>
-        </div>
-      </div>
+  function handleCloseFocus() {
+    if (clearLoading) {
+      return
+    }
+    closeFocus()
+  }
 
-      <div className="logs-toolbar">
-        <button type="button" className="btn btn--soft" onClick={onReload} disabled={loading || clearLoading}>
-          {showInitialLoading ? (
-            <LoadingDots label="読み込み中" />
-          ) : (
-            <span className="btn__with-spinner">
-              {showRefreshingSpinner ? <LoadingSpinner ariaLabel="ログを更新中です" /> : null}
-              <span>再読込</span>
-            </span>
-          )}
-        </button>
-        {showClearButton ? (
-          <button
-            type="button"
-            className="btn btn--danger"
-            onClick={openConfirm}
-            disabled={items.length === 0 || loading || clearLoading}
-          >
-            ログ消去
-          </button>
-        ) : null}
-      </div>
-
-      {error ? <p className="feedback feedback--error">{error}</p> : null}
-
-      {items.length === 0 ? (
-        <p className="empty-state">ログがありません。</p>
-      ) : (
-        <div className="logs-sheet">
-          <table className="logs-table">
-            <thead>
-              <tr>
-                <th>時刻</th>
-                <th>操作</th>
-                <th>PC</th>
-                <th>結果</th>
-                <th>
-                  <span className="logs-table__head-with-action">
-                    <span>メッセージ</span>
-                    {showFocusButton ? (
-                      <button
-                        type="button"
-                        className="logs-table__icon-btn"
-                        aria-label="ログを前面表示"
-                        onClick={openFocus}
-                      >
-                        ⤢
-                      </button>
-                    ) : null}
-                  </span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {logGroups.map((group) => (
-                <Fragment key={group.key}>
-                  <tr className="logs-table__group-row">
-                    <td colSpan={5}>
-                      <span className="logs-table__group-label">
-                        <span>{group.label}</span>
-                        <span>{group.items.length}件</span>
-                      </span>
-                    </td>
-                  </tr>
-                  {group.items.map((item) => {
-                    const detailsText = formatDetails(item.details)
-                    const hasDetails = detailsText !== '-'
-                    const isExpanded = hasDetails && expandedDetailIds.has(item.id)
-                    const timeParts = formatJstDateParts(item.created_at, { fallbackDate: '-', fallbackTime: '' })
-
-                    return (
-                      <Fragment key={item.id}>
-                        <tr
-                          className={`logs-table__row${hasDetails ? ' logs-table__row--expandable' : ''}${isExpanded ? ' logs-table__row--expanded' : ''}`}
-                          role={hasDetails ? 'button' : undefined}
-                          tabIndex={hasDetails ? 0 : undefined}
-                          aria-expanded={hasDetails ? isExpanded : undefined}
-                          onClick={hasDetails ? () => toggleDetails(item.id) : undefined}
-                          onKeyDown={hasDetails ? (event) => handleRowKeyDown(event, item.id) : undefined}
-                        >
-                          <td data-label="時刻">
-                            <span className="logs-time-cell">
-                              <span className="logs-time-cell__value">
-                                <span className="logs-time-cell__date">{timeParts.date}</span>
-                                {timeParts.time ? <span className="logs-time-cell__time">{timeParts.time}</span> : null}
-                              </span>
-                              <span
-                                className={`logs-result-badge logs-result-badge--mobile ${item.ok ? 'logs-result-badge--ok' : 'logs-result-badge--ng'}`}
-                                aria-label={item.ok ? '結果: OK' : '結果: NG'}
-                              >
-                                {item.ok ? 'OK' : 'NG'}
-                              </span>
-                            </span>
-                          </td>
-                          <td data-label="操作">{item.action}</td>
-                          <td data-label="PC">{item.pc_id || '-'}</td>
-                          <td data-label="結果">
-                            <span className={item.ok ? 'result-ok' : 'result-ng'}>{item.ok ? 'OK' : 'NG'}</span>
-                          </td>
-                          <td data-label="メッセージ">
-                            <span className="logs-message-cell">
-                              <span className="logs-message-cell__text">{item.message || '-'}</span>
-                              {hasDetails ? (
-                                <span className={`logs-message-cell__hint${isExpanded ? ' logs-message-cell__hint--open' : ''}`}>
-                                  {isExpanded ? 'タップで閉じる' : 'タップで詳細'}
-                                </span>
-                              ) : null}
-                            </span>
-                          </td>
-                        </tr>
-                        {hasDetails && isExpanded ? (
-                          <tr className="logs-table__detail-row">
-                            <td colSpan={5}>
-                              <div className="log-details">
-                                <pre className="log-details__text log-details__text--expanded">{detailsText}</pre>
-                              </div>
-                            </td>
-                          </tr>
-                        ) : null}
-                      </Fragment>
-                    )
-                  })}
-                </Fragment>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </>
+  const content = (
+    <LogsPanelContent
+      titleId={panelId}
+      items={items}
+      loading={loading}
+      error={error}
+      clearLoading={clearLoading}
+      showInitialLoading={showInitialLoading}
+      showRefreshingSpinner={showRefreshingSpinner}
+      showFocusButton
+      showClearButton
+      logGroups={logGroups}
+      collapsedGroupKeys={collapsedGroupKeys}
+      expandedDetailIds={expandedDetailIds}
+      sheetRef={mainSheetRef}
+      onReload={onReload}
+      onOpenFocus={openFocus}
+      onOpenConfirm={openConfirm}
+      onToggleGroup={toggleGroup}
+      onToggleDetail={toggleDetail}
+    />
   )
-  }
 
   return (
     <>
-      {embedded ? (
-        <div className="panel-embedded panel-embedded--logs">{renderContent(panelId, true, true)}</div>
-      ) : (
-        <section className="panel">{renderContent(panelId, true, true)}</section>
-      )}
+      {embedded ? <div className="panel-embedded panel-embedded--logs">{content}</div> : <section className="panel">{content}</section>}
 
       {focusOpen && typeof document !== 'undefined'
         ? createPortal(
-            <div className="logs-focus__backdrop" role="presentation" onClick={closeFocus}>
+            <div className="logs-focus__backdrop" role="presentation" onClick={handleCloseFocus}>
               <section
                 className="panel logs-focus__panel"
                 role="dialog"
@@ -352,43 +186,65 @@ function LogsPanel({
                     type="button"
                     className="logs-focus__close-btn"
                     aria-label="前面表示を閉じる"
-                    onClick={closeFocus}
+                    onClick={handleCloseFocus}
                   >
                     ✕
                   </button>
                 </div>
-                {renderContent(focusPanelId, false, false)}
+                <LogsPanelContent
+                  titleId={focusPanelId}
+                  items={items}
+                  loading={loading}
+                  error={error}
+                  clearLoading={clearLoading}
+                  showInitialLoading={showInitialLoading}
+                  showRefreshingSpinner={showRefreshingSpinner}
+                  showFocusButton={false}
+                  showClearButton={false}
+                  logGroups={logGroups}
+                  collapsedGroupKeys={collapsedGroupKeys}
+                  expandedDetailIds={expandedDetailIds}
+                  sheetRef={focusSheetRef}
+                  onReload={onReload}
+                  onOpenFocus={openFocus}
+                  onOpenConfirm={openConfirm}
+                  onToggleGroup={toggleGroup}
+                  onToggleDetail={toggleDetail}
+                />
               </section>
             </div>,
             document.body,
           )
         : null}
 
-      {confirmOpen ? (
-        <div className="confirm-dialog__backdrop" role="presentation" onClick={closeConfirm}>
-          <div
-            className="confirm-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="log-clear-dialog-title"
-            aria-describedby="log-clear-dialog-description"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <h3 id="log-clear-dialog-title">ログを消去しますか？</h3>
-            <p id="log-clear-dialog-description">
-              現在表示されている操作ログを全件削除します。この操作は取り消せません。
-            </p>
-            <div className="confirm-dialog__actions">
-              <button type="button" className="btn btn--soft" onClick={closeConfirm} disabled={clearLoading}>
-                キャンセル
-              </button>
-              <button type="button" className="btn btn--danger" onClick={confirmClear} disabled={clearLoading}>
-                {clearLoading ? <LoadingDots label="消去中" /> : '消去する'}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {confirmOpen && typeof document !== 'undefined'
+        ? createPortal(
+            <div className="confirm-dialog__backdrop" role="presentation" onClick={handleCloseConfirm}>
+              <div
+                className="confirm-dialog"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="log-clear-dialog-title"
+                aria-describedby="log-clear-dialog-description"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <h3 id="log-clear-dialog-title">ログを消去しますか？</h3>
+                <p id="log-clear-dialog-description">
+                  現在表示されている操作ログを全件削除します。この操作は取り消せません。
+                </p>
+                <div className="confirm-dialog__actions">
+                  <button type="button" className="btn btn--soft" onClick={handleCloseConfirm} disabled={clearLoading}>
+                    キャンセル
+                  </button>
+                  <button type="button" className="btn btn--danger" onClick={confirmClear} disabled={clearLoading}>
+                    {clearLoading ? <LoadingDots label="消去中" /> : '消去する'}
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </>
   )
 }

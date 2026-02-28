@@ -7,6 +7,9 @@
 
 ## 変更内容
 
+- 2026-03-01: Alembic/SQLiteの実DDLに合わせてインデックス記述を更新（`DESC` 明記を削除）。
+- 2026-03-01: `logs.event_kind` を追加し、定期ステータス確認の識別を `action` から分離。
+- 2026-03-01: uptime詳細メモを `docs/backend/db/uptime-tables.md` へ集約（本ページは全体ER中心に整理）。
 - 2026-02-27: 実クエリに合わせてインデックスを再設計（`logs/jobs/status_history/uptime_daily_summary`）。
 - 2026-02-27: ER図を `ER図（全体）` 1つに統合。
 - 2026-02-24: 現行スキーマ（`pcs` / `logs` / `jobs`）のER図を追加。
@@ -65,6 +68,7 @@ erDiagram
         TEXT pc_id FK
         TEXT job_id
         TEXT action
+        TEXT event_kind
         INTEGER ok
         TEXT status
         TEXT message
@@ -92,35 +96,19 @@ erDiagram
     pcs ||--o{ uptime_daily_summary : "uptime_daily_summary.pc_id -> pcs.id (ON DELETE CASCADE)"
 ```
 
-## テーブル設計メモ（uptime）
-
-- `status_history`
-  - 用途: 状態変化イベントを時系列保存し、週タイムラインの区間生成に使う。
-  - 保存ルール: 前回状態から変化したときのみ1レコード追加。
-  - `is_online`: `status == online` のとき `1`、それ以外は `0`。
-  - 推奨インデックス:
-    - `idx_status_history_pc_changed_id (pc_id, changed_at DESC, id DESC)`
-    - `idx_status_history_changed_at (changed_at DESC)`
-
-- `uptime_daily_summary`
-  - 用途: 日次グラフ表示向けの集計結果を保持。
-  - 1日1PC1行（`pc_id + date + tz` を主キー）。
-  - `online_seconds` は 0..86400。`online_ratio` はAPIで算出して返却。
-  - 推奨インデックス:
-    - `idx_uptime_daily_summary_pc_tz_date (pc_id, tz, date ASC)`
-
 ## 実クエリ整合インデックス（主要）
 
 - `pcs`
   - `idx_pcs_status_id (status, id ASC)`: statusフィルタ + カーソルページング
 - `logs`
-  - `idx_logs_pc_id_desc (pc_id, id DESC)`: `pc_id` 絞り込み + 新しい順
-  - `idx_logs_action_id_desc (action, id DESC)`: `action` 絞り込み + 新しい順
-  - `idx_logs_ok_id_desc (ok, id DESC)`: 成否絞り込み + 新しい順
-  - `idx_logs_job_id_id_desc (job_id, id DESC)`: `job_id` 単位のログ取得 + 新しい順
+  - `idx_logs_pc_id_desc (pc_id, id)`: `pc_id` 絞り込み + 新しい順（逆順走査）
+  - `idx_logs_action_id_desc (action, id)`: `action` 絞り込み + 新しい順（逆順走査）
+  - `idx_logs_ok_id_desc (ok, id)`: 成否絞り込み + 新しい順（逆順走査）
+  - `idx_logs_job_id_id_desc (job_id, id)`: `job_id` 単位のログ取得 + 新しい順（逆順走査）
+  - `idx_logs_event_kind_id_desc (event_kind, id)`: 種別別ログ取得（定期/通常） + 新しい順（逆順走査）
   - `idx_logs_created_at (created_at)`: 保持期間削除、`since/until` 範囲条件
 - `jobs`
-  - `idx_jobs_job_type_state_created_at (job_type, state, created_at DESC)`: 同種ジョブの `queued/running` 最新取得
+  - `idx_jobs_job_type_state_created_at (job_type, state, created_at)`: 同種ジョブの `queued/running` 最新取得
 
 ## 運用時の注意点
 

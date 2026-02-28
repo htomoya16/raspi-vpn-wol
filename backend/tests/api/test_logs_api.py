@@ -49,3 +49,32 @@ def test_logs_filters_validation_and_cursor(client: TestClient) -> None:
     second_items = second_page.json()["items"]
     assert len(second_items) >= 1
     assert all(item["id"] < first_body["next_cursor"] for item in second_items)
+
+
+def test_logs_datetime_query_validation(client: TestClient) -> None:
+    _create_pc(client, id="pc-log-dt", name="Log DT", mac="AA:BB:CC:DD:EE:62")
+    client.patch("/api/pcs/pc-log-dt", json={"note": "datetime validation"})
+
+    invalid_since = client.get("/api/logs", params={"since": "not-a-datetime"})
+    assert invalid_since.status_code == 400
+
+    missing_tz = client.get("/api/logs", params={"since": "2026-03-01T00:00:00"})
+    assert missing_tz.status_code == 400
+
+    reverse_range = client.get(
+        "/api/logs",
+        params={
+            "since": "2026-03-01T09:00:00+09:00",
+            "until": "2026-03-01T08:00:00+09:00",
+        },
+    )
+    assert reverse_range.status_code == 400
+
+    valid = client.get(
+        "/api/logs",
+        params={
+            "since": "2026-03-01T00:00:00Z",
+            "until": "2026-03-02T00:00:00+00:00",
+        },
+    )
+    assert valid.status_code == 200

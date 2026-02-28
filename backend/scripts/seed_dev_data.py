@@ -278,7 +278,7 @@ def _insert_seed_jobs(conn: sqlite3.Connection, *, tz: ZoneInfo) -> dict[str, st
         ),
         SeedJob(
             id="seed-job-lab-status-running",
-            job_type="status_refresh_all",
+            job_type="seed_status_refresh_all",
             state="running",
             payload={"source": "seed"},
             result=None,
@@ -289,7 +289,7 @@ def _insert_seed_jobs(conn: sqlite3.Connection, *, tz: ZoneInfo) -> dict[str, st
         ),
         SeedJob(
             id="seed-job-refresh-all-queued",
-            job_type="status_refresh_all",
+            job_type="seed_status_refresh_all",
             state="queued",
             payload={"source": "seed"},
             result=None,
@@ -414,8 +414,8 @@ def _insert_seed_logs(conn: sqlite3.Connection, *, start_day: date, tz: ZoneInfo
         local_time = datetime.combine(start_day + timedelta(days=14 + index), time(8 + index, 30), tzinfo=tz)
         conn.execute(
             """
-            INSERT INTO logs (pc_id, job_id, action, ok, status, message, details_json, created_at)
-            VALUES (?, NULL, 'seed_wol', 1, 'ok', 'seed wol dispatch', ?, ?)
+            INSERT INTO logs (pc_id, job_id, action, event_kind, ok, status, message, details_json, created_at)
+            VALUES (?, NULL, 'seed_wol', 'normal', 1, 'ok', 'seed wol dispatch', ?, ?)
             """,
             (
                 pc.id,
@@ -427,8 +427,8 @@ def _insert_seed_logs(conn: sqlite3.Connection, *, start_day: date, tz: ZoneInfo
         local_status_time = local_time + timedelta(minutes=45)
         conn.execute(
             """
-            INSERT INTO logs (pc_id, job_id, action, ok, status, message, details_json, created_at)
-            VALUES (?, NULL, 'seed_status', 1, 'online', 'seed status refresh', ?, ?)
+            INSERT INTO logs (pc_id, job_id, action, event_kind, ok, status, message, details_json, created_at)
+            VALUES (?, NULL, 'status', 'periodic_status', 1, 'online', 'seed status refresh', ?, ?)
             """,
             (
                 pc.id,
@@ -438,11 +438,15 @@ def _insert_seed_logs(conn: sqlite3.Connection, *, start_day: date, tz: ZoneInfo
         )
 
     now_local = datetime.now(timezone.utc).astimezone(tz)
-    recent_logs: tuple[tuple[str, str | None, str, int, str, str, dict[str, object], int], ...] = (
+    recent_logs: tuple[
+        tuple[str, str | None, str, str, int, str, str, dict[str, object], int],
+        ...,
+    ] = (
         (
             "seed-pc-main",
             job_ids["seed-job-main-wol"],
             "seed_job",
+            "normal",
             0,
             "running",
             "wol job started",
@@ -453,6 +457,7 @@ def _insert_seed_logs(conn: sqlite3.Connection, *, start_day: date, tz: ZoneInfo
             "seed-pc-main",
             job_ids["seed-job-main-wol"],
             "seed_wol",
+            "normal",
             1,
             "sent",
             "magic packet sent",
@@ -462,7 +467,8 @@ def _insert_seed_logs(conn: sqlite3.Connection, *, start_day: date, tz: ZoneInfo
         (
             "seed-pc-main",
             job_ids["seed-job-main-wol"],
-            "seed_status",
+            "status",
+            "periodic_status",
             1,
             "online",
             "target became online",
@@ -473,6 +479,7 @@ def _insert_seed_logs(conn: sqlite3.Connection, *, start_day: date, tz: ZoneInfo
             "seed-pc-sub",
             job_ids["seed-job-sub-wol-failed"],
             "seed_job",
+            "normal",
             0,
             "running",
             "wol job started",
@@ -483,6 +490,7 @@ def _insert_seed_logs(conn: sqlite3.Connection, *, start_day: date, tz: ZoneInfo
             "seed-pc-sub",
             job_ids["seed-job-sub-wol-failed"],
             "seed_wol",
+            "normal",
             1,
             "sent",
             "magic packet sent",
@@ -492,7 +500,8 @@ def _insert_seed_logs(conn: sqlite3.Connection, *, start_day: date, tz: ZoneInfo
         (
             "seed-pc-sub",
             job_ids["seed-job-sub-wol-failed"],
-            "seed_status",
+            "status",
+            "periodic_status",
             0,
             "unreachable",
             "tcp connect failed (445): timed out",
@@ -502,7 +511,8 @@ def _insert_seed_logs(conn: sqlite3.Connection, *, start_day: date, tz: ZoneInfo
         (
             "seed-pc-lab",
             job_ids["seed-job-lab-status-running"],
-            "seed_status",
+            "status",
+            "periodic_status",
             0,
             "running",
             "refreshing all pc status",
@@ -512,7 +522,8 @@ def _insert_seed_logs(conn: sqlite3.Connection, *, start_day: date, tz: ZoneInfo
         (
             "seed-pc-main",
             job_ids["seed-job-lab-status-running"],
-            "seed_status",
+            "status",
+            "periodic_status",
             1,
             "online",
             "status probe ok",
@@ -522,7 +533,8 @@ def _insert_seed_logs(conn: sqlite3.Connection, *, start_day: date, tz: ZoneInfo
         (
             "seed-pc-sub",
             job_ids["seed-job-lab-status-running"],
-            "seed_status",
+            "status",
+            "periodic_status",
             0,
             "unreachable",
             "status probe failed",
@@ -533,24 +545,26 @@ def _insert_seed_logs(conn: sqlite3.Connection, *, start_day: date, tz: ZoneInfo
             "seed-pc-lab",
             job_ids["seed-job-refresh-all-queued"],
             "seed_job",
+            "normal",
             0,
             "queued",
-            "status_refresh_all queued",
+            "seed_status_refresh_all queued",
             {"source": "seed"},
             -4,
         ),
     )
-    for pc_id, job_id, action, ok, status, message, details, offset_min in recent_logs:
+    for pc_id, job_id, action, event_kind, ok, status, message, details, offset_min in recent_logs:
         created_at = (now_local + timedelta(minutes=offset_min)).astimezone(timezone.utc)
         conn.execute(
             """
-            INSERT INTO logs (pc_id, job_id, action, ok, status, message, details_json, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO logs (pc_id, job_id, action, event_kind, ok, status, message, details_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 pc_id,
                 job_id,
                 action,
+                event_kind,
                 ok,
                 status,
                 message,

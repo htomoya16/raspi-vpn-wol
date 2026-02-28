@@ -11,6 +11,8 @@
 - `npm run test` を追加し、`frontend-ci.yml` に組み込んだ。
 - API/Hook/Component/Utils それぞれに回帰テストを追加。
 - 稼働時間UIの回帰として `UptimePanel` のAPI連携・週移動・エラー表示・モック切替をテスト対象に追加。
+- テストデータの重複定義を削減するため、共通factory (`src/test/factories.ts`) を導入。
+- リファクタ後の回帰として `LogsPanel` / `PcList` / `UptimePanel` の既存シナリオを維持し、挙動互換を確認。
 
 ## 運用時の注意点
 

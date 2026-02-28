@@ -27,7 +27,7 @@
 4. `Step 4: PCs 一覧を表示する`
 - `GET /api/pcs` の結果を表示する。
 
-5. `Step 5: WOL送信と状態確認を追加する`
+5. `Step 5: WOL送信とステータス確認を追加する`
 - `POST /api/pcs/{pc_id}/wol` と `POST /api/pcs/{pc_id}/status/refresh` を接続する。
 
 6. `Step 6: ログ表示を追加する`

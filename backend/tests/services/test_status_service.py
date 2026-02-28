@@ -139,3 +139,33 @@ def test_status_service_raises_when_ip_is_not_configured(monkeypatch: pytest.Mon
     with pytest.raises(ValueError, match="ip_address is required for pc"):
         status_service.get_pc_status("pc-1")
     assert logs[-1]["status"] == "failed"
+
+
+def test_status_service_uses_periodic_event_kind_for_periodic_job(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    logs: list[dict[str, object]] = []
+
+    def _capture_log(**kwargs: object) -> None:
+        logs.append(dict(kwargs))
+
+    monkeypatch.setattr(status_service, "insert_log", _capture_log)
+    monkeypatch.setattr(
+        status_service.job_context,
+        "is_current_periodic_status_job",
+        lambda: True,
+    )
+    monkeypatch.setattr(
+        status_service.pc_repository,
+        "get_pc_by_id",
+        lambda _: _pc_row(ip_address="192.168.10.10", status_method="tcp", status_port=445),
+    )
+
+    def _raise_timeout(*args: object, **kwargs: object) -> object:
+        raise socket.timeout("timeout")
+
+    monkeypatch.setattr(status_service.socket, "create_connection", _raise_timeout)
+    result = status_service.get_pc_status("pc-1")
+    assert result["status"] == "offline"
+    assert logs[-1]["action"] == "status"
+    assert logs[-1]["event_kind"] == "periodic_status"

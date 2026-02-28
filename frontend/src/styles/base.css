@@ -113,6 +113,21 @@
   transition: transform 0.12s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
+button,
+[role='button'],
+.btn,
+.tab-btn,
+.mobile-bottom-nav__btn,
+.desktop-uptime-switch {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus:not(:focus-visible),
+[role='button']:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
 .btn:hover {
   transform: translateY(-1px);
 }

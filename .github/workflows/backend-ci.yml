@@ -36,5 +36,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
+      - name: Verify dependency consistency
+        run: python -m pip check
+
+      - name: Apply migrations
+        run: alembic upgrade head
+
       - name: Run tests
         run: pytest -q

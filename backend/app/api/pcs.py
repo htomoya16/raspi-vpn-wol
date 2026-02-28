@@ -63,7 +63,10 @@ def create_pc(payload: PcCreate) -> PcResponse:
     "/pcs/{pc_id}",
     response_model=PcResponse,
     summary="PC詳細取得",
-    responses={404: {"description": "対象が存在しない"}},
+    responses={
+        400: {"description": "入力値不正"},
+        404: {"description": "対象が存在しない"},
+    },
 )
 def get_pc(pc_id: str) -> PcResponse:
     try:
@@ -102,7 +105,10 @@ def update_pc(pc_id: str, payload: PcUpdate) -> PcResponse:
     "/pcs/{pc_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="PC削除",
-    responses={404: {"description": "対象が存在しない"}},
+    responses={
+        400: {"description": "入力値不正"},
+        404: {"description": "対象が存在しない"},
+    },
 )
 def delete_pc(pc_id: str) -> None:
     try:
@@ -163,7 +169,7 @@ async def send_wol(
 )
 async def refresh_pc_status(pc_id: str) -> PcResponse:
     try:
-        pc = pc_service.refresh_pc_status(pc_id)
+        pc = await asyncio.to_thread(pc_service.refresh_pc_status, pc_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -188,13 +194,10 @@ async def refresh_pc_status(pc_id: str) -> PcResponse:
     summary="全PCステータス更新（非同期）",
 )
 async def refresh_all_statuses() -> JobAccepted:
-    active_job = job_service.get_active_job_by_type("status_refresh_all")
-    if active_job is not None:
-        return JobAccepted(job_id=str(active_job["id"]), state=str(active_job["state"]))
-
-    job = job_service.create_job("status_refresh_all", payload=None)
-    asyncio.create_task(job_service.run_job(job["id"], pc_service.refresh_all_statuses))
-    await event_service.event_broker.publish("job", {"job_id": job["id"], "state": "queued"})
+    job, created = job_service.create_or_get_active_job("status_refresh_all", payload=None)
+    if created:
+        asyncio.create_task(job_service.run_job(job["id"], pc_service.refresh_all_statuses))
+        await event_service.event_broker.publish("job", {"job_id": job["id"], "state": "queued"})
     return JobAccepted(job_id=job["id"], state=job["state"])
 
 

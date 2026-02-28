@@ -4,6 +4,7 @@ import UptimeSummarySection from './uptime/UptimeSummarySection'
 import UptimeTimelineSection from './uptime/UptimeTimelineSection'
 import UptimeToolbar from './uptime/UptimeToolbar'
 import { useUptimePanelState } from './uptime/useUptimePanelState'
+import { toIsoDateLocal } from './uptime/utils'
 
 interface UptimePanelProps {
   pcs: Pc[]
@@ -11,15 +12,25 @@ interface UptimePanelProps {
   onSelectPc: (pcId: string) => void
   dataVersion?: string
   embedded?: boolean
+  enabled?: boolean
 }
 
-function UptimePanel({ pcs, selectedPcId, onSelectPc, dataVersion = '', embedded = false }: UptimePanelProps) {
+function UptimePanel({
+  pcs,
+  selectedPcId,
+  onSelectPc,
+  dataVersion = '',
+  embedded = false,
+  enabled = true,
+}: UptimePanelProps) {
   const isMobile = useMediaQuery('(max-width: 760px)')
+  const todayIso = toIsoDateLocal(new Date())
   const state = useUptimePanelState({
     pcs,
     selectedPcId,
     dataVersion,
     isMobile,
+    enabled,
   })
 
   const content = (
@@ -36,10 +47,13 @@ function UptimePanel({ pcs, selectedPcId, onSelectPc, dataVersion = '', embedded
           <UptimeToolbar
             pcs={pcs}
             activePcId={state.activePcId}
+            referenceDate={state.referenceDate}
+            maxReferenceDate={todayIso}
             summaryBucket={state.summaryBucket}
             enableUptimeMock={state.enableUptimeMock}
             useMockData={state.useMockData}
             onPcChange={(nextPcId) => state.handlePcSelectionChange(nextPcId, onSelectPc)}
+            onReferenceDateChange={state.changeReferenceDate}
             onBucketChange={state.changeSummaryBucket}
             onToggleMock={state.handleToggleMockData}
           />

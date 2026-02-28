@@ -10,13 +10,8 @@ from app.services import status_monitor_service
 def test_status_monitor_enqueue_reuses_active_job(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         status_monitor_service.job_service,
-        "get_active_job_by_type",
-        lambda _: {"id": "job-active"},
-    )
-    monkeypatch.setattr(
-        status_monitor_service.job_service,
-        "create_job",
-        lambda *args, **kwargs: pytest.fail("create_job should not be called"),
+        "create_or_get_active_job",
+        lambda *_args, **_kwargs: ({"id": "job-active", "state": "running"}, False),
     )
 
     job_id = asyncio.run(status_monitor_service.enqueue_status_refresh_all_job())
@@ -26,13 +21,8 @@ def test_status_monitor_enqueue_reuses_active_job(monkeypatch: pytest.MonkeyPatc
 def test_status_monitor_enqueue_creates_job_and_publishes(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         status_monitor_service.job_service,
-        "get_active_job_by_type",
-        lambda _: None,
-    )
-    monkeypatch.setattr(
-        status_monitor_service.job_service,
-        "create_job",
-        lambda *args, **kwargs: {"id": "job-new", "state": "queued"},
+        "create_or_get_active_job",
+        lambda *_args, **_kwargs: ({"id": "job-new", "state": "queued"}, True),
     )
 
     async def _run_job(*args: object, **kwargs: object) -> None:

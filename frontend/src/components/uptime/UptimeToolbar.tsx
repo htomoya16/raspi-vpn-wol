@@ -4,10 +4,13 @@ import type { SummaryBucket } from './types'
 interface UptimeToolbarProps {
   pcs: Pc[]
   activePcId: string
+  referenceDate: string
+  maxReferenceDate: string
   summaryBucket: SummaryBucket
   enableUptimeMock: boolean
   useMockData: boolean
   onPcChange: (pcId: string) => void
+  onReferenceDateChange: (date: string) => void
   onBucketChange: (bucket: SummaryBucket) => void
   onToggleMock: () => void
 }
@@ -15,10 +18,13 @@ interface UptimeToolbarProps {
 function UptimeToolbar({
   pcs,
   activePcId,
+  referenceDate,
+  maxReferenceDate,
   summaryBucket,
   enableUptimeMock,
   useMockData,
   onPcChange,
+  onReferenceDateChange,
   onBucketChange,
   onToggleMock,
 }: UptimeToolbarProps) {
@@ -33,6 +39,17 @@ function UptimeToolbar({
             </option>
           ))}
         </select>
+      </label>
+
+      <label>
+        表示する日付
+        <input
+          className="uptime-toolbar__date-input"
+          type="date"
+          value={referenceDate}
+          max={maxReferenceDate}
+          onChange={(event) => onReferenceDateChange(event.target.value)}
+        />
       </label>
 
       <label>

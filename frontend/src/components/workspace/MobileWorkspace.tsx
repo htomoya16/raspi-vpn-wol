@@ -7,23 +7,15 @@ import homeIcon from '../icons/home.svg'
 import logIcon from '../icons/log.svg'
 import registerIcon from '../icons/register.svg'
 import uptimeIcon from '../icons/uptime.svg'
-import type { JobQueueProps } from '../JobQueue'
-import type { LogsPanelProps } from '../LogsPanel'
-import type { PcFormProps } from '../PcForm'
-import type { PcListProps } from '../PcList'
 import type { Pc } from '../../types/models'
+import type { DashboardWorkspaceData } from './types'
 
 export type MobileView = 'pcs' | 'create' | 'logs' | 'uptime'
 
 interface MobileWorkspaceProps {
   mobileView: MobileView
   onChangeMobileView: (view: MobileView) => void
-  pcListProps: PcListProps
-  createLoading: PcFormProps['loading']
-  createError: PcFormProps['error']
-  onCreatePc: PcFormProps['onCreate']
-  jobs: JobQueueProps['jobs']
-  logsPanelProps: LogsPanelProps
+  dashboard: DashboardWorkspaceData
   pcs: Pc[]
   selectedPcId: string
   onSelectPc: (pcId: string) => void
@@ -33,17 +25,21 @@ interface MobileWorkspaceProps {
 function MobileWorkspace({
   mobileView,
   onChangeMobileView,
-  pcListProps,
-  createLoading,
-  createError,
-  onCreatePc,
-  jobs,
-  logsPanelProps,
+  dashboard,
   pcs,
   selectedPcId,
   onSelectPc,
   uptimeDataVersion,
 }: MobileWorkspaceProps) {
+  const {
+    pcListProps,
+    createLoading,
+    createError,
+    onCreatePc,
+    jobs,
+    logsPanelProps,
+  } = dashboard
+
   return (
     <>
       <section className="mobile-workspace">

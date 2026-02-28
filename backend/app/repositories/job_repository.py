@@ -80,6 +80,70 @@ def get_active_job_by_type(job_type: str) -> JobRow | None:
     return cast(JobRow, dict(row))
 
 
+def create_or_get_active_job(job_type: str, payload_json: str | None) -> tuple[JobRow, bool]:
+    now_iso = datetime.now(timezone.utc).isoformat()
+    created = False
+    with connection() as conn:
+        # Keep "active check + insert" atomic to avoid duplicate queued jobs.
+        conn.execute("BEGIN IMMEDIATE")
+        row = conn.execute(
+            """
+            SELECT
+                id,
+                job_type,
+                state,
+                payload_json,
+                result_json,
+                error_message,
+                created_at,
+                started_at,
+                finished_at,
+                updated_at
+            FROM jobs
+            WHERE job_type = ?
+              AND state IN ('queued', 'running')
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+            (job_type,),
+        ).fetchone()
+
+        if row is None:
+            created = True
+            job_id = uuid4().hex
+            conn.execute(
+                """
+                INSERT INTO jobs (
+                    id, job_type, state, payload_json, created_at, updated_at
+                )
+                VALUES (?, ?, 'queued', ?, ?, ?)
+                """,
+                (job_id, job_type, payload_json, now_iso, now_iso),
+            )
+            row = conn.execute(
+                """
+                SELECT
+                    id,
+                    job_type,
+                    state,
+                    payload_json,
+                    result_json,
+                    error_message,
+                    created_at,
+                    started_at,
+                    finished_at,
+                    updated_at
+                FROM jobs
+                WHERE id = ?
+                """,
+                (job_id,),
+            ).fetchone()
+
+    if row is None:
+        raise ValueError("failed to create or get active job")
+    return cast(JobRow, dict(row)), created
+
+
 def mark_running(job_id: str) -> None:
     now_iso = datetime.now(timezone.utc).isoformat()
     with connection() as conn:

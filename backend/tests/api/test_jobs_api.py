@@ -27,18 +27,10 @@ def test_jobs_endpoint_error_mapping(client: TestClient) -> None:
 def test_refresh_all_statuses_reuses_active_job(client: TestClient, monkeypatch) -> None:
     import app.api.pcs as pcs_api
 
-    def _fail_create_job(*args: object, **kwargs: object) -> dict[str, object]:
-        raise AssertionError("create_job should not be called")
-
     monkeypatch.setattr(
         pcs_api.job_service,
-        "get_active_job_by_type",
-        lambda _: {"id": "job-active", "state": "running"},
-    )
-    monkeypatch.setattr(
-        pcs_api.job_service,
-        "create_job",
-        _fail_create_job,
+        "create_or_get_active_job",
+        lambda *_args, **_kwargs: ({"id": "job-active", "state": "running"}, False),
     )
 
     response = client.post("/api/pcs/status/refresh")

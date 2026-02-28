@@ -1,3 +1,5 @@
+import type { KeyboardEvent, MouseEvent } from 'react'
+
 import type { Pc, PcBusyState } from '../../types/models'
 import { formatLocalDateTime } from '../../utils/datetime'
 import LoadingDots from '../LoadingDots'
@@ -23,36 +25,50 @@ function PcRowItem({
   onSendWol,
   onRefreshStatus,
 }: PcRowItemProps) {
+  function openDetailFromRow(): void {
+    onOpenDetail(pc.id)
+  }
+
+  function handleRowClick(event: MouseEvent<HTMLDivElement>): void {
+    const target = event.target as HTMLElement
+    if (target.closest('.pc-row__list-actions')) {
+      return
+    }
+    openDetailFromRow()
+  }
+
+  function handleSummaryKeyDown(event: KeyboardEvent<HTMLDivElement>): void {
+    if (event.key !== 'Enter' && event.key !== ' ') {
+      return
+    }
+    event.preventDefault()
+    openDetailFromRow()
+  }
+
   return (
     <li className={`pc-row ${isActive ? 'pc-row--active' : ''}`}>
-      <div
-        className="pc-row__summary"
-        role="button"
-        tabIndex={0}
-        onClick={() => onOpenDetail(pc.id)}
-        onKeyDown={(event) => {
-          if (event.currentTarget !== event.target) {
-            return
-          }
-          if (event.key === 'Enter' || event.key === ' ') {
-            event.preventDefault()
-            onOpenDetail(pc.id)
-          }
-        }}
-        aria-pressed={isActive}
-      >
-        <div className="pc-row__summary-main">
-          <p className="pc-row__name">{pc.name}</p>
-          <p className="pc-row__id">{pc.id}</p>
-          <p className="pc-row__tags">
-            タグ: {(pc.tags || []).length > 0 ? pc.tags.join(', ') : 'なし'}
-          </p>
-        </div>
-        <div className="pc-row__summary-meta">
-          <span className={`status-badge status-badge--${pc.status}`}>{statusLabel}</span>
-          <p className="pc-row__last-seen">
-            最終確認: {formatLocalDateTime(pc.last_seen_at, { fallback: '未記録' })}
-          </p>
+      <div className="pc-row__summary" onClick={handleRowClick}>
+        <div
+          className="pc-row__summary-trigger"
+          role="button"
+          tabIndex={0}
+          onKeyDown={handleSummaryKeyDown}
+          aria-pressed={isActive}
+          aria-label={`${pc.name} の詳細を開く`}
+        >
+          <div className="pc-row__summary-main">
+            <p className="pc-row__name">{pc.name}</p>
+            <p className="pc-row__id">{pc.id}</p>
+            <p className="pc-row__tags">
+              タグ: {(pc.tags || []).length > 0 ? pc.tags.join(', ') : 'なし'}
+            </p>
+          </div>
+          <div className="pc-row__summary-meta">
+            <span className={`status-badge status-badge--${pc.status} pc-row__status-badge`}>{statusLabel}</span>
+            <p className="pc-row__last-seen">
+              最終確認: {formatLocalDateTime(pc.last_seen_at, { fallback: '未記録' })}
+            </p>
+          </div>
         </div>
         <div className="pc-row__list-actions">
           <button
@@ -75,7 +91,7 @@ function PcRowItem({
             }}
             disabled={Boolean(isBusy.status)}
           >
-            {isBusy.status ? <LoadingDots label="状態確認中" /> : '状態確認'}
+            {isBusy.status ? <LoadingDots label="ステータス確認中" /> : 'ステータス確認'}
           </button>
         </div>
       </div>

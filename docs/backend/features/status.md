@@ -19,6 +19,7 @@
   - `ping`: `ping -c 1 -W 1`
 - PC作成時のデフォルトは `status_method=tcp`, `status_port=445`。
 - 呼び出し時は `logs` に `action=status` と結果メッセージを記録する。
+- 定期実行ジョブ（`status_refresh_all` / scheduler起点）は `logs.event_kind=periodic_status` で記録する。
 - エラー時（HTTP 400/404）:
   - 対象ID未登録
   - `ip_address` 不正

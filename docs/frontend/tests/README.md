@@ -14,7 +14,12 @@
 
 - API:
   - `frontend/src/api/http.test.ts`
+  - `frontend/src/api/pcs.test.ts`
+  - `frontend/src/api/logs.test.ts`
+  - `frontend/src/api/cache-flow.test.ts`
+  - `frontend/src/api/query.test.ts`
 - Hooks:
+  - `frontend/src/hooks/useDashboardData.test.tsx`
   - `frontend/src/hooks/useJobTracker.test.tsx`
 - Components:
   - `frontend/src/components/LogsPanel.test.tsx`
@@ -23,11 +28,15 @@
   - `frontend/src/components/pc-list/utils.test.ts`
 - Utils:
   - `frontend/src/utils/datetime.test.ts`
+- Test helper:
+  - `frontend/src/test/factories.ts`
 
 ## 何を担保しているか
 
 - APIエラーハンドリングの整形（`formatApiError` / `request`）
+- APIキャッシュキー/TTL/invalidateフロー（`requestCached` / `cache-policy` / `cache-flow`）
 - ジョブ追跡の成功・失敗・タイムアウト遷移
+- SSEイベント受信時のinvalidateと再読込トリガー
 - PC一覧の詳細表示、編集バリデーション、削除確認ダイアログ
 - ログ一覧の詳細展開、ログ削除確認フロー
 - 稼働時間パネルのAPI連携、週移動、エラー表示、モック切替

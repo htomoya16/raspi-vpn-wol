@@ -13,6 +13,7 @@ def test_insert_log_adds_job_id_from_context(monkeypatch) -> None:
         action: str,
         pc_id: str,
         status: str,
+        event_kind: str,
         job_id: str | None,
         message: str | None,
         details_json: str | None,
@@ -22,6 +23,7 @@ def test_insert_log_adds_job_id_from_context(monkeypatch) -> None:
                 "action": action,
                 "pc_id": pc_id,
                 "status": status,
+                "event_kind": event_kind,
                 "job_id": job_id,
                 "message": message,
                 "details_json": details_json,
@@ -44,6 +46,7 @@ def test_insert_log_adds_job_id_from_context(monkeypatch) -> None:
 
     assert len(captured) == 1
     assert captured[0]["job_id"] == "job-123"
+    assert captured[0]["event_kind"] == "normal"
     details = json.loads(str(captured[0]["details_json"]))
     assert details["probe"] == "tcp"
 
