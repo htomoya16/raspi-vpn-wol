@@ -86,8 +86,10 @@ function withDefaultHeaders(headers?: HeadersInit): Headers {
 }
 
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const cacheMode = options.cache ?? 'no-store'
   const response = await fetch(path, {
     ...options,
+    cache: cacheMode,
     headers: withDefaultHeaders(options.headers),
   })
 

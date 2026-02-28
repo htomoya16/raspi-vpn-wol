@@ -103,6 +103,7 @@ describe('useDashboardData SSE cache invalidation', () => {
       updatePcEntry: vi.fn(),
       refreshPcStatusEntry: vi.fn(),
       applyPcStatusEvent,
+      setPcStatusLocal: vi.fn(),
       handleFilterChange: vi.fn(),
       handleApplyFilters: vi.fn(),
       handleClearFilters: vi.fn(),
@@ -136,7 +137,7 @@ describe('useDashboardData SSE cache invalidation', () => {
     expect(loadPcs).not.toHaveBeenCalled()
   })
 
-  it('invalidates related caches and reloads data on job event', async () => {
+  it('does not reload on non-terminal job event', async () => {
     const source = new EventSourceStub()
     const loadLogs = vi.fn().mockResolvedValue(undefined)
     const loadPcs = vi.fn().mockResolvedValue(undefined)
@@ -170,6 +171,7 @@ describe('useDashboardData SSE cache invalidation', () => {
       updatePcEntry: vi.fn(),
       refreshPcStatusEntry: vi.fn(),
       applyPcStatusEvent: vi.fn(),
+      setPcStatusLocal: vi.fn(),
       handleFilterChange: vi.fn(),
       handleApplyFilters: vi.fn(),
       handleClearFilters: vi.fn(),
@@ -186,13 +188,13 @@ describe('useDashboardData SSE cache invalidation', () => {
       source.emitJson('job', { id: 'job-1', state: 'running' })
     })
 
-    expect(invalidatePcsAndUptimeCache).toHaveBeenCalledWith(undefined)
-    expect(invalidateLogsCache).toHaveBeenCalledTimes(1)
-    expect(loadPcs).toHaveBeenCalledTimes(1)
-    expect(loadLogs).toHaveBeenCalledTimes(1)
+    expect(invalidatePcsAndUptimeCache).not.toHaveBeenCalled()
+    expect(invalidateLogsCache).not.toHaveBeenCalled()
+    expect(loadPcs).not.toHaveBeenCalled()
+    expect(loadLogs).not.toHaveBeenCalled()
   })
 
-  it('uses per-pc invalidate when job event contains pc_id in payload', async () => {
+  it('uses per-pc invalidate when terminal job event contains pc_id in payload', async () => {
     const source = new EventSourceStub()
     const loadLogs = vi.fn().mockResolvedValue(undefined)
     const loadPcs = vi.fn().mockResolvedValue(undefined)
@@ -226,6 +228,7 @@ describe('useDashboardData SSE cache invalidation', () => {
       updatePcEntry: vi.fn(),
       refreshPcStatusEntry: vi.fn(),
       applyPcStatusEvent: vi.fn(),
+      setPcStatusLocal: vi.fn(),
       handleFilterChange: vi.fn(),
       handleApplyFilters: vi.fn(),
       handleClearFilters: vi.fn(),
@@ -241,6 +244,7 @@ describe('useDashboardData SSE cache invalidation', () => {
     await act(async () => {
       source.emitJson('job', {
         id: 'job-1',
+        state: 'failed',
         payload: {
           pc_id: 'pc-sub',
         },

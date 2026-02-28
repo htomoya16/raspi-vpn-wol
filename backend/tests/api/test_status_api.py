@@ -21,13 +21,13 @@ def _create_pc(
     return response.json()["pc"]
 
 
-def test_status_refresh_without_ip_returns_unreachable(client: TestClient) -> None:
+def test_status_refresh_without_ip_returns_unknown(client: TestClient) -> None:
     _create_pc(client, id="pc-no-ip", name="No IP", mac="AA:BB:CC:DD:EE:51")
 
     response = client.post("/api/pcs/pc-no-ip/status/refresh")
     assert response.status_code == 200
     body = response.json()["pc"]
-    assert body["status"] == "unreachable"
+    assert body["status"] == "unknown"
 
     logs_response = client.get("/api/logs", params={"pc_id": "pc-no-ip", "action": "status", "ok": "false"})
     assert logs_response.status_code == 200

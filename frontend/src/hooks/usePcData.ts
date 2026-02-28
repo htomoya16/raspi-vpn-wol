@@ -40,9 +40,34 @@ interface UsePcDataReturn {
   updatePcEntry: (pcId: string, payload: PcUpdatePayload) => Promise<Pc>
   refreshPcStatusEntry: (pcId: string) => Promise<void>
   applyPcStatusEvent: (pcId: string, status: PcStatus, updatedAt: string, lastSeenAt: string | null) => void
+  setPcStatusLocal: (pcId: string, status: PcStatus) => void
   handleFilterChange: (key: keyof PcFilterState, value: string) => void
   handleApplyFilters: () => void
   handleClearFilters: () => void
+}
+
+function matchesPcFilters(pc: Pc, filters: PcFilterState): boolean {
+  const normalizedQuery = filters.q.trim().toLowerCase()
+  if (normalizedQuery) {
+    const haystacks = [
+      pc.id,
+      pc.name,
+      pc.mac,
+      pc.ip || '',
+      ...(pc.tags || []),
+      pc.note || '',
+    ].map((value) => value.toLowerCase())
+    const matched = haystacks.some((value) => value.includes(normalizedQuery))
+    if (!matched) {
+      return false
+    }
+  }
+
+  if (filters.status && pc.status !== filters.status) {
+    return false
+  }
+
+  return true
 }
 
 export function usePcData({ loadLogs, setNotice }: UsePcDataParams): UsePcDataReturn {
@@ -55,6 +80,7 @@ export function usePcData({ loadLogs, setNotice }: UsePcDataParams): UsePcDataRe
   const [createLoading, setCreateLoading] = useState(false)
   const [createError, setCreateError] = useState('')
   const createInFlightRef = useRef(false)
+  const loadPcsRequestSeqRef = useRef(0)
 
   const [busyById, setBusyById] = useState<BusyById>({})
   const [rowErrorById, setRowErrorById] = useState<RowErrorById>({})
@@ -83,6 +109,8 @@ export function usePcData({ loadLogs, setNotice }: UsePcDataParams): UsePcDataRe
   }, [])
 
   const loadPcs = useCallback(async () => {
+    const requestSeq = loadPcsRequestSeqRef.current + 1
+    loadPcsRequestSeqRef.current = requestSeq
     setPcLoading(true)
     setPcError('')
 
@@ -92,12 +120,20 @@ export function usePcData({ loadLogs, setNotice }: UsePcDataParams): UsePcDataRe
         status: appliedPcFilters.status,
         limit: 200,
       })
+      if (requestSeq !== loadPcsRequestSeqRef.current) {
+        return
+      }
       setPcs(data?.items || [])
       setLastSyncedAt(new Date().toISOString())
     } catch (error) {
+      if (requestSeq !== loadPcsRequestSeqRef.current) {
+        return
+      }
       setPcError(formatApiError(error))
     } finally {
-      setPcLoading(false)
+      if (requestSeq === loadPcsRequestSeqRef.current) {
+        setPcLoading(false)
+      }
     }
   }, [appliedPcFilters.q, appliedPcFilters.status])
 
@@ -112,9 +148,15 @@ export function usePcData({ loadLogs, setNotice }: UsePcDataParams): UsePcDataRe
       setCreateError('')
 
       try {
-        await createPc(payload)
-        setNotice(`PCを登録しました: ${payload.name}`)
-        await Promise.all([loadPcs(), loadLogs()])
+        const response = await createPc(payload)
+        const createdPc = response.pc
+        if (matchesPcFilters(createdPc, appliedPcFilters)) {
+          setPcs((prev) => [createdPc, ...prev.filter((pc) => pc.id !== createdPc.id)])
+          setLastSyncedAt(new Date().toISOString())
+        }
+        setNotice(`PCを登録しました: ${createdPc.name}`)
+        void loadPcs()
+        void loadLogs()
         return true
       } catch (error) {
         setCreateError(formatApiError(error))
@@ -124,7 +166,7 @@ export function usePcData({ loadLogs, setNotice }: UsePcDataParams): UsePcDataRe
         setCreateLoading(false)
       }
     },
-    [loadLogs, loadPcs, setNotice],
+    [appliedPcFilters, loadLogs, loadPcs, setNotice],
   )
 
   const deletePcEntry = useCallback(
@@ -134,8 +176,11 @@ export function usePcData({ loadLogs, setNotice }: UsePcDataParams): UsePcDataRe
 
       try {
         await deletePc(pcId)
+        setPcs((prev) => prev.filter((pc) => pc.id !== pcId))
+        setLastSyncedAt(new Date().toISOString())
         setNotice(`PCを削除しました: ${pcId}`)
-        await Promise.all([loadPcs(), loadLogs()])
+        void loadPcs()
+        await loadLogs()
       } catch (error) {
         setRowError(pcId, formatApiError(error))
       } finally {
@@ -205,6 +250,22 @@ export function usePcData({ loadLogs, setNotice }: UsePcDataParams): UsePcDataRe
     [],
   )
 
+  const setPcStatusLocal = useCallback((pcId: string, status: PcStatus) => {
+    const updatedAt = new Date().toISOString()
+    setPcs((prev) =>
+      prev.map((pc) =>
+        pc.id === pcId
+          ? {
+              ...pc,
+              status,
+              updated_at: updatedAt,
+            }
+          : pc,
+      ),
+    )
+    setLastSyncedAt(updatedAt)
+  }, [])
+
   const handleFilterChange = useCallback((key: keyof PcFilterState, value: string) => {
     setPcFilters((prev) => ({
       ...prev,
@@ -242,6 +303,7 @@ export function usePcData({ loadLogs, setNotice }: UsePcDataParams): UsePcDataRe
     updatePcEntry,
     refreshPcStatusEntry,
     applyPcStatusEvent,
+    setPcStatusLocal,
     handleFilterChange,
     handleApplyFilters,
     handleClearFilters,

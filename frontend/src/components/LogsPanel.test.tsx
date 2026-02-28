@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -32,7 +32,9 @@ describe('LogsPanel', () => {
     )
 
     await user.click(screen.getByRole('button', { name: 'ログを前面表示' }))
-    expect(screen.getByRole('dialog', { name: '操作ログ' })).toBeInTheDocument()
+    const focusDialog = screen.getByRole('dialog', { name: '操作ログ' })
+    expect(focusDialog).toBeInTheDocument()
+    expect(within(focusDialog).queryByRole('button', { name: 'ログ消去' })).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: '前面表示を閉じる' }))
     await waitFor(() => {

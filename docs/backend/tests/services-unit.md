@@ -37,6 +37,10 @@
   - pingコマンド不在で `ValueError`。
   - 失敗ログが残る。
 
+- `test_status_service_returns_unknown_when_ip_is_not_configured`
+  - `ip_address` 未設定時は `ValueError` ではなく `unknown` を返す。
+  - `action=status` ログに `status=unknown` が記録される。
+
 ## `wol_service`
 
 - `test_wol_service_error_paths`
@@ -78,6 +82,9 @@
 
 - `test_pc_service_send_wol_marks_unreachable_on_status_probe_error`
   - ステータス判定処理が例外になった場合は `unreachable` に更新されること。
+
+- `test_refresh_pc_status_keeps_unreachable_when_probe_is_offline`
+  - 既に `unreachable` のPCは、状態確認結果が `offline` でも `unreachable` を維持すること。
 
 ## 運用時の注意点
 

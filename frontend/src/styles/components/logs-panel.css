@@ -60,18 +60,33 @@
 
 .logs-focus__panel {
   width: min(1240px, calc(100vw - 32px));
+  height: calc(100dvh - 32px);
   max-height: calc(100dvh - 32px);
-  overflow: auto;
-  display: grid;
-  align-content: start;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .logs-focus__header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 10px;
+}
+
+.logs-focus__panel .panel__header,
+.logs-focus__panel .logs-toolbar,
+.logs-focus__panel .feedback,
+.logs-focus__panel .empty-state {
+  flex-shrink: 0;
+}
+
+.logs-focus__panel .logs-sheet {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
 }
 
 .logs-focus__title {

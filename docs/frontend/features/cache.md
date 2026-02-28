@@ -73,6 +73,7 @@
 - 共通実行（requestCached）: `frontend/src/api/http.ts`
 - 変異時invalidate: `frontend/src/api/pcs.ts`, `frontend/src/api/logs.ts`
 - SSE時invalidate: `frontend/src/hooks/useDashboardData.ts`
+- HTTPクライアント: `frontend/src/api/http.ts` で `fetch(..., { cache: 'no-store' })` を既定化し、ブラウザHTTPキャッシュによる古い一覧復元を防止
 
 ### フロント実装内容（2026-02-27）
 

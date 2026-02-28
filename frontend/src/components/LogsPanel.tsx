@@ -151,7 +151,7 @@ function LogsPanel({
     toggleDetails(id)
   }
 
-  function renderContent(titleId: string, showFocusButton: boolean) {
+  function renderContent(titleId: string, showFocusButton: boolean, showClearButton: boolean) {
     return (
     <>
       <div className="panel__header logs-panel__header">
@@ -172,14 +172,16 @@ function LogsPanel({
             </span>
           )}
         </button>
-        <button
-          type="button"
-          className="btn btn--danger"
-          onClick={openConfirm}
-          disabled={items.length === 0 || loading || clearLoading}
-        >
-          ログ消去
-        </button>
+        {showClearButton ? (
+          <button
+            type="button"
+            className="btn btn--danger"
+            onClick={openConfirm}
+            disabled={items.length === 0 || loading || clearLoading}
+          >
+            ログ消去
+          </button>
+        ) : null}
       </div>
 
       {error ? <p className="feedback feedback--error">{error}</p> : null}
@@ -282,9 +284,9 @@ function LogsPanel({
   return (
     <>
       {embedded ? (
-        <div className="panel-embedded panel-embedded--logs">{renderContent(panelId, true)}</div>
+        <div className="panel-embedded panel-embedded--logs">{renderContent(panelId, true, true)}</div>
       ) : (
-        <section className="panel">{renderContent(panelId, true)}</section>
+        <section className="panel">{renderContent(panelId, true, true)}</section>
       )}
 
       {focusOpen && typeof document !== 'undefined'
@@ -308,7 +310,7 @@ function LogsPanel({
                     ✕
                   </button>
                 </div>
-                {renderContent(focusPanelId, false)}
+                {renderContent(focusPanelId, false, false)}
               </section>
             </div>,
             document.body,

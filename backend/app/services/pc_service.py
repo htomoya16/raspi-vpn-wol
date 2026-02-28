@@ -226,10 +226,13 @@ def _refresh_pc_status_internal(pc_id: str, *, invalidate_cache: bool) -> dict[s
     existing = pc_repository.get_pc_by_id(pc_id.strip())
     if existing is None:
         raise LookupError(f"pc not found: {pc_id}")
+    previous_status = str(existing.get("status") or "unknown")
     try:
         result = status_service.get_pc_status(pc_id)
         status_value = str(result["status"])
     except ValueError:
+        status_value = "unreachable"
+    if previous_status == "unreachable" and status_value == "offline":
         status_value = "unreachable"
     if status_value not in STATUS_VALUES:
         status_value = "unreachable"
@@ -277,13 +280,18 @@ def send_wol(
 
     normalized_repeat = repeat if repeat > 0 else 1
     message = ""
-    for _ in range(normalized_repeat):
-        result = wol_service.send_wol(
-            pc_id=normalized_id,
-            broadcast_ip_override=broadcast,
-            wol_port_override=port,
-        )
-        message = result["message"]
+    try:
+        for _ in range(normalized_repeat):
+            result = wol_service.send_wol(
+                pc_id=normalized_id,
+                broadcast_ip_override=broadcast,
+                wol_port_override=port,
+            )
+            message = result["message"]
+    except ValueError as exc:
+        pc_registry_service.update_runtime_status(normalized_id, status="unreachable", mark_seen=False)
+        _invalidate_pc_related_cache(normalized_id)
+        raise RuntimeError(f"wol packet send failed: {exc} (pc_id={normalized_id})") from exc
 
     pc_registry_service.update_runtime_status(normalized_id, status="booting", mark_seen=False)
     _invalidate_pc_related_cache(normalized_id)
@@ -296,16 +304,12 @@ def send_wol(
         try:
             probe = status_service.get_pc_status(normalized_id)
             probe_status = str(probe["status"])
-        except ValueError:
+        except ValueError as exc:
             pc_registry_service.update_runtime_status(normalized_id, status="unreachable", mark_seen=False)
             _invalidate_pc_related_cache(normalized_id)
-            return {
-                "message": message,
-                "requested_at": now_iso,
-                "final_status": "unreachable",
-                "poll_interval_seconds": BOOTING_POLL_INTERVAL_SECONDS,
-                "poll_attempts": attempts,
-            }
+            raise RuntimeError(
+                f"wol status probe failed: {exc} (pc_id={normalized_id}, attempts={attempts})"
+            ) from exc
 
         if probe_status == "online":
             pc_registry_service.update_runtime_status(normalized_id, status="online", mark_seen=True)
@@ -318,16 +322,21 @@ def send_wol(
                 "poll_attempts": attempts,
             }
 
+        if probe_status in {"unknown", "unreachable"}:
+            pc_registry_service.update_runtime_status(normalized_id, status=probe_status, mark_seen=False)
+            _invalidate_pc_related_cache(normalized_id)
+            raise RuntimeError(
+                "wol status probe returned non-retriable status: "
+                f"{probe_status} (pc_id={normalized_id}, attempts={attempts})"
+            )
+
     final_status: PcStatus = "offline" if had_seen_before else "unknown"
     pc_registry_service.update_runtime_status(normalized_id, status=final_status, mark_seen=False)
     _invalidate_pc_related_cache(normalized_id)
-    return {
-        "message": message,
-        "requested_at": now_iso,
-        "final_status": final_status,
-        "poll_interval_seconds": BOOTING_POLL_INTERVAL_SECONDS,
-        "poll_attempts": attempts,
-    }
+    raise RuntimeError(
+        "wol boot confirmation timed out: "
+        f"status={final_status} (pc_id={normalized_id}, attempts={attempts}, requested_at={now_iso})"
+    )
 
 
 def get_uptime_summary(

@@ -52,12 +52,17 @@
 - requestBody: `WolRequest`（任意）
 - responses: `202`, `400`, `404`, `422`
 - note: 送信後は `booting` へ更新し、バックエンドで3秒間隔の起動確認（最大20回）を行う
+- note: WOL送信自体が失敗した場合、PC状態は `unreachable` に更新され、ジョブ状態は `failed` で終了する
+- note: 起動確認で `unknown` / `unreachable` が返った場合は再試行せず、その状態でジョブを `failed` 終了する
+- note: 起動確認で `online` に到達しない場合（`offline/unknown/unreachable`）はジョブ状態を `failed` として終了する
 
 ### `POST /api/pcs/{pc_id}/status/refresh`
 
 - operationId: `refreshPcStatus`
 - summary: 単体ステータス更新
 - responses: `200`, `400`, `404`
+- note: `ip_address` 未設定時は `unknown` を返す
+- note: 既に `unreachable` のPCは、判定結果が `offline` でも `unreachable` を維持する
 
 ### `POST /api/pcs/status/refresh`
 
