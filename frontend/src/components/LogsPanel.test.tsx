@@ -3,19 +3,11 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { LogEntry } from '../types/models'
+import { createLogEntryFactory } from '../test/factories'
 import LogsPanel from './LogsPanel'
 
 function createLogEntry(overrides: Partial<LogEntry> = {}): LogEntry {
-  return {
-    id: 1,
-    pc_id: 'pc-1',
-    action: 'status',
-    ok: true,
-    message: 'status checked',
-    details: { source: 'manual' },
-    created_at: '2026-02-24T00:00:00Z',
-    ...overrides,
-  }
+  return createLogEntryFactory(overrides)
 }
 
 describe('LogsPanel', () => {
@@ -222,6 +214,7 @@ describe('LogsPanel', () => {
             id: 30,
             job_id: 'job-status-1',
             action: 'status',
+            event_kind: 'periodic_status',
             message: 'status by scheduler',
           }),
         ]}
@@ -247,6 +240,7 @@ describe('LogsPanel', () => {
             id: 40,
             job_id: 'job-status-1',
             action: 'status',
+            event_kind: 'periodic_status',
             ok: true,
             message: 'scheduled status 1',
           }),
@@ -254,6 +248,7 @@ describe('LogsPanel', () => {
             id: 39,
             job_id: 'job-status-2',
             action: 'status',
+            event_kind: 'periodic_status',
             ok: false,
             message: 'scheduled status 2',
           }),
@@ -274,5 +269,30 @@ describe('LogsPanel', () => {
     expect(groupButtons[0]).toHaveTextContent('OK 1')
     expect(groupButtons[0]).toHaveTextContent('NG 1')
     expect(groupButtons[0]).toHaveTextContent('2件')
+  })
+
+  it('shows manual status-refresh job as 全体ステータス更新 instead of periodic group', () => {
+    render(
+      <LogsPanel
+        items={[
+          createLogEntry({
+            id: 50,
+            job_id: 'job-status-manual',
+            action: 'status',
+            ok: true,
+            message: 'manual refresh all',
+          }),
+        ]}
+        loading={false}
+        error=""
+        onReload={vi.fn()}
+        onClear={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    expect(screen.queryByText('定期ステータス確認')).not.toBeInTheDocument()
+    const groupButton = screen.getByRole('button', { name: /ID: job-status-manual/ })
+    expect(groupButton).toHaveTextContent('全体ステータス更新')
+    expect(screen.getByText('manual refresh all')).toBeInTheDocument()
   })
 })

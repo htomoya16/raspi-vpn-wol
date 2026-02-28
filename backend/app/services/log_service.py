@@ -11,6 +11,7 @@ def insert_log(
     action: str,
     pc_id: str,
     status: str,
+    event_kind: str = "normal",
     message: str | None = None,
     details: dict[str, object] | None = None,
 ) -> None:
@@ -22,6 +23,7 @@ def insert_log(
         action=action,
         pc_id=pc_id,
         status=status,
+        event_kind=event_kind,
         job_id=current_job_id,
         message=message,
         details_json=details_json,
@@ -75,6 +77,7 @@ def _row_to_log_entry(row: LogRow) -> dict[str, object]:
         "pc_id": row["pc_id"],
         "job_id": row.get("job_id"),
         "action": row["action"],
+        "event_kind": row.get("event_kind") or "normal",
         "ok": bool(row["ok"]),
         "message": row["message"],
         "details": details,

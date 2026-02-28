@@ -55,7 +55,29 @@ async def run_job(
 ) -> None:
     job_repository.mark_running(job_id)
     await event_service.event_broker.publish("job", {"job_id": job_id, "state": "running"})
-    token = job_context.set_current_job_id(job_id)
+    current_row = job_repository.get_job(job_id)
+    current_job_type: str | None = None
+    current_job_source: str | None = None
+    if current_row is not None:
+        current_job_type = str(current_row.get("job_type") or "").strip() or None
+        raw_payload = current_row.get("payload_json")
+        if isinstance(raw_payload, str) and raw_payload.strip():
+            try:
+                payload = json.loads(raw_payload)
+                if isinstance(payload, dict):
+                    source = payload.get("source")
+                    if isinstance(source, str):
+                        normalized_source = source.strip()
+                        if normalized_source:
+                            current_job_source = normalized_source
+            except json.JSONDecodeError:
+                current_job_source = None
+
+    id_token = job_context.set_current_job_id(job_id)
+    meta_tokens = job_context.set_current_job_metadata(
+        job_type=current_job_type,
+        job_source=current_job_source,
+    )
 
     try:
         result = await asyncio.to_thread(runner)
@@ -74,7 +96,8 @@ async def run_job(
             {"job_id": job_id, "state": "failed", "error": str(exc)},
         )
     finally:
-        job_context.reset_current_job_id(token)
+        job_context.reset_current_job_id(id_token)
+        job_context.reset_current_job_metadata(meta_tokens)
 
 
 def _to_job(row: dict[str, object]) -> dict[str, object]:

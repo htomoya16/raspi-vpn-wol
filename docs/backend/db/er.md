@@ -8,6 +8,7 @@
 ## 変更内容
 
 - 2026-03-01: Alembic/SQLiteの実DDLに合わせてインデックス記述を更新（`DESC` 明記を削除）。
+- 2026-03-01: `logs.event_kind` を追加し、定期ステータス確認の識別を `action` から分離。
 - 2026-03-01: uptime詳細メモを `docs/backend/db/uptime-tables.md` へ集約（本ページは全体ER中心に整理）。
 - 2026-02-27: 実クエリに合わせてインデックスを再設計（`logs/jobs/status_history/uptime_daily_summary`）。
 - 2026-02-27: ER図を `ER図（全体）` 1つに統合。
@@ -67,6 +68,7 @@ erDiagram
         TEXT pc_id FK
         TEXT job_id
         TEXT action
+        TEXT event_kind
         INTEGER ok
         TEXT status
         TEXT message
@@ -103,6 +105,7 @@ erDiagram
   - `idx_logs_action_id_desc (action, id)`: `action` 絞り込み + 新しい順（逆順走査）
   - `idx_logs_ok_id_desc (ok, id)`: 成否絞り込み + 新しい順（逆順走査）
   - `idx_logs_job_id_id_desc (job_id, id)`: `job_id` 単位のログ取得 + 新しい順（逆順走査）
+  - `idx_logs_event_kind_id_desc (event_kind, id)`: 種別別ログ取得（定期/通常） + 新しい順（逆順走査）
   - `idx_logs_created_at (created_at)`: 保持期間削除、`since/until` 範囲条件
 - `jobs`
   - `idx_jobs_job_type_state_created_at (job_type, state, created_at)`: 同種ジョブの `queued/running` 最新取得

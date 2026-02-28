@@ -15,6 +15,7 @@ def insert_log_row(
     action: str,
     pc_id: str,
     status: str,
+    event_kind: str = "normal",
     job_id: str | None = None,
     message: str | None = None,
     details_json: str | None = None,
@@ -23,10 +24,10 @@ def insert_log_row(
     with connection() as conn:
         conn.execute(
             """
-            INSERT INTO logs (pc_id, job_id, action, ok, status, message, details_json)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO logs (pc_id, job_id, action, event_kind, ok, status, message, details_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (pc_id or None, job_id or None, action, ok, status, message, details_json),
+            (pc_id or None, job_id or None, action, event_kind, ok, status, message, details_json),
         )
         _prune_old_logs(conn)
         _prune_excess_logs(conn)
@@ -65,7 +66,7 @@ def list_logs(
 
     where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     sql = (
-        "SELECT id, pc_id, job_id, action, ok, message, details_json, created_at "
+        "SELECT id, pc_id, job_id, action, event_kind, ok, message, details_json, created_at "
         f"FROM logs {where_sql} ORDER BY id DESC LIMIT ?"
     )
     params.append(limit)

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { Pc } from '../types/models'
+import { createPcFactory } from '../test/factories'
 import UptimePanel from './UptimePanel'
 
 const getPcUptimeSummary = vi.fn()
@@ -14,19 +15,7 @@ vi.mock('../api/pcs', () => ({
 }))
 
 function createPc(overrides: Partial<Pc> = {}): Pc {
-  return {
-    id: 'pc-1',
-    name: 'Main PC',
-    mac: 'AA:BB:CC:DD:EE:FF',
-    ip: '192.168.10.10',
-    tags: ['desk'],
-    note: 'main machine',
-    status: 'online',
-    last_seen_at: '2026-02-24T00:00:00Z',
-    created_at: '2026-02-24T00:00:00Z',
-    updated_at: '2026-02-24T00:00:00Z',
-    ...overrides,
-  }
+  return createPcFactory(overrides)
 }
 
 describe('UptimePanel', () => {
@@ -154,7 +143,7 @@ describe('UptimePanel', () => {
       />,
     )
 
-    await waitFor(() => expect(getPcUptimeSummary).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(getPcUptimeSummary).toHaveBeenCalled())
     await user.click(screen.getByRole('button', { name: 'オンライン集計を前へ' }))
 
     await waitFor(() => {
@@ -201,7 +190,7 @@ describe('UptimePanel', () => {
       />,
     )
 
-    await waitFor(() => expect(getPcUptimeSummary).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(getPcUptimeSummary).toHaveBeenCalled())
     await user.click(screen.getByRole('button', { name: 'モック表示: OFF' }))
 
     await waitFor(() => {

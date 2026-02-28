@@ -30,6 +30,7 @@ class LogRow(TypedDict):
     pc_id: str | None
     job_id: str | None
     action: str
+    event_kind: str
     ok: int
     message: str | None
     details_json: str | None

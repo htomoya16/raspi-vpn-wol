@@ -133,6 +133,7 @@
 - `JobAccepted`, `Job`, `JobState`: 非同期処理
 - `LogEntry`, `LogListResponse`, `LogClearResponse`: 監査ログ
   - `LogEntry.job_id` はジョブ由来ログの関連ID（null可）
+  - `LogEntry.event_kind` はログ分類（`normal` / `periodic_status` など）
 - `PcUptimeSummaryResponse`: オンライン集計一覧（日/週/月/年グラフ向け）
 - `PcWeeklyTimelineResponse`: 週タイムライン（1日ごとのオンライン区間）
 - `Error`: 基本は FastAPI 既定エラー形式（`detail`）

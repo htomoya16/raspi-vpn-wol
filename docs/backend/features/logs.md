@@ -10,12 +10,15 @@
 - `GET /api/logs` を提供（`pc_id` `action` `ok` `since` `until` `limit` `cursor`）。
 - `DELETE /api/logs` を提供（全ログ削除、削除件数を返却）。
 - `logs` テーブルの記録項目:
-  - `id`, `pc_id`, `action`, `ok`, `status`, `message`, `details_json`, `created_at`
+  - `id`, `pc_id`, `job_id`, `action`, `event_kind`, `ok`, `status`, `message`, `details_json`, `created_at`
 - 主な記録トリガー:
   - `pc_upsert`
   - `pc_delete`
   - `wol`（成功/失敗）
   - `status`
+- 補足:
+  - `action=status` の中でも `event_kind=periodic_status` で定期ステータス確認を識別する。
+  - 旧方式の `action=seed_status` は廃止し、DBマイグレーションで `action=status` に正規化する。
 - 取得順序は `id DESC`（新しい順）、ページングは `cursor`（`id < cursor`）で実施。
 - 保持ポリシー:
   - `created_at` が30日より古いログを削除

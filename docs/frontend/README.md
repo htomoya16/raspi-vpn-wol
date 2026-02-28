@@ -7,6 +7,7 @@
 
 ## 変更内容
 
+- 2026-03-01: フロント全体を責務分割リファクタ（`PcList` 分割、`usePcData` 分離、`LogsPanel` 分割、`Uptime` 取得フック分離、`logs-panel.css` 3分割、テストfactory共通化）。
 - 2026-02-27: APIキャッシュ実装を追加（in-memory + requestCached + invalidate）。
 - 2026-02-27: `UptimePanel` を `components/uptime/` 配下へ分割し、Hook/Utils/CSS責務を整理。
 - 2026-02-27: 稼働時間UIを更新（`稼働タイムライン` 名称、モバイル1日表示、スワイプ操作、ロード表示安定化）。

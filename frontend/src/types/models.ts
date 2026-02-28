@@ -75,6 +75,7 @@ export interface LogEntry {
   pc_id: string | null
   job_id?: string | null
   action: string
+  event_kind?: string
   ok: boolean
   message: string | null
   details: unknown

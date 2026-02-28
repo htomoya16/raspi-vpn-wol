@@ -10,6 +10,7 @@ import type { PcListProps } from './components/PcList'
 import UptimePanel from './components/UptimePanel'
 import type { LeftView } from './components/workspace/DesktopWorkspace'
 import type { MobileView } from './components/workspace/MobileWorkspace'
+import type { DashboardWorkspaceData } from './components/workspace/types'
 import { useDashboardData } from './hooks/useDashboardData'
 import { useMediaQuery } from './hooks/useMediaQuery'
 import type { PcCreatePayload } from './types/models'
@@ -107,6 +108,15 @@ function App() {
     onClear: clearLogsEntry,
   }
 
+  const dashboardWorkspaceData: DashboardWorkspaceData = {
+    pcListProps,
+    createLoading,
+    createError,
+    onCreatePc: handleCreatePc,
+    jobs,
+    logsPanelProps,
+  }
+
   return (
     <main className="app-layout">
       <AppHeader
@@ -122,12 +132,7 @@ function App() {
         <MobileWorkspace
           mobileView={mobileView}
           onChangeMobileView={setMobileView}
-          pcListProps={pcListProps}
-          createLoading={createLoading}
-          createError={createError}
-          onCreatePc={handleCreatePc}
-          jobs={jobs}
-          logsPanelProps={logsPanelProps}
+          dashboard={dashboardWorkspaceData}
           pcs={pcs}
           selectedPcId={activeSelectedPcId}
           onSelectPc={setSelectedPcId}
@@ -140,12 +145,7 @@ function App() {
               <DesktopWorkspace
                 leftView={leftView}
                 onChangeLeftView={setLeftView}
-                pcListProps={pcListProps}
-                createLoading={createLoading}
-                createError={createError}
-                onCreatePc={handleCreatePc}
-                jobs={jobs}
-                logsPanelProps={logsPanelProps}
+                dashboard={dashboardWorkspaceData}
               />
             </div>
             <div className="desktop-stage__page">

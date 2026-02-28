@@ -23,6 +23,13 @@
 - 削除・ログ消去は確認ダイアログを挟み、誤操作を防ぐ。
 - `操作ログ` は `前面表示` ボタンでオーバーレイ拡大表示でき、閲覧時の可読性を高める。
 - `操作ログ` の `定期ステータス確認` グループは初期状態で折りたたみ表示とし、通常ログの可読性を優先する。
+- フロント構造の保守性向上のため、責務分割を実施:
+  - `LogsPanel` は `log-panel/` 配下へ分割（表示本体 / グルーピング / 状態管理 / sticky制御）。
+  - `PcList` はヘッダ・フィルタ・一覧描画を `pc-list/` 配下へ分割し、ダイアログ状態管理をフック化。
+  - `usePcData` は `usePcFilters` / `usePcCollection` / `usePcCrud` に分割。
+  - `useUptimePanelState` は取得責務を `useUptimeSummaryData` / `useUptimeTimelineData` に分離。
+  - `logs-panel.css` は `base / desktop / mobile` の3層に分割。
+  - `App` から Workspace への受け渡しは `dashboard` オブジェクト（`workspace/types.ts`）に集約し、propsドリルを抑制。
 - 稼働時間パネルのUI仕様:
   - `オンライン集計グラフ` は `日次 / 月次 / 年次` 切替。
   - `稼働タイムライン` は 1時間刻み縦軸・拡張高さで可読性を優先。

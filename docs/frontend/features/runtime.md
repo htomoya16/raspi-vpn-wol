@@ -14,3 +14,4 @@
 
 - 開発時は `npm run dev`、型確認は `npm run typecheck` を利用する。
 - Vite 開発サーバーでは `/api` をバックエンドへプロキシする想定。
+- 変更時の最小確認は `npm run lint` / `npm run typecheck` / `npm run test` を順に実行する。
