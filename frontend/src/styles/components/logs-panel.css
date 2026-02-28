@@ -183,6 +183,14 @@
   background: rgba(32, 73, 126, 0.2);
 }
 
+.logs-table__group-toggle--job {
+  background: rgba(20, 49, 88, 0.46);
+}
+
+.logs-table__group-toggle--normal {
+  background: rgba(45, 40, 78, 0.4);
+}
+
 .logs-table__group-toggle:focus-visible {
   outline: 2px solid #5b9bff;
   outline-offset: -2px;
@@ -203,6 +211,55 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+}
+
+.logs-table__group-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.logs-table__group-subtitle {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(147, 187, 247, 0.4);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 0.68rem;
+  letter-spacing: 0.01em;
+  color: #d7e7ff;
+}
+
+.logs-table__group-counts {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.logs-table__group-count {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  letter-spacing: 0.01em;
+  line-height: 1;
+}
+
+.logs-table__group-count--ok {
+  background: rgba(16, 80, 56, 0.78);
+  color: #9ef5ca;
+}
+
+.logs-table__group-count--ng {
+  background: rgba(88, 32, 32, 0.78);
+  color: #ffc1b2;
+}
+
+.logs-table__group-count--total {
+  background: rgba(36, 62, 101, 0.78);
+  color: #d1e3ff;
 }
 
 .logs-table__group-caret {
@@ -496,7 +553,8 @@
     width: 100%;
   }
 
-  .logs-table tr {
+  .logs-table tr.logs-table__row,
+  .logs-table tr.logs-table__detail-row {
     margin-bottom: 8px;
     border: 1px solid var(--line);
     border-radius: 10px;
@@ -528,14 +586,25 @@
   }
 
   .logs-table__group-toggle {
-    border: 1px solid #274974;
-    border-radius: 10px;
-    background: rgba(13, 36, 68, 0.88);
-    padding: 8px 10px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 4px 2px 6px;
   }
 
   .logs-table__group-toggle:hover {
-    background: rgba(32, 73, 126, 0.35);
+    background: rgba(32, 73, 126, 0.12);
+  }
+
+  .logs-table__group-label {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    text-transform: none;
+  }
+
+  .logs-table__group-counts {
+    flex-wrap: wrap;
   }
 
   .logs-table tbody td:nth-child(n) {

@@ -41,7 +41,7 @@ function PcRowItem({
             </p>
           </div>
           <div className="pc-row__summary-meta">
-            <span className={`status-badge status-badge--${pc.status}`}>{statusLabel}</span>
+            <span className={`status-badge status-badge--${pc.status} pc-row__status-badge`}>{statusLabel}</span>
             <p className="pc-row__last-seen">
               最終確認: {formatLocalDateTime(pc.last_seen_at, { fallback: '未記録' })}
             </p>

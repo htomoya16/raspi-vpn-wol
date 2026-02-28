@@ -34,8 +34,23 @@ function formatDetails(details: LogEntry['details']): string {
 
 type LogGroup = {
   key: string
-  label: string
+  kind: 'job' | 'normal'
+  title: string
+  subtitle: string | null
+  jobName: string | null
+  okCount: number
+  ngCount: number
+  latestLogId: number
   items: LogEntry[]
+}
+
+const ACTION_LABELS: Record<string, string> = {
+  wol: 'WOL送信',
+  status: '状態確認',
+  pc_upsert: 'PC登録/更新',
+  pc_delete: 'PC削除',
+  seed_wol: 'WOL送信',
+  seed_status: '状態確認',
 }
 
 function extractJobId(item: LogEntry): string | null {
@@ -48,22 +63,97 @@ function extractJobId(item: LogEntry): string | null {
   return null
 }
 
-function buildLogGroups(items: LogEntry[]): LogGroup[] {
-  const groupMap = new Map<string, LogGroup>()
+function getActionLabel(action: string): string {
+  return ACTION_LABELS[action] || action
+}
 
-  for (const item of items) {
-    const jobId = extractJobId(item)
-    const key = jobId ? `job:${jobId}` : 'no-job'
-    const label = jobId ? `ジョブ ${jobId}` : '通常ログ'
-    const existing = groupMap.get(key)
-    if (existing) {
-      existing.items.push(item)
-      continue
-    }
-    groupMap.set(key, { key, label, items: [item] })
+function inferJobName(items: LogEntry[]): string | null {
+  const actions = items.map((item) => item.action).filter(Boolean)
+  if (actions.length === 0) {
+    return null
+  }
+  const hasWol = actions.some((action) => action === 'wol' || action === 'seed_wol')
+  if (hasWol) {
+    return 'WOL送信'
+  }
+  const hasStatus = actions.some((action) => action === 'status' || action === 'seed_status')
+  if (hasStatus) {
+    return '状態確認'
   }
 
-  return Array.from(groupMap.values())
+  const uniqueActions = Array.from(new Set(actions))
+  if (uniqueActions.length === 1) {
+    return getActionLabel(uniqueActions[0])
+  }
+
+  return '複合処理'
+}
+
+function buildLogGroups(items: LogEntry[]): LogGroup[] {
+  const sortedItems = [...items].sort((a, b) => b.id - a.id)
+  const groups: LogGroup[] = []
+  const jobGroupMap = new Map<string, LogGroup>()
+  let currentNormalGroup: LogGroup | null = null
+
+  for (const item of sortedItems) {
+    const jobId = extractJobId(item)
+    const okCount = item.ok ? 1 : 0
+    const ngCount = item.ok ? 0 : 1
+
+    if (jobId) {
+      currentNormalGroup = null
+      const key = `job:${jobId}`
+      const existing = jobGroupMap.get(key)
+      if (existing) {
+        existing.items.push(item)
+        existing.okCount += okCount
+        existing.ngCount += ngCount
+        existing.latestLogId = Math.max(existing.latestLogId, item.id)
+        existing.jobName = inferJobName(existing.items)
+        existing.title = existing.jobName || 'ジョブログ'
+        continue
+      }
+
+      const nextGroup: LogGroup = {
+        key,
+        kind: 'job',
+        title: inferJobName([item]) || 'ジョブログ',
+        subtitle: `ID: ${jobId}`,
+        jobName: inferJobName([item]),
+        okCount,
+        ngCount,
+        latestLogId: item.id,
+        items: [item],
+      }
+      jobGroupMap.set(key, nextGroup)
+      groups.push(nextGroup)
+      continue
+    }
+
+    if (!currentNormalGroup) {
+      currentNormalGroup = {
+        key: `normal:${item.id}`,
+        kind: 'normal',
+        title: '通常ログ',
+        subtitle: null,
+        jobName: null,
+        okCount: 0,
+        ngCount: 0,
+        latestLogId: item.id,
+        items: [],
+      }
+      groups.push(currentNormalGroup)
+    }
+    currentNormalGroup.items.push(item)
+    currentNormalGroup.okCount += okCount
+    currentNormalGroup.ngCount += ngCount
+    currentNormalGroup.latestLogId = Math.max(currentNormalGroup.latestLogId, item.id)
+  }
+
+  return groups.map((group) => ({
+    ...group,
+    items: [...group.items].sort((a, b) => b.id - a.id),
+  }))
 }
 
 export interface LogsPanelProps {
@@ -277,7 +367,7 @@ function LogsPanel({
                     <td colSpan={5}>
                       <button
                         type="button"
-                        className="logs-table__group-toggle"
+                        className={`logs-table__group-toggle logs-table__group-toggle--${group.kind}`}
                         aria-expanded={!collapsedGroupKeys.has(group.key)}
                         onClick={() => toggleGroup(group.key)}
                       >
@@ -289,9 +379,16 @@ function LogsPanel({
                             >
                               ▾
                             </span>
-                            <span>{group.label}</span>
+                            <span className="logs-table__group-title">
+                              <span>{group.title}</span>
+                              {group.subtitle ? <span className="logs-table__group-subtitle">{group.subtitle}</span> : null}
+                            </span>
                           </span>
-                          <span>{group.items.length}件</span>
+                          <span className="logs-table__group-counts">
+                            <span className="logs-table__group-count logs-table__group-count--ok">OK {group.okCount}</span>
+                            <span className="logs-table__group-count logs-table__group-count--ng">NG {group.ngCount}</span>
+                            <span className="logs-table__group-count logs-table__group-count--total">{group.items.length}件</span>
+                          </span>
                         </span>
                       </button>
                     </td>
@@ -321,7 +418,7 @@ function LogsPanel({
                               </span>
                             </span>
                           </td>
-                          <td data-label="操作">{item.action}</td>
+                          <td data-label="操作">{getActionLabel(item.action)}</td>
                           <td data-label="PC">{item.pc_id || '-'}</td>
                           <td data-label="結果">
                             <span className={item.ok ? 'result-ok' : 'result-ng'}>{item.ok ? 'OK' : 'NG'}</span>

@@ -278,7 +278,7 @@ def _insert_seed_jobs(conn: sqlite3.Connection, *, tz: ZoneInfo) -> dict[str, st
         ),
         SeedJob(
             id="seed-job-lab-status-running",
-            job_type="status_refresh_all",
+            job_type="seed_status_refresh_all",
             state="running",
             payload={"source": "seed"},
             result=None,
@@ -289,7 +289,7 @@ def _insert_seed_jobs(conn: sqlite3.Connection, *, tz: ZoneInfo) -> dict[str, st
         ),
         SeedJob(
             id="seed-job-refresh-all-queued",
-            job_type="status_refresh_all",
+            job_type="seed_status_refresh_all",
             state="queued",
             payload={"source": "seed"},
             result=None,
@@ -535,7 +535,7 @@ def _insert_seed_logs(conn: sqlite3.Connection, *, start_day: date, tz: ZoneInfo
             "seed_job",
             0,
             "queued",
-            "status_refresh_all queued",
+            "seed_status_refresh_all queued",
             {"source": "seed"},
             -4,
         ),
