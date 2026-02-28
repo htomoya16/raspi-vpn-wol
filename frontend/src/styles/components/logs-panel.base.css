@@ -239,6 +239,15 @@
   font-size: 0.68rem;
   letter-spacing: 0.01em;
   color: #d7e7ff;
+  min-width: 0;
+}
+
+.logs-table__group-subtitle-full {
+  display: inline;
+}
+
+.logs-table__group-subtitle-compact {
+  display: none;
 }
 
 .logs-table__group-counts {
@@ -466,6 +475,5 @@
   background: rgba(88, 32, 32, 0.78);
   color: #ffc1b2;
 }
-
 
 

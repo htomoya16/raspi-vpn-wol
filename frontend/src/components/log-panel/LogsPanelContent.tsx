@@ -28,6 +28,17 @@ interface LogsPanelContentProps {
   onToggleDetail: (id: number) => void
 }
 
+function formatCompactSubtitle(subtitle: string): string {
+  if (!subtitle.startsWith('ID: ')) {
+    return subtitle
+  }
+  const rawId = subtitle.slice(4).trim()
+  if (rawId.length <= 18) {
+    return subtitle
+  }
+  return `ID: ${rawId.slice(0, 8)}...${rawId.slice(-6)}`
+}
+
 function LogsPanelContent({
   titleId,
   items,
@@ -131,7 +142,12 @@ function LogsPanelContent({
                           <span className="logs-table__group-title">
                             <span>{group.title}</span>
                             {group.subtitle ? (
-                              <span className="logs-table__group-subtitle">{group.subtitle}</span>
+                              <span className="logs-table__group-subtitle" title={group.subtitle}>
+                                <span className="logs-table__group-subtitle-full">{group.subtitle}</span>
+                                <span className="logs-table__group-subtitle-compact">
+                                  {formatCompactSubtitle(group.subtitle)}
+                                </span>
+                              </span>
                             ) : null}
                           </span>
                         </span>

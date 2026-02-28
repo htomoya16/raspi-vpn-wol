@@ -140,6 +140,10 @@
 
   .logs-table__group-title {
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
 
   .logs-table__group-counts {
@@ -147,6 +151,23 @@
     flex: 0 0 auto;
     justify-content: flex-end;
     flex-wrap: wrap;
+  }
+
+  .logs-table__group-subtitle {
+    max-width: 170px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+    letter-spacing: 0;
+  }
+
+  .logs-table__group-subtitle-full {
+    display: none;
+  }
+
+  .logs-table__group-subtitle-compact {
+    display: inline;
   }
 
   .logs-table tbody td:nth-child(n) {
@@ -250,4 +271,3 @@
     font-size: 0.68rem;
   }
 }
-
