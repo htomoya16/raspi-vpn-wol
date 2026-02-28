@@ -62,7 +62,7 @@ export async function createPc(payload: PcCreatePayload): Promise<PcResponse> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
-  invalidatePcsAndUptimeCache()
+  invalidatePcsAndUptimeCache(response.pc.id)
   invalidateLogCache()
   return response
 }
@@ -71,7 +71,7 @@ export async function deletePc(pcId: string): Promise<void> {
   await request<void>(`/api/pcs/${encodeURIComponent(pcId)}`, {
     method: 'DELETE',
   })
-  invalidatePcsAndUptimeCache()
+  invalidatePcsAndUptimeCache(pcId)
   invalidateLogCache()
 }
 
@@ -81,7 +81,7 @@ export async function updatePc(pcId: string, payload: PcUpdatePayload): Promise<
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
-  invalidatePcsAndUptimeCache()
+  invalidatePcsAndUptimeCache(response.pc.id)
   invalidateLogCache()
   return response
 }
@@ -90,7 +90,7 @@ export async function refreshPcStatus(pcId: string): Promise<PcResponse> {
   const response = await request<PcResponse>(`/api/pcs/${encodeURIComponent(pcId)}/status/refresh`, {
     method: 'POST',
   })
-  invalidatePcsAndUptimeCache()
+  invalidatePcsAndUptimeCache(response.pc.id)
   invalidateLogCache()
   return response
 }
@@ -118,7 +118,7 @@ export function sendPcWol(
   }
 
   return request<JobAccepted>(`/api/pcs/${encodeURIComponent(pcId)}/wol`, options).then((response) => {
-    invalidatePcsAndUptimeCache()
+    invalidatePcsAndUptimeCache(pcId)
     invalidateLogCache()
     return response
   })

@@ -37,6 +37,15 @@ function expectGlobalInvalidateSet(): void {
   expect(invalidate).toHaveBeenCalledTimes(4)
 }
 
+function expectPerPcInvalidateSet(pcId: string): void {
+  const invalidate = vi.mocked(invalidateCacheByPrefix)
+  expect(invalidate).toHaveBeenCalledWith(CACHE_PREFIX.pcsList)
+  expect(invalidate).toHaveBeenCalledWith(buildUptimeSummaryPcPrefix(pcId))
+  expect(invalidate).toHaveBeenCalledWith(buildUptimeWeeklyPcPrefix(pcId))
+  expect(invalidate).toHaveBeenCalledWith(CACHE_PREFIX.logsList)
+  expect(invalidate).toHaveBeenCalledTimes(4)
+}
+
 describe('pcs api client', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -86,27 +95,27 @@ describe('pcs api client', () => {
       tags: [],
       note: null,
     })
-    expectGlobalInvalidateSet()
+    expectPerPcInvalidateSet('pc-1')
 
     vi.clearAllMocks()
     requestMock.mockResolvedValue({ pc: { id: 'pc-1' } } as never)
     await updatePc('pc-1', { note: 'updated' })
-    expectGlobalInvalidateSet()
+    expectPerPcInvalidateSet('pc-1')
 
     vi.clearAllMocks()
     requestMock.mockResolvedValue(undefined as never)
     await deletePc('pc-1')
-    expectGlobalInvalidateSet()
+    expectPerPcInvalidateSet('pc-1')
 
     vi.clearAllMocks()
     requestMock.mockResolvedValue({ pc: { id: 'pc-1' } } as never)
     await refreshPcStatus('pc-1')
-    expectGlobalInvalidateSet()
+    expectPerPcInvalidateSet('pc-1')
 
     vi.clearAllMocks()
     requestMock.mockResolvedValue({ job_id: 'job-1', state: 'queued' } as never)
     await sendPcWol('pc-1')
-    expectGlobalInvalidateSet()
+    expectPerPcInvalidateSet('pc-1')
 
     vi.clearAllMocks()
     requestMock.mockResolvedValue({ job_id: 'job-2', state: 'queued' } as never)

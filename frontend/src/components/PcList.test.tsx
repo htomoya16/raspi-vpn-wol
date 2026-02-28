@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import type { Pc, PcFilterState } from '../types/models'
 import PcList, { type PcListProps } from './PcList'
@@ -48,6 +48,10 @@ function renderPcList(overrides: Partial<PcListProps> = {}) {
 }
 
 describe('PcList', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('shows empty-state message when no pc exists', () => {
     renderPcList({ items: [] })
     expect(screen.getByText('PCがまだ登録されていません。')).toBeInTheDocument()
@@ -61,10 +65,10 @@ describe('PcList', () => {
     expect(screen.getByText('該当するPCがありません。')).toBeInTheDocument()
   })
 
-  it('keeps list layout while loading and shows loading overlay', () => {
+  it('keeps list layout while loading without showing blocking overlay', () => {
     renderPcList({ loading: true })
     expect(screen.getByText('Main PC')).toBeInTheDocument()
-    expect(screen.getByText(/PC一覧を読み込み中/)).toBeInTheDocument()
+    expect(screen.queryByText(/PC一覧を読み込み中/)).not.toBeInTheDocument()
   })
 
   it('opens detail dialog when row is tapped', async () => {

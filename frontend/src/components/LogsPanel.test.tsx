@@ -19,6 +19,27 @@ function createLogEntry(overrides: Partial<LogEntry> = {}): LogEntry {
 }
 
 describe('LogsPanel', () => {
+  it('opens front focus view when pressing header icon button', async () => {
+    const user = userEvent.setup()
+    render(
+      <LogsPanel
+        items={[createLogEntry()]}
+        loading={false}
+        error=""
+        onReload={vi.fn()}
+        onClear={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'ログを前面表示' }))
+    expect(screen.getByRole('dialog', { name: '操作ログ' })).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '前面表示を閉じる' }))
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog', { name: '操作ログ' })).not.toBeInTheDocument()
+    })
+  })
+
   it('expands and closes detail row by tapping log row', async () => {
     const user = userEvent.setup()
     render(

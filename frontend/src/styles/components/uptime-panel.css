@@ -89,6 +89,12 @@
   font-size: 0.86rem;
 }
 
+.uptime-section__subline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .uptime-nav {
   display: inline-flex;
   align-items: center;

@@ -1,7 +1,9 @@
 import type { CSSProperties, TouchEvent } from 'react'
 
+import { useDelayedVisibility } from '../../hooks/useDelayedVisibility'
 import type { UptimeSummaryItem } from '../../types/models'
 import LoadingDots from '../LoadingDots'
+import LoadingSpinner from '../LoadingSpinner'
 import type { SlideDirection, SummaryAxisTick, SummaryBucket } from './types'
 import { formatSecondsToAxisHours, formatSecondsToHours, formatSummaryLabel } from './utils'
 
@@ -44,12 +46,19 @@ function UptimeSummarySection({
   onTouchEnd,
   onTouchCancel,
 }: UptimeSummarySectionProps) {
+  const hasSummaryContent = summaryItems.length > 0
+  const showInitialLoading = summaryLoading && !hasSummaryContent
+  const showRefreshingSpinner = useDelayedVisibility(summaryLoading && hasSummaryContent, 200)
+
   return (
     <section className="uptime-section">
       <header className="uptime-section__header uptime-section__header--with-nav">
         <div>
           <h3>オンライン集計グラフ</h3>
-          <p>{dateRangeLabel}</p>
+          <p className="uptime-section__subline">
+            <span>{dateRangeLabel}</span>
+            {showRefreshingSpinner ? <LoadingSpinner ariaLabel="オンライン集計を更新中です" /> : null}
+          </p>
         </div>
 
         {!isMobile ? (
@@ -150,7 +159,7 @@ function UptimeSummarySection({
             </div>
           )}
 
-          {summaryLoading ? (
+      {showInitialLoading ? (
             <div className="uptime-loading-overlay">
               <LoadingDots ariaLabel="集計データを読み込み中です" />
             </div>

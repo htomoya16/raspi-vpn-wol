@@ -224,6 +224,25 @@
   flex-shrink: 0;
 }
 
+.pc-detail__close-btn {
+  width: 34px;
+  height: 34px;
+  border: 1px solid #2f4f80;
+  border-radius: 999px;
+  background: rgba(15, 42, 75, 0.65);
+  color: #d6e5ff;
+  font-size: 1rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.pc-detail__close-btn:hover {
+  background: rgba(32, 73, 126, 0.6);
+}
+
 .pc-detail__header h3 {
   margin: 0;
   font-size: 1rem;

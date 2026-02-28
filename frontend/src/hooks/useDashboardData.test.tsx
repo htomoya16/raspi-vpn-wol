@@ -186,7 +186,68 @@ describe('useDashboardData SSE cache invalidation', () => {
       source.emitJson('job', { id: 'job-1', state: 'running' })
     })
 
-    expect(invalidatePcsAndUptimeCache).toHaveBeenCalledWith()
+    expect(invalidatePcsAndUptimeCache).toHaveBeenCalledWith(undefined)
+    expect(invalidateLogsCache).toHaveBeenCalledTimes(1)
+    expect(loadPcs).toHaveBeenCalledTimes(1)
+    expect(loadLogs).toHaveBeenCalledTimes(1)
+  })
+
+  it('uses per-pc invalidate when job event contains pc_id in payload', async () => {
+    const source = new EventSourceStub()
+    const loadLogs = vi.fn().mockResolvedValue(undefined)
+    const loadPcs = vi.fn().mockResolvedValue(undefined)
+
+    openEventsMock.mockReturnValue(source as unknown as EventSource)
+    useLogsDataMock.mockReturnValue({
+      logs: [],
+      logsLoading: false,
+      logsError: '',
+      loadLogs,
+      clearLogsEntry: vi.fn().mockResolvedValue(undefined),
+    })
+    usePcDataMock.mockReturnValue({
+      pcs: [],
+      pcLoading: false,
+      pcError: '',
+      pcFilters: { q: '', status: '' },
+      appliedPcFilters: { q: '', status: '' },
+      createLoading: false,
+      createError: '',
+      busyById: {},
+      rowErrorById: {},
+      lastSyncedAt: '',
+      onlineCount: 0,
+      loadPcs,
+      setBusy: vi.fn(),
+      setPcError: vi.fn(),
+      setRowError: vi.fn(),
+      createPcEntry: vi.fn(),
+      deletePcEntry: vi.fn(),
+      updatePcEntry: vi.fn(),
+      refreshPcStatusEntry: vi.fn(),
+      applyPcStatusEvent: vi.fn(),
+      handleFilterChange: vi.fn(),
+      handleApplyFilters: vi.fn(),
+      handleClearFilters: vi.fn(),
+    })
+    useJobTrackerMock.mockReturnValue({
+      jobs: [],
+      trackJob: vi.fn().mockResolvedValue(undefined),
+    })
+
+    renderHook(() => useDashboardData())
+
+    vi.clearAllMocks()
+    await act(async () => {
+      source.emitJson('job', {
+        id: 'job-1',
+        payload: {
+          pc_id: 'pc-sub',
+        },
+      })
+    })
+
+    expect(invalidatePcsAndUptimeCache).toHaveBeenCalledWith('pc-sub')
     expect(invalidateLogsCache).toHaveBeenCalledTimes(1)
     expect(loadPcs).toHaveBeenCalledTimes(1)
     expect(loadLogs).toHaveBeenCalledTimes(1)

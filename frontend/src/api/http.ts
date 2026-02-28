@@ -1,4 +1,11 @@
-import { clearInFlight, getCachedValue, getInFlight, setCachedValue, setInFlight } from './cache'
+import {
+  clearInFlight,
+  getCachedValue,
+  getInFlight,
+  logCacheDebug,
+  setCachedValue,
+  setInFlight,
+} from './cache'
 
 export class ApiError extends Error {
   status: number
@@ -124,13 +131,24 @@ function startCachedFetch<T>(
 ): Promise<T> {
   const pending = getInFlight<T>(key)
   if (pending) {
+    logCacheDebug('fetch-join-inflight', { key, path })
     return pending
   }
 
+  logCacheDebug('fetch-start', { key, path })
   const next = request<T>(path, options)
     .then((data) => {
       setCachedValue(key, data, ttlMs)
+      logCacheDebug('fetch-success', { key, path, ttlMs })
       return data
+    })
+    .catch((error) => {
+      logCacheDebug('fetch-failed', {
+        key,
+        path,
+        error: error instanceof Error ? error.message : String(error),
+      })
+      throw error
     })
     .finally(() => {
       clearInFlight(key)
@@ -147,10 +165,16 @@ export async function requestCached<T>(
 ): Promise<T> {
   const cached = getCachedValue<T>(cache.key)
   if (cached !== null) {
+    logCacheDebug('request-cached-hit', {
+      key: cache.key,
+      path,
+      staleWhileRevalidate: Boolean(cache.staleWhileRevalidate),
+    })
     if (cache.staleWhileRevalidate) {
       void startCachedFetch<T>(cache.key, path, options, cache.ttlMs).catch(() => undefined)
     }
     return cached
   }
+  logCacheDebug('request-cached-miss', { key: cache.key, path })
   return startCachedFetch<T>(cache.key, path, options, cache.ttlMs)
 }

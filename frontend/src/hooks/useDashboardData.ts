@@ -33,6 +33,25 @@ function parseEventData(event: Event): Record<string, unknown> | null {
   }
 }
 
+function extractJobPcId(data: Record<string, unknown> | null): string | null {
+  if (!data) {
+    return null
+  }
+  if (typeof data.pc_id === 'string') {
+    return data.pc_id
+  }
+
+  const payload = data.payload
+  if (payload && typeof payload === 'object' && 'pc_id' in payload) {
+    const nestedPcId = (payload as { pc_id?: unknown }).pc_id
+    if (typeof nestedPcId === 'string') {
+      return nestedPcId
+    }
+  }
+
+  return null
+}
+
 export interface UseDashboardDataResult {
   notice: string
   pcs: ReturnType<typeof usePcData>['pcs']
@@ -187,8 +206,9 @@ export function useDashboardData(): UseDashboardDataResult {
       void loadLogs()
     }
 
-    const refreshFromJobEvent = () => {
-      invalidatePcsAndUptimeCache()
+    const refreshFromJobEvent = (event: Event) => {
+      const pcId = extractJobPcId(parseEventData(event))
+      invalidatePcsAndUptimeCache(pcId ?? undefined)
       invalidateLogsCache()
       void loadPcs()
       void loadLogs()

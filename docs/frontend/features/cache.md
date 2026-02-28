@@ -54,17 +54,17 @@
 
 - PC作成/更新/削除後:
   - `pcs:list:*`
-  - `uptime:summary:*`
-  - `uptime:weekly:*`
+  - `uptime:summary:pc={pc_id}:*`
+  - `uptime:weekly:pc={pc_id}:*`
   - `logs:list:*`
 - WOL送信後:
   - `pcs:list:*`
-  - `uptime:summary:*`
-  - `uptime:weekly:*`
+  - `uptime:summary:pc={pc_id}:*`
+  - `uptime:weekly:pc={pc_id}:*`
   - `logs:list:*`
 - SSEイベント受信時:
   - `pc_status`: `pcs:list:*` + 該当PCの `uptime:summary:pc={pc_id}:*` / `uptime:weekly:pc={pc_id}:*` + `logs:list:*`
-  - `job`: `pcs:list:*` + `uptime:summary:*` + `uptime:weekly:*` + `logs:list:*`
+  - `job`: `payload.pc_id` があれば該当PCのみ、なければ全体 (`uptime:summary:*` / `uptime:weekly:*`) を無効化 + `logs:list:*`
 
 ### 参照コード
 
@@ -83,12 +83,16 @@
 5. SSE受信時（`pc_status` / `job`）に `pcs/uptime/logs` のprefix invalidateを行うようにした。
 6. `src/api/http.test.ts` / `src/api/pcs.test.ts` / `src/api/logs.test.ts` でキャッシュ挙動とinvalidateを検証する。
 7. `src/hooks/useDashboardData.test.tsx` で SSE (`pc_status` / `job`) 受信時の invalidate + 再読込を検証する。
+8. `src/api/cache-flow.test.ts` で「一覧表示 → 更新系API → invalidate → 再取得」の回帰を検証する。
 
 ## 運用時の注意点
 
 - キャッシュはメモリのみで、ページリロード時は消える設計にする（学習・デバッグを簡単にするため）。
 - ロード表示は既存データを維持したまま、オーバーレイ `・・・` を重ねる。
 - モバイルのスワイプ画面では、前回データを残しつつ再検証することで視覚的なチラつきを抑える。
+- 開発時にキャッシュログを見たい場合はブラウザコンソールで `localStorage.setItem('wol:cache-debug', '1')` を設定する。
+  - 無効化は `localStorage.removeItem('wol:cache-debug')`。
+  - 本番ビルドでは `import.meta.env.DEV` が `false` のためログは出ない。
 
 ## 確認手順（開発時）
 
