@@ -5,10 +5,16 @@ from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
 
 
-def _create_pc(client: TestClient, *, id: str, mac: str = "AA:BB:CC:DD:EE:90") -> None:
+def _create_pc(
+    client: TestClient,
+    *,
+    id: str,
+    mac: str = "AA:BB:CC:DD:EE:90",
+    ip: str = "192.168.10.90",
+) -> None:
     response = client.post(
         "/api/pcs",
-        json={"id": id, "name": f"PC {id}", "mac": mac},
+        json={"id": id, "name": f"PC {id}", "mac": mac, "ip": ip},
     )
     assert response.status_code == 201, response.text
 

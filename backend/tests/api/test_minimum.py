@@ -68,7 +68,7 @@ def test_pcs_crud_flow(client: TestClient) -> None:
 
 
 def test_pcs_duplicate_id_returns_409(client: TestClient) -> None:
-    payload = {"id": "pc-dup", "name": "PC1", "mac": "00:11:22:33:44:55"}
+    payload = {"id": "pc-dup", "name": "PC1", "mac": "00:11:22:33:44:55", "ip": "192.168.10.80"}
     first = client.post("/api/pcs", json=payload)
     second = client.post("/api/pcs", json=payload)
     assert first.status_code == 201
@@ -78,7 +78,7 @@ def test_pcs_duplicate_id_returns_409(client: TestClient) -> None:
 def test_logs_supports_filters(client: TestClient) -> None:
     create_response = client.post(
         "/api/pcs",
-        json={"id": "pc-log", "name": "Log PC", "mac": "11:22:33:44:55:66"},
+        json={"id": "pc-log", "name": "Log PC", "mac": "11:22:33:44:55:66", "ip": "192.168.10.81"},
     )
     assert create_response.status_code == 201
 
@@ -92,7 +92,7 @@ def test_logs_supports_filters(client: TestClient) -> None:
 def test_wol_job_is_accepted_and_visible(client: TestClient) -> None:
     create_response = client.post(
         "/api/pcs",
-        json={"id": "pc-wol", "name": "Wol PC", "mac": "22:33:44:55:66:77"},
+        json={"id": "pc-wol", "name": "Wol PC", "mac": "22:33:44:55:66:77", "ip": "192.168.10.82"},
     )
     assert create_response.status_code == 201
 

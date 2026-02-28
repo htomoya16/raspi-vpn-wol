@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 class LogEntry(BaseModel):
     id: int = Field(..., ge=1, description="ログID。")
     pc_id: str | None = Field(default=None, description="対象PCのID。")
+    job_id: str | None = Field(default=None, description="関連ジョブID。ジョブ非関連ログは null。")
     action: str = Field(..., description="操作種別。")
     ok: bool = Field(..., description="成功時 true。")
     message: str | None = Field(default=None, description="補足メッセージ。")

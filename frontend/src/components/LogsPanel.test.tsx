@@ -90,4 +90,37 @@ describe('LogsPanel', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
   })
+
+  it('groups log rows by job id from details', () => {
+    render(
+      <LogsPanel
+        items={[
+          createLogEntry({
+            id: 1,
+            job_id: 'job-1',
+            details: { source: 'wol' },
+            message: 'first',
+          }),
+          createLogEntry({
+            id: 2,
+            details: { source: 'manual' },
+            message: 'second',
+          }),
+          createLogEntry({
+            id: 3,
+            job_id: 'job-1',
+            details: { source: 'status' },
+            message: 'third',
+          }),
+        ]}
+        loading={false}
+        error=""
+        onReload={vi.fn()}
+        onClear={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    expect(screen.getByText('ジョブ job-1')).toBeInTheDocument()
+    expect(screen.getByText('通常ログ')).toBeInTheDocument()
+  })
 })

@@ -9,7 +9,7 @@ export function toEditForm(pc: Pc | null): PcEditFormState {
   return {
     name: pc.name || '',
     mac: pc.mac || '',
-    ip: pc.ip || '',
+    ip: pc.ip,
     tags: (pc.tags || []).join(', '),
     note: pc.note || '',
   }
@@ -26,7 +26,7 @@ export function toUpdatePayload(form: PcEditFormState): PcUpdatePayload {
   return {
     name: form.name.trim(),
     mac: form.mac.trim(),
-    ip: form.ip.trim() || null,
+    ip: form.ip.trim(),
     tags: parseTags(form.tags),
     note: form.note.trim() || null,
   }

@@ -87,12 +87,12 @@ describe('PcList', () => {
     await user.click(screen.getByText('Main PC'))
     await user.click(screen.getByRole('button', { name: '編集' }))
 
-    const nameInput = screen.getByLabelText('表示名')
+    const nameInput = screen.getByLabelText(/表示名/)
     await user.clear(nameInput)
     expect(nameInput).toHaveValue('')
 
     await user.click(screen.getByRole('button', { name: '保存' }))
-    expect(await screen.findByText(/表示名とMACアドレスは必須です。/)).toBeInTheDocument()
+    expect(await screen.findByText(/表示名・MACアドレス・IPアドレスは必須です。/)).toBeInTheDocument()
   })
 
   it('opens delete confirmation and calls delete handler', async () => {

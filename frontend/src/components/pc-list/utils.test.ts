@@ -35,11 +35,11 @@ describe('pc-list utils', () => {
     expect(parseTags(' desk, ,home,lab ')).toEqual(['desk', 'home', 'lab'])
   })
 
-  it('builds update payload with null normalization', () => {
+  it('builds update payload with ip as required string', () => {
     const payload = toUpdatePayload({
       name: ' Main PC ',
       mac: ' AA:BB:CC:DD:EE:FF ',
-      ip: ' ',
+      ip: ' 192.168.10.20 ',
       tags: 'desk,home',
       note: ' ',
     })
@@ -47,7 +47,7 @@ describe('pc-list utils', () => {
     expect(payload).toEqual({
       name: 'Main PC',
       mac: 'AA:BB:CC:DD:EE:FF',
-      ip: null,
+      ip: '192.168.10.20',
       tags: ['desk', 'home'],
       note: null,
     })

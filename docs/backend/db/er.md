@@ -21,7 +21,7 @@ erDiagram
         TEXT id PK
         TEXT name
         TEXT mac_address "UNIQUE"
-        TEXT ip_address
+        TEXT ip_address "NOT NULL"
         TEXT tags_json
         TEXT note
         TEXT status
@@ -63,6 +63,7 @@ erDiagram
     logs {
         INTEGER id PK
         TEXT pc_id FK
+        TEXT job_id
         TEXT action
         INTEGER ok
         TEXT status
@@ -86,6 +87,7 @@ erDiagram
     }
 
     pcs ||--o{ logs : "logs.pc_id -> pcs.id (ON DELETE SET NULL)"
+    jobs ||--o{ logs : "logs.job_id -> jobs.id (logical reference)"
     pcs ||--o{ status_history : "status_history.pc_id -> pcs.id (ON DELETE CASCADE)"
     pcs ||--o{ uptime_daily_summary : "uptime_daily_summary.pc_id -> pcs.id (ON DELETE CASCADE)"
 ```
@@ -115,6 +117,7 @@ erDiagram
   - `idx_logs_pc_id_desc (pc_id, id DESC)`: `pc_id` 絞り込み + 新しい順
   - `idx_logs_action_id_desc (action, id DESC)`: `action` 絞り込み + 新しい順
   - `idx_logs_ok_id_desc (ok, id DESC)`: 成否絞り込み + 新しい順
+  - `idx_logs_job_id_id_desc (job_id, id DESC)`: `job_id` 単位のログ取得 + 新しい順
   - `idx_logs_created_at (created_at)`: 保持期間削除、`since/until` 範囲条件
 - `jobs`
   - `idx_jobs_job_type_state_created_at (job_type, state, created_at DESC)`: 同種ジョブの `queued/running` 最新取得
@@ -122,6 +125,7 @@ erDiagram
 ## 運用時の注意点
 
 - `pcs.mac_address` は起動時マイグレーションで正規化される（`AA:BB:CC:DD:EE:FF` 形式）。
+- `pcs.ip_address` は必須（`NOT NULL`）。`NULL/空文字` 行がある状態では `3f2a6df9d4a1` マイグレーションが失敗するため、事前に補正または削除が必要。
 - 既存データに同一MACの重複があると、一意制約作成時に起動エラーになる。重複解消後に再起動する。
 - 保持期間方針:
   - `status_history`: 1年保持（定期削除）。

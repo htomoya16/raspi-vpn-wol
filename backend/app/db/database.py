@@ -5,21 +5,14 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
+from alembic import command
+from alembic.config import Config
+
 
 DB_PATH = Path(__file__).resolve().parent / "app.db"
-
-
-def _normalize_mac_for_migration(mac_address: str) -> str:
-    normalized = mac_address.strip().replace("-", ":").replace(".", "")
-    compact = normalized.replace(":", "").lower()
-    if len(compact) != 12:
-        raise ValueError("invalid mac address length")
-    try:
-        int(compact, 16)
-    except ValueError as exc:
-        raise ValueError("invalid mac address format") from exc
-    pairs = [compact[i : i + 2].upper() for i in range(0, 12, 2)]
-    return ":".join(pairs)
+BACKEND_ROOT = Path(__file__).resolve().parents[2]
+ALEMBIC_INI_PATH = BACKEND_ROOT / "alembic.ini"
+ALEMBIC_SCRIPT_LOCATION = BACKEND_ROOT / "alembic"
 
 
 def get_connection() -> sqlite3.Connection:
@@ -38,188 +31,33 @@ def connection() -> Iterator[sqlite3.Connection]:
         conn.close()
 
 
-def init_db() -> None:
+def _has_revision_files() -> bool:
+    versions_dir = ALEMBIC_SCRIPT_LOCATION / "versions"
+    if not versions_dir.exists():
+        return False
+    return any(path.suffix == ".py" and path.name != "__init__.py" for path in versions_dir.iterdir())
+
+
+def _build_alembic_config() -> Config:
+    config = Config(str(ALEMBIC_INI_PATH))
+    config.set_main_option("script_location", str(ALEMBIC_SCRIPT_LOCATION))
+    config.set_main_option("sqlalchemy.url", f"sqlite:///{DB_PATH}")
+    # アプリ起動時の migration 実行では Uvicorn のロガー設定を上書きしない。
+    config.attributes["configure_logger"] = False
+    return config
+
+
+def run_migrations(revision: str = "head") -> None:
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-    with connection() as conn:
-        conn.execute("PRAGMA foreign_keys = ON")
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS pcs (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                mac_address TEXT NOT NULL,
-                ip_address TEXT,
-                tags_json TEXT NOT NULL DEFAULT '[]',
-                note TEXT,
-                status TEXT NOT NULL DEFAULT 'unknown',
-                last_seen_at TEXT,
-                broadcast_ip TEXT,
-                send_interface TEXT NOT NULL DEFAULT 'eth0',
-                wol_port INTEGER NOT NULL DEFAULT 9,
-                status_method TEXT NOT NULL DEFAULT 'tcp',
-                status_port INTEGER NOT NULL DEFAULT 445,
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )
-            """
-        )
+    # Alembic導入直後で revision がまだ無い場合に、開発サーバ起動をブロックしない。
+    if not _has_revision_files():
+        return
 
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS logs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                pc_id TEXT,
-                action TEXT NOT NULL,
-                ok INTEGER NOT NULL DEFAULT 1,
-                status TEXT NOT NULL,
-                message TEXT,
-                error_code TEXT,
-                details_json TEXT,
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (pc_id) REFERENCES pcs(id) ON DELETE SET NULL
-            )
-            """
-        )
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS jobs (
-                id TEXT PRIMARY KEY,
-                job_type TEXT NOT NULL,
-                state TEXT NOT NULL,
-                payload_json TEXT,
-                result_json TEXT,
-                error_message TEXT,
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                started_at TEXT,
-                finished_at TEXT,
-                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )
-            """
-        )
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS status_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                pc_id TEXT NOT NULL,
-                status TEXT NOT NULL,
-                is_online INTEGER NOT NULL CHECK (is_online IN (0, 1)),
-                changed_at TEXT NOT NULL,
-                source TEXT,
-                note TEXT,
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (pc_id) REFERENCES pcs(id) ON DELETE CASCADE
-            )
-            """
-        )
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS uptime_daily_summary (
-                pc_id TEXT NOT NULL,
-                date TEXT NOT NULL,
-                tz TEXT NOT NULL DEFAULT 'Asia/Tokyo',
-                online_seconds INTEGER NOT NULL DEFAULT 0 CHECK (online_seconds BETWEEN 0 AND 86400),
-                online_count INTEGER NOT NULL DEFAULT 0,
-                offline_count INTEGER NOT NULL DEFAULT 0,
-                first_online_at TEXT,
-                last_online_at TEXT,
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (pc_id, date, tz),
-                FOREIGN KEY (pc_id) REFERENCES pcs(id) ON DELETE CASCADE
-            )
-            """
-        )
-        conn.execute("DROP INDEX IF EXISTS idx_pcs_status")
-        conn.execute("DROP INDEX IF EXISTS idx_pcs_name")
-        conn.execute("DROP INDEX IF EXISTS idx_logs_pc_created_at")
-        conn.execute("DROP INDEX IF EXISTS idx_logs_action_created_at")
-        conn.execute("DROP INDEX IF EXISTS idx_jobs_state_created_at")
-        conn.execute("DROP INDEX IF EXISTS idx_status_history_pc_changed_at")
-        conn.execute("DROP INDEX IF EXISTS idx_uptime_daily_summary_date")
-        conn.execute("DROP INDEX IF EXISTS idx_uptime_daily_summary_pc_date")
+    alembic_config = _build_alembic_config()
+    command.upgrade(alembic_config, revision)
 
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_pcs_status_id ON pcs(status, id ASC)"
-        )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_logs_pc_id_desc ON logs(pc_id, id DESC)"
-        )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_logs_action_id_desc ON logs(action, id DESC)"
-        )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_logs_ok_id_desc ON logs(ok, id DESC)"
-        )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_logs_created_at ON logs(created_at)"
-        )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_jobs_job_type_state_created_at "
-            "ON jobs(job_type, state, created_at DESC)"
-        )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_status_history_pc_changed_id "
-            "ON status_history(pc_id, changed_at DESC, id DESC)"
-        )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_status_history_changed_at ON status_history(changed_at DESC)"
-        )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_uptime_daily_summary_pc_tz_date "
-            "ON uptime_daily_summary(pc_id, tz, date ASC)"
-        )
 
-        pc_rows = conn.execute(
-            """
-            SELECT id, mac_address
-            FROM pcs
-            """
-        ).fetchall()
-        for row in pc_rows:
-            pc_id = str(row["id"])
-            raw_mac = str(row["mac_address"])
-            try:
-                normalized_mac = _normalize_mac_for_migration(raw_mac)
-            except ValueError as exc:
-                raise RuntimeError(
-                    "pcs.mac_address の一意制約マイグレーションに失敗: "
-                    f"不正なMAC形式のレコードがあります。id={pc_id}, mac={raw_mac}"
-                ) from exc
-            if normalized_mac != raw_mac:
-                conn.execute(
-                    """
-                    UPDATE pcs
-                    SET mac_address = ?, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = ?
-                    """,
-                    (normalized_mac, pc_id),
-                )
-
-        duplicates = conn.execute(
-            """
-            SELECT
-                mac_address,
-                COUNT(*) AS cnt,
-                GROUP_CONCAT(id, ', ') AS ids
-            FROM pcs
-            WHERE mac_address IS NOT NULL
-              AND TRIM(mac_address) != ''
-            GROUP BY mac_address
-            HAVING COUNT(*) > 1
-            ORDER BY cnt DESC, mac_address ASC
-            """
-        ).fetchall()
-        if duplicates:
-            duplicate_lines = [
-                f"{row['mac_address']} ({row['cnt']}件): {row['ids']}"
-                for row in duplicates
-            ]
-            joined = "; ".join(duplicate_lines)
-            raise RuntimeError(
-                "pcs.mac_address の一意制約マイグレーションに失敗: "
-                f"重複MACが存在します。重複を解消してから再起動してください。{joined}"
-            )
-        conn.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS uq_pcs_mac_address ON pcs(mac_address)"
-        )
+def init_db() -> None:
+    # 互換のため関数名は残し、中身はAlembic適用へ委譲する。
+    run_migrations("head")

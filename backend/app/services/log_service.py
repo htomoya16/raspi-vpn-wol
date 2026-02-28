@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from app.repositories import log_repository
+from app.services import job_context
 from app.types import LogRow
 
 
@@ -13,11 +14,15 @@ def insert_log(
     message: str | None = None,
     details: dict[str, object] | None = None,
 ) -> None:
-    details_json = json.dumps(details) if details is not None else None
+    normalized_details = dict(details) if details is not None else None
+    current_job_id = job_context.get_current_job_id()
+
+    details_json = json.dumps(normalized_details) if normalized_details is not None else None
     log_repository.insert_log_row(
         action=action,
         pc_id=pc_id,
         status=status,
+        job_id=current_job_id,
         message=message,
         details_json=details_json,
     )
@@ -68,6 +73,7 @@ def _row_to_log_entry(row: LogRow) -> dict[str, object]:
     return {
         "id": row["id"],
         "pc_id": row["pc_id"],
+        "job_id": row.get("job_id"),
         "action": row["action"],
         "ok": bool(row["ok"]),
         "message": row["message"],

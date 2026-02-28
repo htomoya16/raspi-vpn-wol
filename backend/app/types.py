@@ -11,7 +11,7 @@ class PcRow(TypedDict):
     id: str
     name: str
     mac_address: str
-    ip_address: str | None
+    ip_address: str
     tags_json: str
     note: str | None
     status: PcStatus
@@ -28,6 +28,7 @@ class PcRow(TypedDict):
 class LogRow(TypedDict):
     id: int
     pc_id: str | None
+    job_id: str | None
     action: str
     ok: int
     message: str | None

@@ -192,12 +192,16 @@ def update_pc(pc_id: str, payload: PcUpdate) -> dict[str, object]:
     next_mac = patch["mac"] if "mac" in patch else existing["mac_address"]
     _ensure_mac_unique(str(next_mac), exclude_pc_id=existing["id"])
 
+    existing_ip = existing.get("ip_address")
+    if not isinstance(existing_ip, str) or not existing_ip.strip():
+        raise ValueError(f"ip_address is required for existing pc: {existing['id']}")
+
     try:
         pc_row = pc_registry_service.upsert_pc(
             pc_id=existing["id"],
             name=patch["name"] if "name" in patch else existing["name"],
             mac_address=patch["mac"] if "mac" in patch else existing["mac_address"],
-            ip_address=patch["ip"] if "ip" in patch else existing["ip_address"],
+            ip_address=str(patch["ip"]) if "ip" in patch else existing_ip,
             tags=patch["tags"] if "tags" in patch else _parse_tags(existing.get("tags_json", "[]")),
             note=patch["note"] if "note" in patch else existing.get("note"),
             status=str(existing.get("status") or "unknown"),

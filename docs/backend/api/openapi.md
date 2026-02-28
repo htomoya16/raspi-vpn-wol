@@ -23,6 +23,7 @@
 - responses: `201`, `400`, `409`, `422`
 - note: `id` または `mac` が重複する場合は `409` を返す
 - note: `409` の `detail` 例: `既に存在しています（MAC: AA:BB:CC:DD:EE:FF）`
+- note: `ip` は必須（IPv4）
 
 ### `GET /api/pcs/{pc_id}`
 
@@ -38,6 +39,7 @@
 - responses: `200`, `400`, `409`, `404`, `422`
 - note: 更新後の `mac` が他PCと重複する場合は `409` を返す
 - note: `409` の `detail` 例: `既に存在しています（MAC: AA:BB:CC:DD:EE:FF）`
+- note: `ip` を更新する場合は `null` 不可（IPv4文字列のみ）
 
 ### `DELETE /api/pcs/{pc_id}`
 
@@ -61,7 +63,6 @@
 - operationId: `refreshPcStatus`
 - summary: 単体ステータス更新
 - responses: `200`, `400`, `404`
-- note: `ip_address` 未設定時は `unknown` を返す
 - note: 既に `unreachable` のPCは、判定結果が `offline` でも `unreachable` を維持する
 
 ### `POST /api/pcs/status/refresh`
@@ -129,6 +130,7 @@
 - `WolRequest`: `broadcast`, `port`, `repeat`
 - `JobAccepted`, `Job`, `JobState`: 非同期処理
 - `LogEntry`, `LogListResponse`, `LogClearResponse`: 監査ログ
+  - `LogEntry.job_id` はジョブ由来ログの関連ID（null可）
 - `PcUptimeSummaryResponse`: オンライン集計一覧（日/週/月/年グラフ向け）
 - `PcWeeklyTimelineResponse`: 週タイムライン（1日ごとのオンライン区間）
 - `Error`: 共通エラー（`code`, `message`, `details`）

@@ -37,9 +37,9 @@
   - pingコマンド不在で `ValueError`。
   - 失敗ログが残る。
 
-- `test_status_service_returns_unknown_when_ip_is_not_configured`
-  - `ip_address` 未設定時は `ValueError` ではなく `unknown` を返す。
-  - `action=status` ログに `status=unknown` が記録される。
+- `test_status_service_raises_when_ip_is_not_configured`
+  - `ip_address` 未設定時は `ValueError` を送出する。
+  - `action=status` ログに `status=failed` が記録される。
 
 ## `wol_service`
 

@@ -13,7 +13,7 @@ def _pc_row(**overrides: object) -> dict[str, object]:
         "id": "pc-1",
         "name": "PC One",
         "mac_address": "AA:BB:CC:DD:EE:FF",
-        "ip_address": None,
+        "ip_address": "192.168.10.10",
         "tags_json": "[]",
         "note": None,
         "status": "unknown",
@@ -123,7 +123,7 @@ def test_status_service_ping_paths(monkeypatch: pytest.MonkeyPatch) -> None:
     assert any(log["status"] == "failed" for log in logs)
 
 
-def test_status_service_returns_unknown_when_ip_is_not_configured(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_status_service_raises_when_ip_is_not_configured(monkeypatch: pytest.MonkeyPatch) -> None:
     logs: list[dict[str, object]] = []
 
     def _capture_log(**kwargs: object) -> None:
@@ -136,6 +136,6 @@ def test_status_service_returns_unknown_when_ip_is_not_configured(monkeypatch: p
         lambda _: _pc_row(ip_address=None),
     )
 
-    result = status_service.get_pc_status("pc-1")
-    assert result == {"pc_id": "pc-1", "status": "unknown"}
-    assert logs[-1]["status"] == "unknown"
+    with pytest.raises(ValueError, match="ip_address is required for pc"):
+        status_service.get_pc_status("pc-1")
+    assert logs[-1]["status"] == "failed"

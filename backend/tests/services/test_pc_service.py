@@ -11,7 +11,7 @@ def _pc_row(**overrides: object) -> dict[str, object]:
         "id": "pc-1",
         "name": "PC One",
         "mac_address": "AA:BB:CC:DD:EE:FF",
-        "ip_address": None,
+        "ip_address": "192.168.10.10",
         "tags_json": "[]",
         "note": None,
         "status": "unknown",
@@ -319,7 +319,7 @@ def test_create_pc_invalidates_list_cache(monkeypatch: pytest.MonkeyPatch) -> No
     pc_service.list_pcs(q=None, status=None, tag=None, limit=50, cursor=None)
     assert call_count["list_pcs"] == 1
 
-    payload = PcCreate(id="pc-new", name="New PC", mac="AA:BB:CC:DD:EE:99")
+    payload = PcCreate(id="pc-new", name="New PC", mac="AA:BB:CC:DD:EE:99", ip="192.168.10.99")
     created = pc_service.create_pc(payload)
     assert created["id"] == "pc-new"
 
