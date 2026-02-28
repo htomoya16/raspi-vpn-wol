@@ -154,6 +154,7 @@ function App() {
                 selectedPcId={activeSelectedPcId}
                 onSelectPc={setSelectedPcId}
                 dataVersion={lastSyncedAt}
+                enabled={desktopView === 'uptime'}
               />
             </div>
           </div>

@@ -38,6 +38,7 @@ interface UseUptimePanelStateInput {
   selectedPcId: string
   dataVersion?: string
   isMobile: boolean
+  enabled: boolean
 }
 
 export interface UptimePanelState {
@@ -85,6 +86,7 @@ export function useUptimePanelState({
   selectedPcId,
   dataVersion = '',
   isMobile,
+  enabled,
 }: UseUptimePanelStateInput): UptimePanelState {
   const [summaryBucket, setSummaryBucket] = useState<SummaryBucket>('day')
   const [summaryAnchor, setSummaryAnchor] = useState<Date>(() => new Date())
@@ -241,6 +243,14 @@ export function useUptimePanelState({
   }, [activePcId])
 
   useEffect(() => {
+    if (!enabled) {
+      pendingSummarySlideRef.current = null
+      setSummary(null)
+      setSummaryError('')
+      setSummaryLoading(false)
+      return
+    }
+
     let cancelled = false
 
     async function runSummaryFlow() {
@@ -298,9 +308,17 @@ export function useUptimePanelState({
     return () => {
       cancelled = true
     }
-  }, [activePcId, dataVersion, summaryQuery, useMockData])
+  }, [activePcId, dataVersion, enabled, summaryQuery, useMockData])
 
   useEffect(() => {
+    if (!enabled) {
+      pendingWeeklySlideRef.current = null
+      setWeekly(null)
+      setWeeklyError('')
+      setWeeklyLoading(false)
+      return
+    }
+
     let cancelled = false
 
     async function runWeeklyFlow() {
@@ -355,7 +373,7 @@ export function useUptimePanelState({
     return () => {
       cancelled = true
     }
-  }, [activePcId, dataVersion, useMockData, weekStart])
+  }, [activePcId, dataVersion, enabled, useMockData, weekStart])
 
   useEffect(() => {
     if (!summarySlide) {

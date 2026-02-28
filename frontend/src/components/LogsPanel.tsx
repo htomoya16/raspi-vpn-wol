@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useDelayedVisibility } from '../hooks/useDelayedVisibility'
@@ -195,14 +195,6 @@ function LogsPanel({
     })
   }
 
-  function handleRowKeyDown(event: ReactKeyboardEvent<HTMLTableRowElement>, id: number) {
-    if (event.key !== 'Enter' && event.key !== ' ') {
-      return
-    }
-    event.preventDefault()
-    toggleDetails(id)
-  }
-
   function toggleGroup(key: string) {
     setCollapsedGroupKeys((prev) => {
       const next = new Set(prev)
@@ -314,11 +306,6 @@ function LogsPanel({
                       <Fragment key={item.id}>
                         <tr
                           className={`logs-table__row${hasDetails ? ' logs-table__row--expandable' : ''}${isExpanded ? ' logs-table__row--expanded' : ''}`}
-                          role={hasDetails ? 'button' : undefined}
-                          tabIndex={hasDetails ? 0 : undefined}
-                          aria-expanded={hasDetails ? isExpanded : undefined}
-                          onClick={hasDetails ? () => toggleDetails(item.id) : undefined}
-                          onKeyDown={hasDetails ? (event) => handleRowKeyDown(event, item.id) : undefined}
                         >
                           <td data-label="時刻">
                             <span className="logs-time-cell">
@@ -343,9 +330,15 @@ function LogsPanel({
                             <span className="logs-message-cell">
                               <span className="logs-message-cell__text">{item.message || '-'}</span>
                               {hasDetails ? (
-                                <span className={`logs-message-cell__hint${isExpanded ? ' logs-message-cell__hint--open' : ''}`}>
-                                  {isExpanded ? 'タップで閉じる' : 'タップで詳細'}
-                                </span>
+                                <button
+                                  type="button"
+                                  className={`logs-message-cell__hint${isExpanded ? ' logs-message-cell__hint--open' : ''}`}
+                                  onClick={() => toggleDetails(item.id)}
+                                  aria-expanded={isExpanded}
+                                  aria-label={isExpanded ? '詳細を閉じる' : '詳細を表示'}
+                                >
+                                  {isExpanded ? '閉じる' : '詳細'}
+                                </button>
                               ) : null}
                             </span>
                           </td>

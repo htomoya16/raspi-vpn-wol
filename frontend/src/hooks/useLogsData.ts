@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 import type { LogEntry } from '../types/models'
 import { formatApiError } from '../api/http'
@@ -22,18 +22,29 @@ export function useLogsData({ setNotice }: UseLogsDataParams): UseLogsDataReturn
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [logsLoading, setLogsLoading] = useState(false)
   const [logsError, setLogsError] = useState('')
+  const loadLogsRequestSeqRef = useRef(0)
 
   const loadLogs = useCallback(async () => {
+    const requestSeq = loadLogsRequestSeqRef.current + 1
+    loadLogsRequestSeqRef.current = requestSeq
     setLogsLoading(true)
     setLogsError('')
 
     try {
       const data = await listLogs({ limit: DEFAULT_LOG_LIMIT })
+      if (requestSeq !== loadLogsRequestSeqRef.current) {
+        return
+      }
       setLogs(data?.items || [])
     } catch (error) {
+      if (requestSeq !== loadLogsRequestSeqRef.current) {
+        return
+      }
       setLogsError(formatApiError(error))
     } finally {
-      setLogsLoading(false)
+      if (requestSeq === loadLogsRequestSeqRef.current) {
+        setLogsLoading(false)
+      }
     }
   }, [])
 
@@ -41,6 +52,7 @@ export function useLogsData({ setNotice }: UseLogsDataParams): UseLogsDataReturn
     setLogsError('')
     try {
       const data = await clearLogs()
+      loadLogsRequestSeqRef.current += 1
       setLogs([])
       const deleted = Number(data?.deleted || 0)
       setNotice(`ログを削除しました: ${deleted}件`)

@@ -11,15 +11,24 @@ interface UptimePanelProps {
   onSelectPc: (pcId: string) => void
   dataVersion?: string
   embedded?: boolean
+  enabled?: boolean
 }
 
-function UptimePanel({ pcs, selectedPcId, onSelectPc, dataVersion = '', embedded = false }: UptimePanelProps) {
+function UptimePanel({
+  pcs,
+  selectedPcId,
+  onSelectPc,
+  dataVersion = '',
+  embedded = false,
+  enabled = true,
+}: UptimePanelProps) {
   const isMobile = useMediaQuery('(max-width: 760px)')
   const state = useUptimePanelState({
     pcs,
     selectedPcId,
     dataVersion,
     isMobile,
+    enabled,
   })
 
   const content = (

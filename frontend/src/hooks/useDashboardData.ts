@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { openEvents } from '../api/events'
 import { formatApiError } from '../api/http'
+import { fetchJob } from '../api/jobs'
 import { invalidateLogsCache } from '../api/logs'
 import { invalidatePcsAndUptimeCache, refreshAllStatuses, sendPcWol } from '../api/pcs'
 import type { PcCreatePayload, PcFilterState, PcStatus, PcUpdatePayload } from '../types/models'
@@ -56,6 +57,19 @@ function extractJobPcId(data: Record<string, unknown> | null): string | null {
   return null
 }
 
+function extractEventJobId(data: Record<string, unknown> | null): string | null {
+  if (!data) {
+    return null
+  }
+  if (typeof data.job_id === 'string' && data.job_id.trim()) {
+    return data.job_id.trim()
+  }
+  if (typeof data.id === 'string' && data.id.trim()) {
+    return data.id.trim()
+  }
+  return null
+}
+
 export interface UseDashboardDataResult {
   notice: string
   pcs: ReturnType<typeof usePcData>['pcs']
@@ -92,6 +106,7 @@ export function useDashboardData(): UseDashboardDataResult {
   const [notice, setNotice] = useState('')
   const [refreshAllLoading, setRefreshAllLoading] = useState(false)
   const refreshAllInFlightRef = useRef(false)
+  const trackedJobIdsRef = useRef<Set<string>>(new Set())
 
   const {
     logs,
@@ -141,6 +156,10 @@ export function useDashboardData(): UseDashboardDataResult {
     onTerminal: refreshFromTerminal,
     onProgress: refreshLogsDuringProgress,
   })
+
+  useEffect(() => {
+    trackedJobIdsRef.current = new Set(jobs.map((job) => job.id))
+  }, [jobs])
 
   const sendPcWolEntry = useCallback(
     async (pcId: string) => {
@@ -223,11 +242,45 @@ export function useDashboardData(): UseDashboardDataResult {
       if (!isTerminalJobState(data?.state)) {
         return
       }
-      const pcId = extractJobPcId(data)
-      invalidatePcsAndUptimeCache(pcId ?? undefined)
+
+      const jobId = extractEventJobId(data)
+      if (!jobId) {
+        return
+      }
+
+      if (trackedJobIdsRef.current.has(jobId)) {
+        return
+      }
+
+      const eventPcId = extractJobPcId(data)
       invalidateLogsCache()
-      void loadPcs()
       void loadLogs()
+
+      void (async () => {
+        let pcId = eventPcId
+        let jobType = ''
+
+        try {
+          const response = await fetchJob(jobId)
+          jobType = typeof response.job.type === 'string' ? response.job.type : ''
+          if (!pcId && response.job.payload && typeof response.job.payload === 'object') {
+            pcId = extractJobPcId(response.job.payload as Record<string, unknown>)
+          }
+        } catch {
+          // noop: fetch失敗時はイベントデータのみで判定する
+        }
+
+        if (jobType === 'status_refresh_all') {
+          invalidatePcsAndUptimeCache()
+          await loadPcs()
+          return
+        }
+
+        if (pcId) {
+          invalidatePcsAndUptimeCache(pcId)
+          await loadPcs()
+        }
+      })()
     }
 
     source.addEventListener('pc_status', handlePcStatusEvent)

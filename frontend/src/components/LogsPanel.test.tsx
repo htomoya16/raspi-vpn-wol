@@ -56,10 +56,10 @@ describe('LogsPanel', () => {
 
     expect(screen.queryByText(/"source": "manual"/)).not.toBeInTheDocument()
 
-    await user.click(screen.getByText('status checked'))
+    await user.click(screen.getByRole('button', { name: '詳細を表示' }))
     expect(screen.getByText(/"source": "manual"/)).toBeInTheDocument()
 
-    await user.click(screen.getByText('status checked'))
+    await user.click(screen.getByRole('button', { name: '詳細を閉じる' }))
     expect(screen.queryByText(/"source": "manual"/)).not.toBeInTheDocument()
   })
 
