@@ -1,19 +1,8 @@
 import type { LogClearResponse, LogListResponse } from '../types/models'
-import { request } from './http'
-
-function toQueryString(params: object): string {
-  const search = new URLSearchParams()
-
-  Object.entries(params).forEach(([key, value]) => {
-    if (value === undefined || value === null || value === '') {
-      return
-    }
-    search.set(key, String(value))
-  })
-
-  const query = search.toString()
-  return query ? `?${query}` : ''
-}
+import { invalidateCacheByPrefix } from './cache'
+import { buildLogsListCacheKey, CACHE_PREFIX, CACHE_TTL_MS } from './cache-policy'
+import { request, requestCached } from './http'
+import { toQueryString } from './query'
 
 export interface ListLogsParams {
   pc_id?: string
@@ -27,11 +16,24 @@ export interface ListLogsParams {
 
 export function listLogs(params: ListLogsParams = {}): Promise<LogListResponse> {
   const query = toQueryString(params)
-  return request<LogListResponse>(`/api/logs${query}`)
+  return requestCached<LogListResponse>(
+    `/api/logs${query}`,
+    {
+      key: buildLogsListCacheKey(query),
+      ttlMs: CACHE_TTL_MS.logsList,
+      staleWhileRevalidate: true,
+    },
+  )
 }
 
-export function clearLogs(): Promise<LogClearResponse> {
-  return request<LogClearResponse>('/api/logs', {
+export function invalidateLogsCache(): void {
+  invalidateCacheByPrefix(CACHE_PREFIX.logsList)
+}
+
+export async function clearLogs(): Promise<LogClearResponse> {
+  const response = await request<LogClearResponse>('/api/logs', {
     method: 'DELETE',
   })
+  invalidateLogsCache()
+  return response
 }

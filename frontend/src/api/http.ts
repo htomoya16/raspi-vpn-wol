@@ -1,3 +1,5 @@
+import { clearInFlight, getCachedValue, getInFlight, setCachedValue, setInFlight } from './cache'
+
 export class ApiError extends Error {
   status: number
   detail: string
@@ -106,4 +108,49 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   }
 
   return data as T
+}
+
+export interface RequestCacheOptions {
+  key: string
+  ttlMs: number
+  staleWhileRevalidate?: boolean
+}
+
+function startCachedFetch<T>(
+  key: string,
+  path: string,
+  options: RequestInit,
+  ttlMs: number,
+): Promise<T> {
+  const pending = getInFlight<T>(key)
+  if (pending) {
+    return pending
+  }
+
+  const next = request<T>(path, options)
+    .then((data) => {
+      setCachedValue(key, data, ttlMs)
+      return data
+    })
+    .finally(() => {
+      clearInFlight(key)
+    })
+
+  setInFlight(key, next)
+  return next
+}
+
+export async function requestCached<T>(
+  path: string,
+  cache: RequestCacheOptions,
+  options: RequestInit = {},
+): Promise<T> {
+  const cached = getCachedValue<T>(cache.key)
+  if (cached !== null) {
+    if (cache.staleWhileRevalidate) {
+      void startCachedFetch<T>(cache.key, path, options, cache.ttlMs).catch(() => undefined)
+    }
+    return cached
+  }
+  return startCachedFetch<T>(cache.key, path, options, cache.ttlMs)
 }

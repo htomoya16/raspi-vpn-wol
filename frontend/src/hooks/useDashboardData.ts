@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { openEvents } from '../api/events'
 import { formatApiError } from '../api/http'
-import { refreshAllStatuses, sendPcWol } from '../api/pcs'
+import { invalidateLogsCache } from '../api/logs'
+import { invalidatePcsAndUptimeCache, refreshAllStatuses, sendPcWol } from '../api/pcs'
 import type { PcCreatePayload, PcFilterState, PcStatus, PcUpdatePayload } from '../types/models'
 import { useJobTracker } from './useJobTracker'
 import { useLogsData } from './useLogsData'
@@ -181,10 +182,14 @@ export function useDashboardData(): UseDashboardDataResult {
         return
       }
       applyPcStatusEvent(pcId, status, updatedAt, normalizedLastSeenAt)
+      invalidatePcsAndUptimeCache(pcId)
+      invalidateLogsCache()
       void loadLogs()
     }
 
     const refreshFromJobEvent = () => {
+      invalidatePcsAndUptimeCache()
+      invalidateLogsCache()
       void loadPcs()
       void loadLogs()
     }

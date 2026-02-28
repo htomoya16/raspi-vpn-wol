@@ -7,7 +7,7 @@
 
 ## 変更内容
 
-- 2026-02-27: APIキャッシュ設計（キー/TTL/無効化ルール）を追加。
+- 2026-02-27: APIキャッシュ実装を追加（in-memory + requestCached + invalidate）。
 - 2026-02-27: `UptimePanel` を `components/uptime/` 配下へ分割し、Hook/Utils/CSS責務を整理。
 - 2026-02-27: 稼働時間UIを更新（`稼働タイムライン` 名称、モバイル1日表示、スワイプ操作、ロード表示安定化）。
 - 2026-02-25: `docs/frontend/features/` へ機能別ドキュメントを分割。
