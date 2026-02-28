@@ -9,8 +9,8 @@
 
 - `app.main` の `lifespan` で起動時に `init_db()` を実行。
 - `lifespan` で 60秒間隔の定期ステータス監視タスクを起動する。
-- `init_db()` で `pcs` / `logs` / `jobs` / `status_history` / `uptime_daily_summary` を `CREATE TABLE IF NOT EXISTS`。
-- `init_db()` で、実クエリに合わせたインデックスを再作成する（不要インデックスは `DROP INDEX IF EXISTS` で整理）。
+- `init_db()` は Alembic `upgrade head` を実行してスキーマを最新化する。
+- `RUN_MIGRATIONS_ON_STARTUP=0` のときは起動時マイグレーションをスキップする。
 - 初期スキーマ方針:
   - `pcs`: PC設定 + 状態保持
   - `logs`: 操作履歴
@@ -28,7 +28,7 @@
 
 ## 運用時の注意点
 
-- 現在は「初期化前提」のため、スキーマ変更時は `app.db` 再作成で追従する。
+- 本番はデプロイ工程で `alembic upgrade head` を実行し、アプリ起動時マイグレーションは無効化（`RUN_MIGRATIONS_ON_STARTUP=0`）を推奨する。
 - DBファイルは `backend/app/db/app.db`。
 - `health` はアプリ生存確認のみで、外部依存（LAN疎通等）は検査しない。
 - 起動直後にAPI異常がある場合は `init_db()` の例外有無を最優先で確認する。

@@ -34,6 +34,21 @@ def get_active_job_by_type(job_type: str) -> dict[str, object] | None:
     return _to_job(row)
 
 
+def create_or_get_active_job(
+    job_type: str,
+    payload: dict[str, object] | None,
+) -> tuple[dict[str, object], bool]:
+    normalized_type = job_type.strip()
+    if not normalized_type:
+        raise ValueError("job_type is required")
+    payload_json = json.dumps(payload) if payload is not None else None
+    row, created = job_repository.create_or_get_active_job(
+        job_type=normalized_type,
+        payload_json=payload_json,
+    )
+    return _to_job(row), created
+
+
 async def run_job(
     job_id: str,
     runner: Callable[[], object],

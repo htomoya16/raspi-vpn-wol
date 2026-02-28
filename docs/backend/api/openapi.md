@@ -29,7 +29,7 @@
 
 - operationId: `getPc`
 - summary: PC詳細取得
-- responses: `200`, `404`
+- responses: `200`, `400`, `404`
 
 ### `PATCH /api/pcs/{pc_id}`
 
@@ -45,7 +45,7 @@
 
 - operationId: `deletePc`
 - summary: PC削除
-- responses: `204`, `404`
+- responses: `204`, `400`, `404`
 
 ### `POST /api/pcs/{pc_id}/wol`
 
@@ -53,7 +53,7 @@
 - summary: WOL送信（非同期）
 - requestBody: `WolRequest`（任意）
 - responses: `202`, `400`, `404`, `422`
-- note: 送信後は `booting` へ更新し、バックエンドで3秒間隔の起動確認（最大20回）を行う
+- note: 送信後は `booting` へ更新し、バックエンドで3秒間隔の起動確認（最大20回 / 最大60秒）を行う
 - note: WOL送信自体が失敗した場合、PC状態は `unreachable` に更新され、ジョブ状態は `failed` で終了する
 - note: 起動確認で `unknown` / `unreachable` が返った場合は再試行せず、その状態でジョブを `failed` 終了する
 - note: 起動確認で `online` に到達しない場合（`offline/unknown/unreachable`）はジョブ状態を `failed` として終了する
@@ -102,7 +102,9 @@
 - operationId: `listLogs`
 - summary: 操作ログ取得
 - query: `pc_id`, `action`, `ok`, `since`, `until`, `limit`, `cursor`
-- responses: `200`, `422`
+- responses: `200`, `400`, `422`
+- note: `since` / `until` はタイムゾーン付きISO8601日時（例: `2026-03-01T00:00:00+09:00`）
+- note: `since` / `until` はサーバー側でUTCに正規化して検索する
 
 ### `DELETE /api/logs`
 
@@ -114,7 +116,7 @@
 
 - operationId: `getJob`
 - summary: ジョブ状態取得
-- responses: `200`, `404`
+- responses: `200`, `400`, `404`
 
 ### `GET /api/events`
 
@@ -133,4 +135,4 @@
   - `LogEntry.job_id` はジョブ由来ログの関連ID（null可）
 - `PcUptimeSummaryResponse`: オンライン集計一覧（日/週/月/年グラフ向け）
 - `PcWeeklyTimelineResponse`: 週タイムライン（1日ごとのオンライン区間）
-- `Error`: 共通エラー（`code`, `message`, `details`）
+- `Error`: 基本は FastAPI 既定エラー形式（`detail`）

@@ -44,7 +44,7 @@
 - 実装変更時は、該当機能ページを同時更新する。
 - API仕様の確認は `docs/backend/api/openapi.md` を参照する。
 - API I/F変更時は、入力項目・バリデーション・代表レスポンスを明記する。
-- DBスキーマ変更時は、初期化手順（`app.db` 再作成）を合わせて追記する。
+- DBスキーマ変更時は、Alembicリビジョン追加と適用手順（`alembic upgrade head`）を合わせて追記する。
 
 ## 未実装 / 改善候補
 
@@ -61,6 +61,7 @@
 
 ## DB 設計ドキュメント
 
+- `docs/backend/db/README.md`（DBドキュメント入口）
 - `docs/backend/db/er.md`（DBスキーマの正）
 - `docs/backend/db/uptime-tables.md`（uptime機能向けDDL案）
 - `docs/backend/db/indexes.md`（実クエリとインデックス対応）

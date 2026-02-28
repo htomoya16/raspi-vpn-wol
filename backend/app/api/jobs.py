@@ -12,7 +12,10 @@ router = APIRouter()
     "/jobs/{job_id}",
     response_model=JobResponse,
     summary="ジョブ状態取得",
-    responses={404: {"description": "対象が存在しない"}},
+    responses={
+        400: {"description": "入力値不正"},
+        404: {"description": "対象が存在しない"},
+    },
 )
 def get_job(job_id: str) -> JobResponse:
     try:

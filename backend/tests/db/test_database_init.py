@@ -62,3 +62,12 @@ def test_connection_commits_changes(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     assert row is not None
     assert row["name"] == "alice"
 
+
+def test_init_db_can_skip_startup_migrations(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("RUN_MIGRATIONS_ON_STARTUP", "0")
+    called: list[str] = []
+    monkeypatch.setattr(db_module, "run_migrations", lambda revision="head": called.append(revision))
+
+    db_module.init_db()
+
+    assert called == []

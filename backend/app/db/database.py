@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 from contextlib import contextmanager
+import os
 from pathlib import Path
 from typing import Iterator
 
@@ -59,5 +60,8 @@ def run_migrations(revision: str = "head") -> None:
 
 
 def init_db() -> None:
+    # Production can run migrations in deploy step and disable startup migration.
+    if os.getenv("RUN_MIGRATIONS_ON_STARTUP", "1").strip().lower() in {"0", "false", "no"}:
+        return
     # 互換のため関数名は残し、中身はAlembic適用へ委譲する。
     run_migrations("head")

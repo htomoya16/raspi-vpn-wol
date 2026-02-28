@@ -123,4 +123,38 @@ describe('LogsPanel', () => {
     expect(screen.getByText('ジョブ job-1')).toBeInTheDocument()
     expect(screen.getByText('通常ログ')).toBeInTheDocument()
   })
+
+  it('toggles grouped logs open and close with group header', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <LogsPanel
+        items={[
+          createLogEntry({
+            id: 1,
+            job_id: 'job-1',
+            details: { source: 'wol' },
+            message: 'grouped message',
+          }),
+          createLogEntry({
+            id: 2,
+            details: { source: 'manual' },
+            message: 'normal message',
+          }),
+        ]}
+        loading={false}
+        error=""
+        onReload={vi.fn()}
+        onClear={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    expect(screen.getByText('grouped message')).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /ジョブ job-1/ }))
+    expect(screen.queryByText('grouped message')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /ジョブ job-1/ }))
+    expect(screen.getByText('grouped message')).toBeInTheDocument()
+  })
 })

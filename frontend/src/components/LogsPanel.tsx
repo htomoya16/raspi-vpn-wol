@@ -92,10 +92,27 @@ function LogsPanel({
   const [focusOpen, setFocusOpen] = useState(false)
   const [clearLoading, setClearLoading] = useState(false)
   const [expandedDetailIds, setExpandedDetailIds] = useState<Set<number>>(() => new Set())
+  const [collapsedGroupKeys, setCollapsedGroupKeys] = useState<Set<string>>(() => new Set())
   const hasItems = items.length > 0
   const logGroups = useMemo(() => buildLogGroups(items), [items])
   const showInitialLoading = loading && !hasItems
   const showRefreshingSpinner = useDelayedVisibility(loading && hasItems, 200)
+
+  useEffect(() => {
+    const activeKeys = new Set(logGroups.map((group) => group.key))
+    setCollapsedGroupKeys((prev) => {
+      const next = new Set<string>()
+      for (const key of prev) {
+        if (activeKeys.has(key)) {
+          next.add(key)
+        }
+      }
+      if (next.size === prev.size) {
+        return prev
+      }
+      return next
+    })
+  }, [logGroups])
 
   useEffect(() => {
     if (typeof document === 'undefined') {
@@ -186,6 +203,18 @@ function LogsPanel({
     toggleDetails(id)
   }
 
+  function toggleGroup(key: string) {
+    setCollapsedGroupKeys((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        next.add(key)
+      }
+      return next
+    })
+  }
+
   function renderContent(titleId: string, showFocusButton: boolean, showClearButton: boolean) {
     return (
     <>
@@ -254,13 +283,28 @@ function LogsPanel({
                 <Fragment key={group.key}>
                   <tr className="logs-table__group-row">
                     <td colSpan={5}>
-                      <span className="logs-table__group-label">
-                        <span>{group.label}</span>
-                        <span>{group.items.length}件</span>
-                      </span>
+                      <button
+                        type="button"
+                        className="logs-table__group-toggle"
+                        aria-expanded={!collapsedGroupKeys.has(group.key)}
+                        onClick={() => toggleGroup(group.key)}
+                      >
+                        <span className="logs-table__group-label">
+                          <span className="logs-table__group-head">
+                            <span
+                              className={`logs-table__group-caret${collapsedGroupKeys.has(group.key) ? ' logs-table__group-caret--collapsed' : ''}`}
+                              aria-hidden="true"
+                            >
+                              ▾
+                            </span>
+                            <span>{group.label}</span>
+                          </span>
+                          <span>{group.items.length}件</span>
+                        </span>
+                      </button>
                     </td>
                   </tr>
-                  {group.items.map((item) => {
+                  {!collapsedGroupKeys.has(group.key) ? group.items.map((item) => {
                     const detailsText = formatDetails(item.details)
                     const hasDetails = detailsText !== '-'
                     const isExpanded = hasDetails && expandedDetailIds.has(item.id)
@@ -317,7 +361,7 @@ function LogsPanel({
                         ) : null}
                       </Fragment>
                     )
-                  })}
+                  }) : null}
                 </Fragment>
               ))}
             </tbody>
