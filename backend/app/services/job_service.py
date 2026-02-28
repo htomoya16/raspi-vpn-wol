@@ -5,7 +5,7 @@ import json
 from collections.abc import Callable
 
 from app.repositories import job_repository
-from app.services import event_service
+from app.services import event_service, job_context
 
 
 def create_job(job_type: str, payload: dict[str, object] | None) -> dict[str, object]:
@@ -40,6 +40,7 @@ async def run_job(
 ) -> None:
     job_repository.mark_running(job_id)
     await event_service.event_broker.publish("job", {"job_id": job_id, "state": "running"})
+    token = job_context.set_current_job_id(job_id)
 
     try:
         result = await asyncio.to_thread(runner)
@@ -57,6 +58,8 @@ async def run_job(
             "job",
             {"job_id": job_id, "state": "failed", "error": str(exc)},
         )
+    finally:
+        job_context.reset_current_job_id(token)
 
 
 def _to_job(row: dict[str, object]) -> dict[str, object]:

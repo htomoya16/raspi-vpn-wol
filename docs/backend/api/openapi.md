@@ -129,6 +129,7 @@
 - `WolRequest`: `broadcast`, `port`, `repeat`
 - `JobAccepted`, `Job`, `JobState`: 非同期処理
 - `LogEntry`, `LogListResponse`, `LogClearResponse`: 監査ログ
+  - `LogEntry.job_id` はジョブ由来ログの関連ID（null可）
 - `PcUptimeSummaryResponse`: オンライン集計一覧（日/週/月/年グラフ向け）
 - `PcWeeklyTimelineResponse`: 週タイムライン（1日ごとのオンライン区間）
 - `Error`: 共通エラー（`code`, `message`, `details`）

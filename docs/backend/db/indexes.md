@@ -18,6 +18,7 @@
 - `idx_logs_pc_id_desc` on `logs(pc_id, id DESC)`
 - `idx_logs_action_id_desc` on `logs(action, id DESC)`
 - `idx_logs_ok_id_desc` on `logs(ok, id DESC)`
+- `idx_logs_job_id_id_desc` on `logs(job_id, id DESC)`
 - `idx_logs_created_at` on `logs(created_at)`
 - `idx_jobs_job_type_state_created_at` on `jobs(job_type, state, created_at DESC)`
 - `idx_status_history_pc_changed_id` on `status_history(pc_id, changed_at DESC, id DESC)`
@@ -45,6 +46,10 @@
 - `idx_logs_ok_id_desc`
   - 対応: `backend/app/repositories/log_repository.py` の `WHERE ok = ?` + `ORDER BY id DESC`
   - 目的: 成否別ログの新しい順取得
+
+- `idx_logs_job_id_id_desc`
+  - 対応: `backend/app/repositories/log_repository.py` の `WHERE job_id = ?` + `ORDER BY id DESC`（ジョブ単位表示向け）
+  - 目的: ジョブ単位ログ取得の高速化
 
 - `idx_logs_created_at`
   - 対応: `backend/app/repositories/log_repository.py` の `WHERE created_at >= ? / <= ?`

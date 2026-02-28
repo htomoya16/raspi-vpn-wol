@@ -14,6 +14,10 @@ backend/.ruff_cache/
 
 # Local DB
 backend/app/db/*.db
+backend/app/db/*.db.bak
+backend/app/db/*.db-wal
+backend/app/db/*.db-shm
+backend/app/db/*.db-journal
 backend/app/db/*.sqlite3
 
 # Frontend (Vite)

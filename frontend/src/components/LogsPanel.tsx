@@ -32,6 +32,71 @@ function formatDetails(details: LogEntry['details']): string {
   return String(details)
 }
 
+type LogGroup = {
+  key: string
+  label: string
+  items: LogEntry[]
+}
+
+function parseDetailsObject(details: LogEntry['details']): Record<string, unknown> | null {
+  if (!details) {
+    return null
+  }
+  if (typeof details === 'object' && !Array.isArray(details)) {
+    return details as Record<string, unknown>
+  }
+  if (typeof details === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(details)
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>
+      }
+    } catch {
+      return null
+    }
+  }
+  return null
+}
+
+function extractJobId(item: LogEntry): string | null {
+  if (typeof item.job_id === 'string') {
+    const normalized = item.job_id.trim()
+    if (normalized) {
+      return normalized
+    }
+  }
+
+  const details = item.details
+  const detailObject = parseDetailsObject(details)
+  if (!detailObject) {
+    return null
+  }
+  const jobId = detailObject.job_id
+  if (typeof jobId !== 'string') {
+    return null
+  }
+  const normalized = jobId.trim()
+  return normalized ? normalized : null
+}
+
+function buildLogGroups(items: LogEntry[]): LogGroup[] {
+  const groupMap = new Map<string, LogGroup>()
+
+  for (const item of items) {
+    const jobId = extractJobId(item)
+    const key = jobId ? `job:${jobId}` : 'no-job'
+    const label = jobId ? `ジョブ ${jobId}` : '通常ログ'
+    const existing = groupMap.get(key)
+    if (existing) {
+      existing.items.push(item)
+      continue
+    }
+    groupMap.set(key, { key, label, items: [item] })
+  }
+
+  return Array.from(groupMap.values())
+}
+
 export interface LogsPanelProps {
   items: LogEntry[]
   loading: boolean
@@ -59,6 +124,7 @@ function LogsPanel({
   const [clearLoading, setClearLoading] = useState(false)
   const [expandedDetailIds, setExpandedDetailIds] = useState<Set<number>>(() => new Set())
   const hasItems = items.length > 0
+  const logGroups = useMemo(() => buildLogGroups(items), [items])
   const showInitialLoading = loading && !hasItems
   const showRefreshingSpinner = useDelayedVisibility(loading && hasItems, 200)
 
@@ -215,64 +281,76 @@ function LogsPanel({
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => {
-                const detailsText = formatDetails(item.details)
-                const hasDetails = detailsText !== '-'
-                const isExpanded = hasDetails && expandedDetailIds.has(item.id)
-                const timeParts = formatJstDateParts(item.created_at, { fallbackDate: '-', fallbackTime: '' })
+              {logGroups.map((group) => (
+                <Fragment key={group.key}>
+                  <tr className="logs-table__group-row">
+                    <td colSpan={5}>
+                      <span className="logs-table__group-label">
+                        <span>{group.label}</span>
+                        <span>{group.items.length}件</span>
+                      </span>
+                    </td>
+                  </tr>
+                  {group.items.map((item) => {
+                    const detailsText = formatDetails(item.details)
+                    const hasDetails = detailsText !== '-'
+                    const isExpanded = hasDetails && expandedDetailIds.has(item.id)
+                    const timeParts = formatJstDateParts(item.created_at, { fallbackDate: '-', fallbackTime: '' })
 
-                return (
-                  <Fragment key={item.id}>
-                    <tr
-                      className={`logs-table__row${hasDetails ? ' logs-table__row--expandable' : ''}${isExpanded ? ' logs-table__row--expanded' : ''}`}
-                      role={hasDetails ? 'button' : undefined}
-                      tabIndex={hasDetails ? 0 : undefined}
-                      aria-expanded={hasDetails ? isExpanded : undefined}
-                      onClick={hasDetails ? () => toggleDetails(item.id) : undefined}
-                      onKeyDown={hasDetails ? (event) => handleRowKeyDown(event, item.id) : undefined}
-                    >
-                      <td data-label="時刻">
-                        <span className="logs-time-cell">
-                          <span className="logs-time-cell__value">
-                            <span className="logs-time-cell__date">{timeParts.date}</span>
-                            {timeParts.time ? <span className="logs-time-cell__time">{timeParts.time}</span> : null}
-                          </span>
-                          <span
-                            className={`logs-result-badge logs-result-badge--mobile ${item.ok ? 'logs-result-badge--ok' : 'logs-result-badge--ng'}`}
-                            aria-label={item.ok ? '結果: OK' : '結果: NG'}
-                          >
-                            {item.ok ? 'OK' : 'NG'}
-                          </span>
-                        </span>
-                      </td>
-                      <td data-label="操作">{item.action}</td>
-                      <td data-label="PC">{item.pc_id || '-'}</td>
-                      <td data-label="結果">
-                        <span className={item.ok ? 'result-ok' : 'result-ng'}>{item.ok ? 'OK' : 'NG'}</span>
-                      </td>
-                      <td data-label="メッセージ">
-                        <span className="logs-message-cell">
-                          <span className="logs-message-cell__text">{item.message || '-'}</span>
-                          {hasDetails ? (
-                            <span className={`logs-message-cell__hint${isExpanded ? ' logs-message-cell__hint--open' : ''}`}>
-                              {isExpanded ? 'タップで閉じる' : 'タップで詳細'}
+                    return (
+                      <Fragment key={item.id}>
+                        <tr
+                          className={`logs-table__row${hasDetails ? ' logs-table__row--expandable' : ''}${isExpanded ? ' logs-table__row--expanded' : ''}`}
+                          role={hasDetails ? 'button' : undefined}
+                          tabIndex={hasDetails ? 0 : undefined}
+                          aria-expanded={hasDetails ? isExpanded : undefined}
+                          onClick={hasDetails ? () => toggleDetails(item.id) : undefined}
+                          onKeyDown={hasDetails ? (event) => handleRowKeyDown(event, item.id) : undefined}
+                        >
+                          <td data-label="時刻">
+                            <span className="logs-time-cell">
+                              <span className="logs-time-cell__value">
+                                <span className="logs-time-cell__date">{timeParts.date}</span>
+                                {timeParts.time ? <span className="logs-time-cell__time">{timeParts.time}</span> : null}
+                              </span>
+                              <span
+                                className={`logs-result-badge logs-result-badge--mobile ${item.ok ? 'logs-result-badge--ok' : 'logs-result-badge--ng'}`}
+                                aria-label={item.ok ? '結果: OK' : '結果: NG'}
+                              >
+                                {item.ok ? 'OK' : 'NG'}
+                              </span>
                             </span>
-                          ) : null}
-                        </span>
-                      </td>
-                    </tr>
-                    {hasDetails && isExpanded ? (
-                      <tr className="logs-table__detail-row">
-                        <td colSpan={5}>
-                          <div className="log-details">
-                            <pre className="log-details__text log-details__text--expanded">{detailsText}</pre>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : null}
-                  </Fragment>
-                )
-              })}
+                          </td>
+                          <td data-label="操作">{item.action}</td>
+                          <td data-label="PC">{item.pc_id || '-'}</td>
+                          <td data-label="結果">
+                            <span className={item.ok ? 'result-ok' : 'result-ng'}>{item.ok ? 'OK' : 'NG'}</span>
+                          </td>
+                          <td data-label="メッセージ">
+                            <span className="logs-message-cell">
+                              <span className="logs-message-cell__text">{item.message || '-'}</span>
+                              {hasDetails ? (
+                                <span className={`logs-message-cell__hint${isExpanded ? ' logs-message-cell__hint--open' : ''}`}>
+                                  {isExpanded ? 'タップで閉じる' : 'タップで詳細'}
+                                </span>
+                              ) : null}
+                            </span>
+                          </td>
+                        </tr>
+                        {hasDetails && isExpanded ? (
+                          <tr className="logs-table__detail-row">
+                            <td colSpan={5}>
+                              <div className="log-details">
+                                <pre className="log-details__text log-details__text--expanded">{detailsText}</pre>
+                              </div>
+                            </td>
+                          </tr>
+                        ) : null}
+                      </Fragment>
+                    )
+                  })}
+                </Fragment>
+              ))}
             </tbody>
           </table>
         </div>

@@ -73,6 +73,7 @@ export interface JobAccepted {
 export interface LogEntry {
   id: number
   pc_id: string | null
+  job_id?: string | null
   action: string
   ok: boolean
   message: string | null

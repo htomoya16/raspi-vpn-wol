@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sqlite3
 from pathlib import Path
 
 import pytest
@@ -8,103 +7,58 @@ import pytest
 from app.db import database as db_module
 
 
-def _create_pcs_table_without_unique_index(db_path: Path) -> None:
-    conn = sqlite3.connect(db_path)
-    try:
-        conn.execute(
-            """
-            CREATE TABLE pcs (
-                id TEXT PRIMARY KEY,
-                name TEXT NOT NULL,
-                mac_address TEXT NOT NULL,
-                ip_address TEXT,
-                tags_json TEXT NOT NULL DEFAULT '[]',
-                note TEXT,
-                status TEXT NOT NULL DEFAULT 'unknown',
-                last_seen_at TEXT,
-                broadcast_ip TEXT,
-                send_interface TEXT NOT NULL DEFAULT 'eth0',
-                wol_port INTEGER NOT NULL DEFAULT 9,
-                status_method TEXT NOT NULL DEFAULT 'tcp',
-                status_port INTEGER NOT NULL DEFAULT 445,
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-            )
-            """
-        )
-        conn.commit()
-    finally:
-        conn.close()
+def test_init_db_runs_alembic_upgrade_when_revisions_exist(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    test_db_path = tmp_path / "app-test.db"
+    monkeypatch.setattr(db_module, "DB_PATH", test_db_path)
+    monkeypatch.setattr(db_module, "_has_revision_files", lambda: True)
+
+    config_obj = object()
+    monkeypatch.setattr(db_module, "_build_alembic_config", lambda: config_obj)
+
+    called: list[tuple[object, str]] = []
+    monkeypatch.setattr(
+        db_module.command,
+        "upgrade",
+        lambda config, revision: called.append((config, revision)),
+    )
+
+    db_module.init_db()
+
+    assert called == [(config_obj, "head")]
 
 
-def test_init_db_normalizes_existing_mac_addresses(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_run_migrations_skips_upgrade_when_no_revisions(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    test_db_path = tmp_path / "app-test.db"
+    monkeypatch.setattr(db_module, "DB_PATH", test_db_path)
+    monkeypatch.setattr(db_module, "_has_revision_files", lambda: False)
+    monkeypatch.setattr(
+        db_module.command,
+        "upgrade",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("must not be called")),
+    )
+
+    db_module.run_migrations()
+
+    assert test_db_path.parent.exists()
+
+
+def test_connection_commits_changes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     test_db_path = tmp_path / "app-test.db"
     monkeypatch.setattr(db_module, "DB_PATH", test_db_path)
 
-    db_module.init_db()
     with db_module.connection() as conn:
-        conn.execute(
-            """
-            INSERT INTO pcs (id, name, mac_address)
-            VALUES (?, ?, ?)
-            """,
-            ("pc-mac", "PC MAC", "aa-bb-cc-dd-ee-ff"),
-        )
-
-    db_module.init_db()
+        conn.execute("CREATE TABLE sample (id INTEGER PRIMARY KEY, name TEXT NOT NULL)")
+        conn.execute("INSERT INTO sample (name) VALUES (?)", ("alice",))
 
     with db_module.connection() as conn:
-        row = conn.execute("SELECT mac_address FROM pcs WHERE id = ?", ("pc-mac",)).fetchone()
+        row = conn.execute("SELECT name FROM sample WHERE id = 1").fetchone()
 
     assert row is not None
-    assert row["mac_address"] == "AA:BB:CC:DD:EE:FF"
+    assert row["name"] == "alice"
 
-
-def test_init_db_raises_when_duplicate_mac_exists(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    test_db_path = tmp_path / "app-test.db"
-    monkeypatch.setattr(db_module, "DB_PATH", test_db_path)
-
-    _create_pcs_table_without_unique_index(test_db_path)
-
-    conn = sqlite3.connect(test_db_path)
-    try:
-        conn.execute(
-            "INSERT INTO pcs (id, name, mac_address) VALUES (?, ?, ?)",
-            ("pc-1", "PC1", "aa-bb-cc-dd-ee-ff"),
-        )
-        conn.execute(
-            "INSERT INTO pcs (id, name, mac_address) VALUES (?, ?, ?)",
-            ("pc-2", "PC2", "AA:BB:CC:DD:EE:FF"),
-        )
-        conn.commit()
-    finally:
-        conn.close()
-
-    with pytest.raises(RuntimeError, match="重複MAC"):
-        db_module.init_db()
-
-
-def test_init_db_creates_uptime_tables(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    test_db_path = tmp_path / "app-test.db"
-    monkeypatch.setattr(db_module, "DB_PATH", test_db_path)
-
-    db_module.init_db()
-
-    with db_module.connection() as conn:
-        status_history = conn.execute(
-            """
-            SELECT name
-            FROM sqlite_master
-            WHERE type='table' AND name='status_history'
-            """
-        ).fetchone()
-        uptime_daily_summary = conn.execute(
-            """
-            SELECT name
-            FROM sqlite_master
-            WHERE type='table' AND name='uptime_daily_summary'
-            """
-        ).fetchone()
-
-    assert status_history is not None
-    assert uptime_daily_summary is not None

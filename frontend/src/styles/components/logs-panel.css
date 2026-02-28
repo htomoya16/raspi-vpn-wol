@@ -162,6 +162,23 @@
   letter-spacing: 0.02em;
 }
 
+.logs-table__group-row td {
+  background: rgba(13, 36, 68, 0.88);
+  border-bottom: 1px solid #274974;
+  padding: 8px 10px;
+}
+
+.logs-table__group-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.74rem;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #b8d0f7;
+}
+
 @media (min-width: 761px) {
   .logs-sheet {
     max-height: 680px;
