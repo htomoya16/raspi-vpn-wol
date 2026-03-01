@@ -7,6 +7,9 @@
 
 ## 変更内容
 
+- 2026-03-02: SSE認証を EventSource 対応（`/api/events?token=...`）にし、`logs/jobs` の `Cache-Control: no-store` を明示。APIメモリキャッシュに上限/期限切れ掃除を追加。
+- 2026-03-02: `/api/admin/*` を admin 専用化し、CLI復旧経路と監査ログ主体記録を追加。
+- 2026-03-02: 端末別 Bearer トークン認証を実装（`api_tokens` / 管理 API / APIテスト）。
 - 2026-02-27: キャッシュ方針を反映（DB集計 + APIメモリ + HTTP Cache-Control）。
 - 2026-02-27: uptime weekly API の週開始日を「日曜始まり」に統一。
 - 2026-03-01: `pcs.ip_address` を必須化（API入力 + DB `NOT NULL`）。
@@ -36,6 +39,10 @@
 - `DELETE /api/logs`: 操作ログ全削除。
 - `GET /api/jobs/{job_id}`: 非同期ジョブ状態取得。
 - `GET /api/events`: SSEイベントストリーム。
+- `GET /api/admin/tokens`: APIトークン一覧取得。
+- `POST /api/admin/tokens`: APIトークン発行（平文は1回返却）。
+- `POST /api/admin/tokens/{token_id}/revoke`: APIトークン失効。
+- `python scripts/create_api_token.py`: break-glass 用トークン発行（CLI）。
 - `pytest` で最小回帰テストを実行可能（health/pcs/logs/jobs）。
 - `python scripts/seed_dev_data.py` で開発用シードデータ（`pcs/status_history/uptime_daily_summary/jobs/logs`）を再投入可能。
 
@@ -48,12 +55,11 @@
 
 ## 未実装 / 改善候補
 
-- 認証/認可（簡易トークンやLAN/VPN制限の強化）。
+- トークン管理画面の権限制御UX改善（role選択、admin専用表示）。
 - レート制限（WOL/APIの連打対策）。
 - job ワーカー分離（現在はアプリ内で非同期実行）。
 - status 判定方式の追加（ARP、複数ポート、複合判定）。
 - 自動テスト（unit/integration）と CI 整備。
-- DBバックアップ・リストア手順の明文化。
 
 ## API 契約ドキュメント
 
@@ -74,6 +80,7 @@
 - `docs/backend/features/cache.md`
 - `docs/backend/features/logs.md`
 - `docs/backend/features/runtime.md`
+- `docs/backend/features/auth-device-tokens.md`
 - `docs/backend/features/types-and-models.md`
 - `docs/backend/features/backlog.md`
 - `docs/backend/features/testing.md`

@@ -148,3 +148,44 @@ export interface PcWeeklyTimelineResponse {
   tz: string
   days: UptimeWeeklyDay[]
 }
+
+export interface ApiToken {
+  id: string
+  name: string
+  role: 'admin' | 'device'
+  token_prefix: string
+  created_at: string
+  expires_at: string | null
+  last_used_at: string | null
+  revoked_at: string | null
+}
+
+export interface ApiTokenListResponse {
+  items: ApiToken[]
+}
+
+export interface ApiTokenCreatePayload {
+  name: string
+  role?: 'admin' | 'device'
+  expires_at: string | null
+}
+
+export interface ApiTokenCreateResponse {
+  token: ApiToken
+  plain_token: string
+}
+
+export interface ApiTokenRevokeResponse {
+  token: ApiToken
+}
+
+export interface ApiTokenDeleteResponse {
+  deleted_token_id: string
+  deleted: boolean
+}
+
+export interface ApiActorMeResponse {
+  token_id: string
+  token_name: string
+  token_role: 'admin' | 'device'
+}

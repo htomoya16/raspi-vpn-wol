@@ -39,3 +39,27 @@ def test_memory_cache_invalidate_prefix() -> None:
     assert cache.get("pcs:list:a") is None
     assert cache.get("pcs:list:b") is None
     assert cache.get("uptime:weekly:a") == {"v": 3}
+
+
+def test_memory_cache_evicts_oldest_when_over_capacity() -> None:
+    cache = memory_cache.MemoryCache(max_items=2, sweep_interval_seconds=60)
+    cache.set("a", {"v": 1}, ttl_seconds=30)
+    cache.set("b", {"v": 2}, ttl_seconds=30)
+    cache.set("c", {"v": 3}, ttl_seconds=30)
+
+    assert cache.get("a") is None
+    assert cache.get("b") == {"v": 2}
+    assert cache.get("c") == {"v": 3}
+
+
+def test_memory_cache_sweeps_expired_entries_periodically(monkeypatch) -> None:
+    now = 10.0
+    monkeypatch.setattr(memory_cache, "monotonic", lambda: now)
+    cache = memory_cache.MemoryCache(max_items=10, sweep_interval_seconds=5)
+    cache.set("expired", {"v": 1}, ttl_seconds=1)
+    assert "expired" in cache._items
+
+    now = 20.0
+    cache.set("fresh", {"v": 2}, ttl_seconds=30)
+    assert "expired" not in cache._items
+    assert cache.get("fresh") == {"v": 2}

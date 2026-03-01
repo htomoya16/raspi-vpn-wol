@@ -23,6 +23,7 @@ export function applyDefaultTheme(root: HTMLElement, appearanceMode: EffectiveAp
     root.style.setProperty('--line', '#303030')
     root.style.setProperty('--text-main', '#f1f1f1')
     root.style.setProperty('--text-sub', '#aaaaaa')
+    root.style.setProperty('--hero-eyebrow-color', '#dcdcdc')
     root.style.setProperty('--surface-elevated', 'rgba(28, 28, 28, 0.74)')
     root.style.setProperty('--surface-elevated-soft', 'rgba(28, 28, 28, 0.52)')
     root.style.setProperty('--surface-strong', 'rgba(20, 20, 20, 0.9)')
@@ -98,6 +99,9 @@ export function applyDefaultTheme(root: HTMLElement, appearanceMode: EffectiveAp
     root.style.setProperty('--mobile-register-active-start', '#4a4a4a')
     root.style.setProperty('--mobile-register-active-end', '#262626')
     root.style.setProperty('--mobile-register-active-shadow', 'rgba(0, 0, 0, 0.34)')
+    root.style.setProperty('--scrollbar-track', 'rgba(44, 44, 44, 0.55)')
+    root.style.setProperty('--scrollbar-thumb', 'rgba(142, 142, 142, 0.84)')
+    root.style.setProperty('--scrollbar-thumb-hover', 'rgba(178, 178, 178, 0.94)')
     return
   }
 
@@ -122,6 +126,7 @@ export function applyDefaultTheme(root: HTMLElement, appearanceMode: EffectiveAp
   root.style.setProperty('--line', '#d6d6d6')
   root.style.setProperty('--text-main', '#0f0f0f')
   root.style.setProperty('--text-sub', '#606060')
+  root.style.setProperty('--hero-eyebrow-color', '#2f2f2f')
   root.style.setProperty('--surface-elevated', 'rgba(247, 247, 247, 0.8)')
   root.style.setProperty('--surface-elevated-soft', 'rgba(247, 247, 247, 0.6)')
   root.style.setProperty('--surface-strong', 'rgba(255, 255, 255, 0.96)')
@@ -197,4 +202,7 @@ export function applyDefaultTheme(root: HTMLElement, appearanceMode: EffectiveAp
   root.style.setProperty('--mobile-register-active-start', '#d1d1d1')
   root.style.setProperty('--mobile-register-active-end', '#b6b6b6')
   root.style.setProperty('--mobile-register-active-shadow', 'rgba(80, 80, 80, 0.2)')
+  root.style.setProperty('--scrollbar-track', 'rgba(227, 227, 227, 0.92)')
+  root.style.setProperty('--scrollbar-thumb', 'rgba(150, 150, 150, 0.82)')
+  root.style.setProperty('--scrollbar-thumb-hover', 'rgba(122, 122, 122, 0.92)')
 }

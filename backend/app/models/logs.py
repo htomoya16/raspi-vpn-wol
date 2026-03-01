@@ -7,6 +7,8 @@ class LogEntry(BaseModel):
     id: int = Field(..., ge=1, description="ログID。")
     pc_id: str | None = Field(default=None, description="対象PCのID。")
     job_id: str | None = Field(default=None, description="関連ジョブID。ジョブ非関連ログは null。")
+    api_token_id: str | None = Field(default=None, description="実行主体APIトークンID。")
+    actor_label: str | None = Field(default=None, description="実行主体の表示名（トークン名）。")
     action: str = Field(..., description="操作種別。")
     event_kind: str = Field(..., description="イベント種別。通常: normal / 定期ステータス: periodic_status。")
     ok: bool = Field(..., description="成功時 true。")

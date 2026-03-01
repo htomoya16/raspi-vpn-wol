@@ -6,6 +6,9 @@ type CacheEntry<T> = {
 const cacheStore = new Map<string, CacheEntry<unknown>>()
 const inFlightStore = new Map<string, Promise<unknown>>()
 const CACHE_DEBUG_STORAGE_KEY = 'wol:cache-debug'
+export const CACHE_MAX_ENTRIES = 300
+export const CACHE_EXPIRED_SWEEP_INTERVAL_MS = 60_000
+let nextSweepAtMs = 0
 
 function nowMs(): number {
   return Date.now()
@@ -29,12 +32,14 @@ export function logCacheDebug(event: string, detail: Record<string, unknown>): v
 }
 
 export function getCachedValue<T>(key: string): T | null {
+  const currentTime = nowMs()
+  maybeSweepExpiredEntries(currentTime)
   const entry = cacheStore.get(key)
   if (!entry) {
     logCacheDebug('miss', { key })
     return null
   }
-  if (entry.expiresAt <= nowMs()) {
+  if (entry.expiresAt <= currentTime) {
     cacheStore.delete(key)
     logCacheDebug('expired', { key })
     return null
@@ -49,10 +54,16 @@ export function setCachedValue<T>(key: string, value: T, ttlMs: number): void {
     logCacheDebug('skip-set-ttl', { key, ttlMs })
     return
   }
+  const currentTime = nowMs()
+  maybeSweepExpiredEntries(currentTime)
+  if (cacheStore.has(key)) {
+    cacheStore.delete(key)
+  }
   cacheStore.set(key, {
     value: structuredClone(value),
-    expiresAt: nowMs() + ttlMs,
+    expiresAt: currentTime + ttlMs,
   })
+  trimCacheEntries()
   logCacheDebug('set', { key, ttlMs })
 }
 
@@ -92,4 +103,37 @@ export function clearInFlight(key: string): void {
 export function clearApiCacheForTest(): void {
   cacheStore.clear()
   inFlightStore.clear()
+  nextSweepAtMs = 0
+}
+
+function maybeSweepExpiredEntries(currentTime: number): void {
+  if (currentTime < nextSweepAtMs) {
+    return
+  }
+  nextSweepAtMs = currentTime + CACHE_EXPIRED_SWEEP_INTERVAL_MS
+  let removed = 0
+  for (const [key, entry] of cacheStore.entries()) {
+    if (entry.expiresAt <= currentTime) {
+      cacheStore.delete(key)
+      removed += 1
+    }
+  }
+  if (removed > 0) {
+    logCacheDebug('sweep-expired', { removed })
+  }
+}
+
+function trimCacheEntries(): void {
+  let removed = 0
+  while (cacheStore.size > CACHE_MAX_ENTRIES) {
+    const oldest = cacheStore.keys().next()
+    if (oldest.done) {
+      break
+    }
+    cacheStore.delete(oldest.value)
+    removed += 1
+  }
+  if (removed > 0) {
+    logCacheDebug('trim-over-capacity', { removed, max: CACHE_MAX_ENTRIES })
+  }
 }

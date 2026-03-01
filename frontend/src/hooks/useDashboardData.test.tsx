@@ -256,4 +256,54 @@ describe('useDashboardData SSE cache invalidation', () => {
     expect(loadPcs).toHaveBeenCalledTimes(1)
     expect(loadLogs).toHaveBeenCalledTimes(1)
   })
+
+  it('does not load api resources when disabled', () => {
+    const loadLogs = vi.fn().mockResolvedValue(undefined)
+    const loadPcs = vi.fn().mockResolvedValue(undefined)
+
+    openEventsMock.mockReturnValue(new EventSourceStub() as unknown as EventSource)
+    useLogsDataMock.mockReturnValue({
+      logs: [],
+      logsLoading: false,
+      logsError: '',
+      loadLogs,
+      clearLogsEntry: vi.fn().mockResolvedValue(undefined),
+    })
+    usePcDataMock.mockReturnValue({
+      pcs: [],
+      pcLoading: false,
+      pcError: '',
+      pcFilters: { q: '', status: '' },
+      appliedPcFilters: { q: '', status: '' },
+      createLoading: false,
+      createError: '',
+      busyById: {},
+      rowErrorById: {},
+      lastSyncedAt: '',
+      onlineCount: 0,
+      loadPcs,
+      setBusy: vi.fn(),
+      setPcError: vi.fn(),
+      setRowError: vi.fn(),
+      createPcEntry: vi.fn(),
+      deletePcEntry: vi.fn(),
+      updatePcEntry: vi.fn(),
+      refreshPcStatusEntry: vi.fn(),
+      applyPcStatusEvent: vi.fn(),
+      setPcStatusLocal: vi.fn(),
+      handleFilterChange: vi.fn(),
+      handleApplyFilters: vi.fn(),
+      handleClearFilters: vi.fn(),
+    })
+    useJobTrackerMock.mockReturnValue({
+      jobs: [],
+      trackJob: vi.fn().mockResolvedValue(undefined),
+    })
+
+    renderHook(() => useDashboardData({ enabled: false }))
+
+    expect(loadLogs).not.toHaveBeenCalled()
+    expect(loadPcs).not.toHaveBeenCalled()
+    expect(openEventsMock).not.toHaveBeenCalled()
+  })
 })

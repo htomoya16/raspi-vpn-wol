@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from app.repositories import log_repository
+from app.security.actor_context import get_current_api_actor
 from app.services import job_context
 from app.types import LogRow
 
@@ -17,6 +18,7 @@ def insert_log(
 ) -> None:
     normalized_details = dict(details) if details is not None else None
     current_job_id = job_context.get_current_job_id()
+    current_actor = get_current_api_actor()
 
     details_json = json.dumps(normalized_details) if normalized_details is not None else None
     log_repository.insert_log_row(
@@ -25,6 +27,8 @@ def insert_log(
         status=status,
         event_kind=event_kind,
         job_id=current_job_id,
+        api_token_id=(current_actor["token_id"] if current_actor is not None else None),
+        actor_label=(current_actor["token_name"] if current_actor is not None else None),
         message=message,
         details_json=details_json,
     )
@@ -76,6 +80,8 @@ def _row_to_log_entry(row: LogRow) -> dict[str, object]:
         "id": row["id"],
         "pc_id": row["pc_id"],
         "job_id": row.get("job_id"),
+        "api_token_id": row.get("api_token_id"),
+        "actor_label": row.get("actor_label"),
         "action": row["action"],
         "event_kind": row.get("event_kind") or "normal",
         "ok": bool(row["ok"]),

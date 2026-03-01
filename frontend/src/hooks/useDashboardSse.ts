@@ -67,6 +67,7 @@ function extractEventJobId(data: Record<string, unknown> | null): string | null 
 }
 
 interface UseDashboardSseInput {
+  enabled: boolean
   trackedJobIdsRef: MutableRefObject<Set<string>>
   applyPcStatusEvent: (
     pcId: string,
@@ -79,12 +80,17 @@ interface UseDashboardSseInput {
 }
 
 export function useDashboardSse({
+  enabled,
   trackedJobIdsRef,
   applyPcStatusEvent,
   loadLogs,
   loadPcs,
 }: UseDashboardSseInput): void {
   useEffect(() => {
+    if (!enabled) {
+      return undefined
+    }
+
     const source = openEvents()
     if (!source) {
       return undefined
@@ -165,5 +171,5 @@ export function useDashboardSse({
       source.removeEventListener('job', handleJobEvent)
       source.close()
     }
-  }, [applyPcStatusEvent, loadLogs, loadPcs, trackedJobIdsRef])
+  }, [enabled, applyPcStatusEvent, loadLogs, loadPcs, trackedJobIdsRef])
 }

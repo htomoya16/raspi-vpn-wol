@@ -19,6 +19,11 @@ def _create_pc(
 
 
 def test_logs_filters_validation_and_cursor(client: TestClient) -> None:
+    token_list_response = client.get("/api/admin/tokens")
+    assert token_list_response.status_code == 200
+    tokens = token_list_response.json()["items"]
+    expected_actor = next(item for item in tokens if item["name"] == "pytest-default-client")
+
     _create_pc(client, id="pc-log", name="Log", mac="AA:BB:CC:DD:EE:61")
     client.patch("/api/pcs/pc-log", json={"note": "first update"})
     client.patch("/api/pcs/pc-log", json={"note": "second update"})
@@ -34,6 +39,8 @@ def test_logs_filters_validation_and_cursor(client: TestClient) -> None:
     assert len(first_body["items"]) == 1
     assert first_body["items"][0]["action"] == "pc_upsert"
     assert first_body["items"][0]["ok"] is True
+    assert first_body["items"][0]["api_token_id"] == expected_actor["id"]
+    assert first_body["items"][0]["actor_label"] == "pytest-default-client"
     assert first_body["next_cursor"] is not None
 
     second_page = client.get(

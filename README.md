@@ -108,3 +108,4 @@ python scripts/backup_db.py --keep 30
 
 - 管理画面は VPN 内アクセス前提（インターネットへ直接公開しない）
 - 本番はデプロイ工程で `alembic upgrade head` を実行し、アプリ起動時マイグレーションは `RUN_MIGRATIONS_ON_STARTUP=0` を推奨
+- API認証は端末別 Bearer トークン方式（`Authorization: Bearer <token>`）

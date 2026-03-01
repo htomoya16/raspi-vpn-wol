@@ -41,7 +41,12 @@ export interface UseDashboardDataResult {
   handleClearFilters: () => void
 }
 
-export function useDashboardData(): UseDashboardDataResult {
+interface UseDashboardDataOptions {
+  enabled?: boolean
+}
+
+export function useDashboardData(options: UseDashboardDataOptions = {}): UseDashboardDataResult {
+  const enabled = options.enabled ?? true
   const [notice, setNotice] = useState('')
   const [refreshAllLoading, setRefreshAllLoading] = useState(false)
   const refreshAllInFlightRef = useRef(false)
@@ -101,6 +106,7 @@ export function useDashboardData(): UseDashboardDataResult {
   }, [jobs])
 
   useDashboardSse({
+    enabled,
     trackedJobIdsRef,
     applyPcStatusEvent,
     loadLogs,
@@ -146,12 +152,18 @@ export function useDashboardData(): UseDashboardDataResult {
   }, [setPcError, trackJob])
 
   useEffect(() => {
+    if (!enabled) {
+      return
+    }
     void loadLogs()
-  }, [loadLogs])
+  }, [enabled, loadLogs])
 
   useEffect(() => {
+    if (!enabled) {
+      return
+    }
     void loadPcs()
-  }, [loadPcs])
+  }, [enabled, loadPcs])
 
   return {
     notice,

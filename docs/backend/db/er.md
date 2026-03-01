@@ -7,6 +7,8 @@
 
 ## 変更内容
 
+- 2026-03-02: `api_tokens.role` と `logs.api_token_id` / `logs.actor_label` を追加（admin認可・監査主体記録）。
+- 2026-03-02: `api_tokens` を追加（端末別 Bearer トークン認証）。
 - 2026-03-01: Alembic/SQLiteの実DDLに合わせてインデックス記述を更新（`DESC` 明記を削除）。
 - 2026-03-01: `logs.event_kind` を追加し、定期ステータス確認の識別を `action` から分離。
 - 2026-03-01: uptime詳細メモを `docs/backend/db/uptime-tables.md` へ集約（本ページは全体ER中心に整理）。
@@ -67,6 +69,8 @@ erDiagram
         INTEGER id PK
         TEXT pc_id FK
         TEXT job_id
+        TEXT api_token_id
+        TEXT actor_label
         TEXT action
         TEXT event_kind
         INTEGER ok
@@ -90,6 +94,18 @@ erDiagram
         TEXT updated_at
     }
 
+    api_tokens {
+        TEXT id PK
+        TEXT name
+        TEXT role
+        TEXT token_hash "UNIQUE"
+        TEXT token_prefix
+        TEXT created_at
+        TEXT expires_at
+        TEXT last_used_at
+        TEXT revoked_at
+    }
+
     pcs ||--o{ logs : "logs.pc_id -> pcs.id (ON DELETE SET NULL)"
     jobs ||--o{ logs : "logs.job_id -> jobs.id (logical reference)"
     pcs ||--o{ status_history : "status_history.pc_id -> pcs.id (ON DELETE CASCADE)"
@@ -105,10 +121,16 @@ erDiagram
   - `idx_logs_action_id_desc (action, id)`: `action` 絞り込み + 新しい順（逆順走査）
   - `idx_logs_ok_id_desc (ok, id)`: 成否絞り込み + 新しい順（逆順走査）
   - `idx_logs_job_id_id_desc (job_id, id)`: `job_id` 単位のログ取得 + 新しい順（逆順走査）
+  - `idx_logs_api_token_id_id_desc (api_token_id, id)`: トークン主体別ログ取得 + 新しい順（逆順走査）
   - `idx_logs_event_kind_id_desc (event_kind, id)`: 種別別ログ取得（定期/通常） + 新しい順（逆順走査）
   - `idx_logs_created_at (created_at)`: 保持期間削除、`since/until` 範囲条件
 - `jobs`
   - `idx_jobs_job_type_state_created_at (job_type, state, created_at)`: 同種ジョブの `queued/running` 最新取得
+- `api_tokens`
+  - `uq_api_tokens_token_hash (token_hash UNIQUE)`: トークン照合の一意性担保
+  - `idx_api_tokens_name (name)`: 管理画面での検索/表示
+  - `idx_api_tokens_revoked_expires (revoked_at, expires_at)`: 有効トークン判定（失効/期限）検索
+  - `idx_api_tokens_role_revoked_expires (role, revoked_at, expires_at)`: role別の有効トークン判定
 
 ## 運用時の注意点
 

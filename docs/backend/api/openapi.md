@@ -1,5 +1,18 @@
 # OpenAPI Contract Notes (vNext)
 
+## 認証（vNext）
+
+- 方式: `Authorization: Bearer <token>`
+- 適用範囲: `/api/health` を除く `/api/*`
+- 例外: `GET /api/events` は EventSource 制約のため `?token=<bearer>` も受け付ける
+- 共通エラー:
+  - `401`（未指定 / 不正形式 / 無効トークン / 失効 / 期限切れ）
+  - レスポンス例: `{"detail":"invalid bearer token"}`
+- note: 有効トークンが 0 件の間はブートストラップ目的で一時的に認証をバイパスする。
+- 認可（現行）:
+  - `/api/pcs` などの業務APIは `admin` / `device` の両方許可。
+  - `/api/admin/*` は `admin` role のみ許可し、`device` role には `403` を返す。
+
 ## エンドポイント
 
 ### `GET /api/health`
@@ -7,6 +20,44 @@
 - operationId: `getHealth`
 - summary: API稼働状態を確認
 - responses: `200`
+- note: 認証不要（疎通確認のため開放）
+
+### `GET /api/auth/me`
+
+- operationId: `getCurrentActor`
+- summary: 現在利用中のBearerトークン情報
+- responses: `200`, `401`
+
+### `GET /api/admin/tokens`
+
+- operationId: `listApiTokens`
+- summary: APIトークン一覧取得
+- responses: `200`, `401`, `403`
+- note: 管理画面向け。トークン平文は返さない。
+
+### `POST /api/admin/tokens`
+
+- operationId: `createApiToken`
+- summary: APIトークン発行
+- requestBody: `ApiTokenCreateRequest`
+- responses: `201`, `400`, `401`, `403`, `422`
+- note: 平文トークンは作成時レスポンスで1回のみ返す。
+
+### `POST /api/admin/tokens/{token_id}/revoke`
+
+- operationId: `revokeApiToken`
+- summary: APIトークン失効
+- responses: `200`, `400`, `401`, `403`, `404`
+- note: 物理削除ではなく `revoked_at` を設定する。
+- note: 最後の有効 `admin` トークンは失効できない（`400`）。
+
+### `DELETE /api/admin/tokens/{token_id}`
+
+- operationId: `deleteApiToken`
+- summary: APIトークン削除
+- responses: `200`, `400`, `401`, `403`, `404`
+- note: `revoked_at` が設定された失効済みトークンのみ削除可能。
+- note: 未失効トークンを削除しようとした場合は `400`。
 
 ### `GET /api/pcs`
 
@@ -103,6 +154,7 @@
 - summary: 操作ログ取得
 - query: `pc_id`, `action`, `ok`, `since`, `until`, `limit`, `cursor`
 - responses: `200`, `400`, `422`
+- cache-control: `no-store`
 - note: `since` / `until` はタイムゾーン付きISO8601日時（例: `2026-03-01T00:00:00+09:00`）
 - note: `since` / `until` はサーバー側でUTCに正規化して検索する
 
@@ -117,12 +169,14 @@
 - operationId: `getJob`
 - summary: ジョブ状態取得
 - responses: `200`, `400`, `404`
+- cache-control: `no-store`
 
 ### `GET /api/events`
 
 - operationId: `streamEvents`
 - summary: SSEイベントストリーム
 - responses: `200` (`text/event-stream`)
+- query: `token`（任意。EventSource利用時のBearerトークン）
 
 ## 主要スキーマ
 
@@ -133,7 +187,14 @@
 - `JobAccepted`, `Job`, `JobState`: 非同期処理
 - `LogEntry`, `LogListResponse`, `LogClearResponse`: 監査ログ
   - `LogEntry.job_id` はジョブ由来ログの関連ID（null可）
+  - `LogEntry.api_token_id` は実行主体トークンID（null可）
+  - `LogEntry.actor_label` は実行主体ラベル（トークン名, null可）
   - `LogEntry.event_kind` はログ分類（`normal` / `periodic_status` など）
 - `PcUptimeSummaryResponse`: オンライン集計一覧（日/週/月/年グラフ向け）
 - `PcWeeklyTimelineResponse`: 週タイムライン（1日ごとのオンライン区間）
+- `ApiToken` / `ApiTokenListResponse`: 管理画面向けトークン一覧（平文トークンは含めない）
+- `ApiToken.role`: `admin|device`
+- `ApiTokenCreateRequest` / `ApiTokenCreateResponse`: トークン発行入力（`role` 任意）と1回表示の平文トークン返却
+- `ApiTokenDeleteResponse`: 物理削除結果（`deleted_token_id`, `deleted`）
+- `ApiActorMeResponse`: 現在利用中トークン（`token_id`, `token_name`, `token_role`）
 - `Error`: 基本は FastAPI 既定エラー形式（`detail`）

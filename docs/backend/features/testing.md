@@ -7,8 +7,13 @@
 
 ## 変更内容
 
+- `backend/tests/api/test_auth_device_tokens_api.py` を追加。
+  - Bearer 必須判定、admin/device 認可、トークン発行/失効、最後のadmin失効防止、期限不正の `400` を検証。
+- `backend/tests/scripts/test_create_api_token.py` を追加。
+  - break-glass 用 CLI（`create_api_token.py`）が service を呼び出し、平文トークンを表示することを検証。
 - `backend/tests/conftest.py` を追加。
   - 各テストで `DB_PATH` を一時SQLiteファイルに差し替え、実DBを汚さない構成にした。
+  - APIテスト用にデフォルトBearerトークン付き `client` fixture を提供する。
 - `backend/tests/api/test_minimum.py` を追加。
   - `GET /api/health`
   - `POST/GET/PATCH/DELETE /api/pcs`

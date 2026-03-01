@@ -5,6 +5,9 @@ interface AppHeaderProps {
   totalCount: number
   onlineCount: number
   refreshAllLoading: boolean
+  tokenConfigured: boolean
+  activeTokenName: string
+  activeTokenRole: 'admin' | 'device' | null
   onRefreshAllStatuses: () => Promise<void> | void
   onOpenSettings: () => void
 }
@@ -13,9 +16,13 @@ function AppHeader({
   totalCount,
   onlineCount,
   refreshAllLoading,
+  tokenConfigured,
+  activeTokenName,
+  activeTokenRole,
   onRefreshAllStatuses,
   onOpenSettings,
 }: AppHeaderProps) {
+  const refreshDisabled = refreshAllLoading || !tokenConfigured
   return (
     <header className="hero hero--compact">
       <div className="hero__lead">
@@ -24,6 +31,16 @@ function AppHeader({
         <p className="hero__description">
           VPN内からPCを安全に起動し、ステータス確認と操作ログをまとめて管理します。
         </p>
+        {tokenConfigured ? (
+          <p className="hero__actor">
+            現在の端末: <strong>{activeTokenName || '取得中...'}</strong>
+            {activeTokenRole ? (
+              <span className={`hero__actor-role hero__actor-role--${activeTokenRole}`}>
+                {activeTokenRole.toUpperCase()}
+              </span>
+            ) : null}
+          </p>
+        ) : null}
       </div>
 
       <div className="hero__metrics">
@@ -42,9 +59,15 @@ function AppHeader({
           type="button"
           className="btn btn--primary"
           onClick={onRefreshAllStatuses}
-          disabled={refreshAllLoading}
+          disabled={refreshDisabled}
         >
-          {refreshAllLoading ? <LoadingDots label="更新ジョブ投入中" /> : '全PCステータス更新'}
+          {refreshAllLoading ? (
+            <LoadingDots label="更新ジョブ投入中" />
+          ) : tokenConfigured ? (
+            '全PCステータス更新'
+          ) : (
+            'APIトークン未認証'
+          )}
         </button>
         <button
           type="button"

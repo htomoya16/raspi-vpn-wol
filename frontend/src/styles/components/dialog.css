@@ -19,6 +19,11 @@
   padding: 16px;
 }
 
+.confirm-dialog.settings-dialog {
+  width: min(1120px, calc(100vw - 36px));
+  max-width: none;
+}
+
 .confirm-dialog h3 {
   margin: 0;
   font-size: 1.05rem;
@@ -44,6 +49,10 @@
     padding: 14px;
     max-height: calc(100dvh - 20px);
     overflow: auto;
+  }
+
+  .confirm-dialog.settings-dialog {
+    width: 100%;
   }
 
   .confirm-dialog__actions {

@@ -121,16 +121,9 @@
   max-height: 520px;
   max-width: 100%;
   overflow: auto;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
   border-radius: 12px;
   border: 1px solid var(--line);
   background: var(--surface-elevated);
-}
-
-.logs-sheet::-webkit-scrollbar {
-  width: 0;
-  height: 0;
 }
 
 .logs-table {
@@ -475,4 +468,3 @@
   background: var(--state-ng-bg);
   color: var(--state-ng-text);
 }
-

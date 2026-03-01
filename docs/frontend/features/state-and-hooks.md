@@ -8,6 +8,7 @@
 
 - `useDashboardData` をオーケストレーターとして配置し、画面に必要な値と操作を集約。
 - `useDashboardSse` を分離し、SSE受信処理（`pc_status` / `job`）を `useDashboardData` から独立。
+- `useTokenValidation` を追加し、Bearerトークンの保存同期・検証・再検証ロジックを `App` から分離。
 - 状態を用途別に分離:
   - `usePcData`: PC領域の統合入口（下位フックの集約）
   - `usePcFilters`: PC絞り込み入力と適用状態
@@ -15,7 +16,14 @@
   - `usePcCrud`: 作成/更新/削除/状態確認の変異処理
   - `useLogsData`: ログ取得/削除
   - `useJobTracker`: 非同期ジョブ追跡
+  - `useTokenValidation`: トークン状態の同期、`/api/auth/me` の検証、失効時のロック判定
 - SSE (`/api/events`) の `pc_status` / `job` イベントで画面状態を同期。
+- 認証状態は `App` で `GET /api/auth/me` を再検証する:
+  - 初期表示時
+  - ウィンドウフォーカス復帰時
+  - `visibilitychange` で再表示された時
+  - 定期実行（`60秒` 間隔）
+  - ただし直近検証から `60秒` 未満の場合、フォーカス/再表示トリガーでは再検証をスキップする。
 - WOL受付直後は `setPcStatusLocal` で対象PCを `booting` 表示へ即時反映し、体感遅延を抑制。
 - `job` イベントは `succeeded/failed` の終端状態のみ再読込トリガーにし、`queued/running` での過剰再取得を抑制。
 - `UptimePanel` の状態管理は `useUptimePanelState` を中心にしつつ、取得責務を以下に分離:

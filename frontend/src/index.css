@@ -106,10 +106,39 @@
   --mobile-register-active-start: #3b82f6;
   --mobile-register-active-end: #1e3a8a;
   --mobile-register-active-shadow: rgba(22, 84, 194, 0.32);
+  --scrollbar-track: rgba(20, 41, 76, 0.48);
+  --scrollbar-thumb: rgba(114, 157, 224, 0.8);
+  --scrollbar-thumb-hover: rgba(139, 181, 244, 0.92);
 }
 
 * {
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--scrollbar-thumb) 0%, var(--scrollbar-thumb-hover) 100%);
+  border: 2px solid var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--scrollbar-thumb-hover) 0%, var(--scrollbar-thumb) 100%);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 body {

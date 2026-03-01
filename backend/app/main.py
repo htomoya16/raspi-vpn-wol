@@ -1,10 +1,12 @@
 import asyncio
 from contextlib import asynccontextmanager, suppress
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI, Request
+from starlette.responses import Response
 
-from app.api import events, jobs, logs, pcs
+from app.api import admin_tokens, auth, events, jobs, logs, pcs
 from app.db.database import init_db
+from app.security import require_admin_token, require_bearer_token, reset_current_api_actor, set_current_api_actor
 from app.services import status_monitor_service
 
 
@@ -22,10 +24,24 @@ async def lifespan(_: FastAPI):
 
 app = FastAPI(title="raspi-vpn-wol API", lifespan=lifespan)
 
-app.include_router(logs.router, prefix="/api", tags=["logs"])
-app.include_router(pcs.router, prefix="/api", tags=["pcs"])
-app.include_router(jobs.router, prefix="/api", tags=["jobs"])
-app.include_router(events.router, prefix="/api", tags=["events"])
+
+@app.middleware("http")
+async def reset_api_actor_context_for_each_request(request: Request, call_next) -> Response:
+    token = set_current_api_actor(None)
+    try:
+        return await call_next(request)
+    finally:
+        reset_current_api_actor(token)
+
+
+admin_guard_dependencies = [Depends(require_admin_token)]
+guard_dependencies = [Depends(require_bearer_token)]
+app.include_router(admin_tokens.router, prefix="/api", tags=["admin"], dependencies=admin_guard_dependencies)
+app.include_router(auth.router, prefix="/api", tags=["auth"], dependencies=guard_dependencies)
+app.include_router(logs.router, prefix="/api", tags=["logs"], dependencies=guard_dependencies)
+app.include_router(pcs.router, prefix="/api", tags=["pcs"], dependencies=guard_dependencies)
+app.include_router(jobs.router, prefix="/api", tags=["jobs"], dependencies=guard_dependencies)
+app.include_router(events.router, prefix="/api", tags=["events"], dependencies=guard_dependencies)
 
 
 @app.get(

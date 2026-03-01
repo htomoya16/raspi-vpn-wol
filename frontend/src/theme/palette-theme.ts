@@ -63,6 +63,7 @@ export function applyPaletteTheme(root: HTMLElement, appearanceMode: EffectiveAp
   root.style.setProperty('--bg-glow-accent-soft', toRgba(selectedTheme.accent, 0.09))
 
   if (appearanceMode === 'dark') {
+    root.style.setProperty('--hero-eyebrow-color', mixHex('#d6e8ff', selectedTheme.accent, 0.18))
     root.style.setProperty('--bg-base', darkBase)
     root.style.setProperty('--bg-soft', darkSoft)
     root.style.setProperty('--bg-card', toRgba(darkCard, 0.82))
@@ -144,10 +145,14 @@ export function applyPaletteTheme(root: HTMLElement, appearanceMode: EffectiveAp
     root.style.setProperty('--mobile-register-active-start', selectedTheme.primary)
     root.style.setProperty('--mobile-register-active-end', mixHex(selectedTheme.accent, selectedTheme.primaryStrong, 0.6))
     root.style.setProperty('--mobile-register-active-shadow', toRgba(selectedTheme.primary, 0.32))
+    root.style.setProperty('--scrollbar-track', toRgba(darkSurfaceMuted, 0.56))
+    root.style.setProperty('--scrollbar-thumb', toRgba(mixHex('#7faef8', selectedTheme.primary, 0.45), 0.84))
+    root.style.setProperty('--scrollbar-thumb-hover', toRgba(mixHex('#9ec3ff', selectedTheme.accent, 0.32), 0.94))
     return
   }
 
   root.style.setProperty('--bg-base', lightBase)
+  root.style.setProperty('--hero-eyebrow-color', mixHex('#2f4f80', selectedTheme.primaryStrong, 0.32))
   root.style.setProperty('--bg-soft', lightSoft)
   root.style.setProperty('--bg-card', toRgba(lightCard, 0.88))
   root.style.setProperty('--line', lightLine)
@@ -228,4 +233,7 @@ export function applyPaletteTheme(root: HTMLElement, appearanceMode: EffectiveAp
   root.style.setProperty('--mobile-register-active-start', mixHex(selectedTheme.primary, '#4d8fff', 0.25))
   root.style.setProperty('--mobile-register-active-end', mixHex(selectedTheme.primaryStrong, selectedTheme.accent, 0.2))
   root.style.setProperty('--mobile-register-active-shadow', toRgba(selectedTheme.primary, 0.26))
+  root.style.setProperty('--scrollbar-track', toRgba(lightSurfaceMuted, 0.94))
+  root.style.setProperty('--scrollbar-thumb', toRgba(mixHex('#7b9fd4', selectedTheme.primary, 0.32), 0.8))
+  root.style.setProperty('--scrollbar-thumb-hover', toRgba(mixHex('#5d86c2', selectedTheme.primaryStrong, 0.24), 0.9))
 }
