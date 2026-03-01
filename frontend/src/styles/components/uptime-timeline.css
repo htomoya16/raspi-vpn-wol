@@ -64,7 +64,7 @@
 }
 
 .uptime-week-calendar__axis-label--hourly {
-  color: rgba(155, 179, 221, 0.95);
+  color: var(--timeline-axis-hourly);
   font-size: 0.56rem;
 }
 

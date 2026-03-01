@@ -87,13 +87,30 @@
   font-weight: 700;
 }
 
-.hero__actor-role {
+.hero__actor-role,
+.settings-admin-badge,
+.settings-token-list__role,
+.settings-token-list__status,
+.status-badge,
+.logs-table__group-count,
+.logs-result-badge,
+.result-ok,
+.result-ng {
   border-radius: 999px;
   border: 1px solid transparent;
-  font-size: 0.66rem;
+  padding: 3px 10px;
+  font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.03em;
-  padding: 2px 8px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.hero__actor-role {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
 }
 
 .hero__actor-role--admin {
@@ -103,8 +120,9 @@
 }
 
 .hero__actor-role--device {
-  background: rgba(76, 157, 255, 0.2);
-  color: #b8dcff;
+  background: var(--badge-device-bg);
+  color: var(--badge-device-text);
+  border-color: var(--badge-device-border);
 }
 
 .hero__metrics {
@@ -262,7 +280,7 @@ button:focus:not(:focus-visible),
   width: 0.95rem;
   height: 0.95rem;
   border-radius: 999px;
-  border: 2px solid rgba(163, 190, 240, 0.35);
+  border: 2px solid var(--loading-spinner-track);
   border-top-color: var(--accent);
   animation: loading-spinner-rotate 0.72s linear infinite;
   vertical-align: middle;
@@ -282,9 +300,9 @@ button:focus:not(:focus-visible),
 }
 
 .feedback--success {
-  background: rgba(56, 164, 110, 0.18);
-  color: var(--text-main);
-  border: 1px solid rgba(56, 164, 110, 0.34);
+  background: var(--feedback-success-bg);
+  color: var(--feedback-success-text);
+  border: 1px solid var(--feedback-success-border);
 }
 
 .feedback--cleared {
@@ -470,7 +488,7 @@ button:focus:not(:focus-visible),
   width: 18px;
   height: 18px;
   border-radius: 999px;
-  border: 1px solid var(--theme-swatch-border, rgba(220, 234, 255, 0.35));
+  border: 1px solid var(--theme-swatch-border);
   background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-accent) 100%);
 }
 
@@ -557,15 +575,11 @@ button:focus:not(:focus-visible),
 .settings-admin-badge {
   display: inline-flex;
   align-items: center;
-  border-radius: 999px;
-  border: 1px solid var(--state-running-text);
+  justify-content: center;
+  border-color: var(--state-running-text);
   background: var(--state-running-bg);
   color: var(--state-running-text);
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  padding: 2px 7px;
-  line-height: 1.2;
+  min-height: 22px;
   white-space: nowrap;
 }
 
@@ -710,12 +724,10 @@ button:focus:not(:focus-visible),
 }
 
 .settings-token-list__role {
-  border-radius: 999px;
-  border: 1px solid transparent;
-  padding: 2px 8px;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
 }
 
 .settings-token-list__role--admin {
@@ -725,25 +737,28 @@ button:focus:not(:focus-visible),
 }
 
 .settings-token-list__role--device {
-  background: rgba(76, 157, 255, 0.2);
-  color: #b8dcff;
+  background: var(--badge-device-bg);
+  color: var(--badge-device-text);
+  border-color: var(--badge-device-border);
 }
 
 .settings-token-list__status {
-  border-radius: 999px;
-  padding: 2px 8px;
-  font-size: 0.72rem;
-  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
 }
 
 .settings-token-list__status--active {
-  background: rgba(94, 199, 117, 0.18);
-  color: #74d48c;
+  background: var(--state-ok-bg);
+  color: var(--state-ok-text);
+  border-color: var(--state-ok-text);
 }
 
 .settings-token-list__status--inactive {
-  background: rgba(190, 100, 100, 0.18);
-  color: #f1a4a4;
+  background: var(--state-ng-bg);
+  color: var(--state-ng-text);
+  border-color: var(--state-ng-text);
 }
 
 .settings-token-list__actions {
@@ -810,7 +825,7 @@ button:focus:not(:focus-visible),
   border-radius: 999px;
   border: 1px solid var(--line);
   background: linear-gradient(135deg, var(--primary-strong) 0%, var(--primary) 100%);
-  color: #ffffff;
+  color: var(--btn-primary-text);
   box-shadow: var(--floating-switch-shadow);
   display: inline-flex;
   align-items: center;
@@ -838,7 +853,7 @@ button:focus:not(:focus-visible),
   width: 40px;
   height: 40px;
   object-fit: contain;
-  filter: brightness(0) saturate(100%) invert(100%);
+  filter: var(--floating-switch-icon-filter);
 }
 
 .desktop-uptime-switch__icon--right {
@@ -944,7 +959,7 @@ button:focus:not(:focus-visible),
 }
 
 .tab-btn--active {
-  color: #ffffff;
+  color: var(--btn-primary-text);
 }
 
 .panel {
