@@ -25,10 +25,10 @@
 .logs-table__icon-btn {
   width: 26px;
   height: 26px;
-  border: 1px solid #2f4f80;
+  border: 1px solid var(--btn-soft-border);
   border-radius: 999px;
-  background: rgba(15, 42, 75, 0.65);
-  color: #d6e5ff;
+  background: var(--btn-soft-bg);
+  color: var(--btn-soft-text);
   font-size: 0.9rem;
   line-height: 1;
   display: inline-flex;
@@ -38,11 +38,11 @@
 }
 
 .logs-table__icon-btn:hover {
-  background: rgba(32, 73, 126, 0.6);
+  background: var(--surface-muted);
 }
 
 .logs-table__icon-btn:focus-visible {
-  outline: 2px solid #5b9bff;
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 
@@ -54,7 +54,7 @@
   place-items: center;
   padding: 16px;
   overflow: hidden;
-  background: rgba(2, 9, 23, 0.72);
+  background: var(--overlay-backdrop);
   backdrop-filter: blur(4px);
 }
 
@@ -91,7 +91,7 @@
 
 .logs-focus__title {
   margin: 0;
-  color: #b7caec;
+  color: var(--text-sub);
   font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -100,10 +100,10 @@
 .logs-focus__close-btn {
   width: 34px;
   height: 34px;
-  border: 1px solid #2f4f80;
+  border: 1px solid var(--btn-soft-border);
   border-radius: 999px;
-  background: rgba(15, 42, 75, 0.65);
-  color: #d6e5ff;
+  background: var(--btn-soft-bg);
+  color: var(--btn-soft-text);
   font-size: 1rem;
   line-height: 1;
   display: inline-flex;
@@ -113,7 +113,7 @@
 }
 
 .logs-focus__close-btn:hover {
-  background: rgba(32, 73, 126, 0.6);
+  background: var(--surface-muted);
 }
 
 .logs-sheet {
@@ -125,7 +125,7 @@
   scrollbar-width: none;
   border-radius: 12px;
   border: 1px solid var(--line);
-  background: rgba(8, 22, 44, 0.78);
+  background: var(--surface-elevated);
 }
 
 .logs-sheet::-webkit-scrollbar {
@@ -137,7 +137,7 @@
   --logs-table-head-height: 38px;
   width: 100%;
   border-collapse: collapse;
-  background: #08172f;
+  background: var(--surface-strong);
   min-width: 0;
   table-layout: fixed;
 }
@@ -145,7 +145,7 @@
 .logs-table th,
 .logs-table td {
   padding: 9px 10px;
-  border-bottom: 1px solid #1f3659;
+  border-bottom: 1px solid var(--line);
   text-align: left;
   font-size: 0.82rem;
   vertical-align: top;
@@ -156,16 +156,16 @@
 .logs-table th {
   position: sticky;
   top: 0;
-  background: #0f2a4b;
-  color: #d4e4ff;
+  background: var(--table-head-bg);
+  color: var(--text-main);
   z-index: 1;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
 
 .logs-table__group-row td {
-  background: #102a4d;
-  border-bottom: 1px solid #274974;
+  background: var(--group-normal-bg);
+  border-bottom: 1px solid var(--line);
   padding: 0;
 }
 
@@ -185,19 +185,19 @@
 }
 
 .logs-table__group-toggle:hover {
-  background: #214a7a;
+  background: var(--group-hover-bg);
 }
 
 .logs-table__group-toggle--job {
-  background: #16365f;
+  background: var(--group-job-bg);
 }
 
 .logs-table__group-toggle--normal {
-  background: #2a284f;
+  background: var(--group-normal-bg);
 }
 
 .logs-table__group-toggle:focus-visible {
-  outline: 2px solid #5b9bff;
+  outline: 2px solid var(--focus-ring);
   outline-offset: -2px;
 }
 
@@ -214,7 +214,7 @@
   font-size: 0.74rem;
   letter-spacing: 0.03em;
   text-transform: uppercase;
-  color: #b8d0f7;
+  color: var(--text-sub);
 }
 
 .logs-table__group-head {
@@ -233,12 +233,12 @@
 .logs-table__group-subtitle {
   display: inline-flex;
   align-items: center;
-  border: 1px solid rgba(147, 187, 247, 0.4);
+  border: 1px solid var(--line);
   border-radius: 999px;
   padding: 1px 8px;
   font-size: 0.68rem;
   letter-spacing: 0.01em;
-  color: #d7e7ff;
+  color: var(--text-main);
   min-width: 0;
 }
 
@@ -267,18 +267,18 @@
 }
 
 .logs-table__group-count--ok {
-  background: rgba(16, 80, 56, 0.78);
-  color: #9ef5ca;
+  background: var(--state-ok-bg);
+  color: var(--state-ok-text);
 }
 
 .logs-table__group-count--ng {
-  background: rgba(88, 32, 32, 0.78);
-  color: #ffc1b2;
+  background: var(--state-ng-bg);
+  color: var(--state-ng-text);
 }
 
 .logs-table__group-count--total {
-  background: rgba(36, 62, 101, 0.78);
-  color: #d1e3ff;
+  background: var(--state-total-bg);
+  color: var(--state-total-text);
 }
 
 .logs-table__group-caret {
@@ -319,12 +319,12 @@
 
 .logs-time-cell__date {
   font-weight: 700;
-  color: #e5efff;
+  color: var(--text-main);
 }
 
 .logs-time-cell__time {
   font-weight: 700;
-  color: #c3d6f7;
+  color: var(--text-sub);
 }
 
 .logs-message-cell {
@@ -353,31 +353,31 @@
 }
 
 .logs-result-badge--ok {
-  background: rgba(16, 80, 56, 0.78);
-  color: #9ef5ca;
+  background: var(--state-ok-bg);
+  color: var(--state-ok-text);
 }
 
 .logs-result-badge--ng {
-  background: rgba(88, 32, 32, 0.78);
-  color: #ffc1b2;
+  background: var(--state-ng-bg);
+  color: var(--state-ng-text);
 }
 
 .logs-message-cell__hint {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  border: 1px solid #2f4f7f;
+  border: 1px solid var(--btn-soft-border);
   border-radius: 999px;
   padding: 3px 8px;
   font-size: 0.7rem;
   line-height: 1;
-  color: #a9c2ec;
-  background: rgba(12, 30, 56, 0.55);
+  color: var(--text-sub);
+  background: var(--surface-elevated-soft);
 }
 
 .logs-message-cell__hint--open {
-  color: #d7e7ff;
-  background: rgba(22, 48, 88, 0.6);
+  color: var(--text-main);
+  background: var(--surface-muted);
 }
 
 .log-details__text {
@@ -387,7 +387,7 @@
   box-sizing: border-box;
   font-size: 0.82rem;
   line-height: 1.45;
-  color: #d2e2ff;
+  color: var(--text-main);
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   white-space: pre-wrap;
   word-break: normal;
@@ -402,16 +402,16 @@
 
 .log-details__empty {
   margin: 0;
-  color: #b7caec;
+  color: var(--text-sub);
   font-size: 0.8rem;
 }
 
 .logs-table tbody tr.logs-table__row:nth-child(even) {
-  background: rgba(15, 42, 75, 0.42);
+  background: var(--surface-alt);
 }
 
 .logs-table tbody tr.logs-table__row:hover {
-  background: rgba(32, 73, 126, 0.32);
+  background: var(--surface-hover);
 }
 
 .logs-table__group-row,
@@ -430,18 +430,18 @@
 }
 
 .logs-table__row--expandable:focus-visible {
-  outline: 2px solid #5b9bff;
+  outline: 2px solid var(--focus-ring);
   outline-offset: -2px;
 }
 
 .logs-table__row--expanded {
-  background: rgba(27, 63, 109, 0.34);
+  background: var(--surface-hover);
 }
 
 .logs-table__detail-row td {
   padding: 8px 10px 10px;
-  border-bottom: 1px solid #1f3659;
-  background: rgba(8, 22, 44, 0.82);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-muted);
 }
 
 .logs-table__detail-row td::before {
@@ -458,8 +458,8 @@
   font-size: 0.74rem;
   font-weight: 700;
   line-height: 1;
-  background: rgba(16, 80, 56, 0.78);
-  color: #9ef5ca;
+  background: var(--state-ok-bg);
+  color: var(--state-ok-text);
 }
 
 .result-ng {
@@ -472,8 +472,7 @@
   font-size: 0.74rem;
   font-weight: 700;
   line-height: 1;
-  background: rgba(88, 32, 32, 0.78);
-  color: #ffc1b2;
+  background: var(--state-ng-bg);
+  color: var(--state-ng-text);
 }
-
 

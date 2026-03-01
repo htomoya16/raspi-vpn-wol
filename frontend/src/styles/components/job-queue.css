@@ -23,13 +23,13 @@
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 10px;
-  background: rgba(8, 22, 44, 0.8);
+  background: var(--surface-strong);
 }
 
 .job-id {
   margin: 0;
   font-size: 0.82rem;
-  color: #9fb2d9;
+  color: var(--text-sub);
   word-break: break-all;
 }
 
@@ -54,7 +54,7 @@
 
 .job-elapsed {
   font-size: 0.75rem;
-  color: #a9c2ec;
+  color: var(--text-sub);
 }
 
 .job-state {
@@ -65,23 +65,23 @@
 }
 
 .job-state--queued {
-  background: rgba(56, 70, 95, 0.78);
-  color: #c3d1f2;
+  background: var(--state-unknown-bg);
+  color: var(--state-unknown-text);
 }
 
 .job-state--running {
-  background: rgba(103, 74, 18, 0.78);
-  color: #ffe08f;
+  background: var(--state-running-bg);
+  color: var(--state-running-text);
 }
 
 .job-state--succeeded {
-  background: rgba(16, 80, 56, 0.78);
-  color: #9ef5ca;
+  background: var(--state-ok-bg);
+  color: var(--state-ok-text);
 }
 
 .job-state--failed {
-  background: rgba(88, 32, 32, 0.78);
-  color: #ffc1b2;
+  background: var(--state-ng-bg);
+  color: var(--state-ng-text);
 }
 
 @media (max-width: 760px) {

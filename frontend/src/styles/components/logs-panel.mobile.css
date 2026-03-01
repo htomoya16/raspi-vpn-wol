@@ -56,7 +56,7 @@
     margin-bottom: 8px;
     border: 1px solid var(--line);
     border-radius: 10px;
-    background: rgba(8, 22, 44, 0.85);
+    background: var(--surface-strong);
     padding: 8px;
   }
 
@@ -65,7 +65,7 @@
     grid-template-columns: 68px minmax(0, 1fr);
     gap: 6px;
     align-items: start;
-    border-bottom: 1px solid #1f3659;
+    border-bottom: 1px solid var(--line);
     padding: 5px 0;
     font-size: 0.8rem;
   }
@@ -103,15 +103,15 @@
   }
 
   .logs-table__group-toggle {
-    border: 1px solid rgba(66, 111, 173, 0.45);
+    border: 1px solid var(--line);
     border-radius: 12px;
-    background: #16365f;
+    background: var(--group-job-bg);
     padding: 8px 10px;
     backdrop-filter: none;
   }
 
   .logs-table__group-toggle:hover {
-    background: #214a7a;
+    background: var(--group-hover-bg);
   }
 
   .logs-table__group-toggle:focus-visible {
@@ -120,7 +120,7 @@
   }
 
   .logs-table__group-toggle:active {
-    background: #16365f;
+    background: var(--group-job-bg);
     outline: none !important;
     box-shadow: none !important;
   }

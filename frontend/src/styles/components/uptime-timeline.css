@@ -21,11 +21,11 @@
 }
 
 .uptime-week-calendar__axis-spacer {
-  border-bottom: 1px solid rgba(85, 117, 171, 0.4);
+  border-bottom: 1px solid var(--timeline-day-border);
 }
 
 .uptime-week-calendar__day-head {
-  border-bottom: 1px solid rgba(85, 117, 171, 0.4);
+  border-bottom: 1px solid var(--timeline-day-border);
   padding: 8px 6px;
   display: grid;
   gap: 2px;
@@ -33,18 +33,18 @@
 }
 
 .uptime-week-calendar__day-head + .uptime-week-calendar__day-head {
-  border-left: 1px solid rgba(79, 114, 170, 0.35);
+  border-left: 1px solid var(--timeline-axis-line);
 }
 
 .uptime-week-calendar__day-head p {
   margin: 0;
-  color: #d8e5ff;
+  color: var(--timeline-day-title);
   font-size: 0.78rem;
   font-weight: 700;
 }
 
 .uptime-week-calendar__day-head span {
-  color: #9ad5ff;
+  color: var(--timeline-day-date);
   font-size: 0.72rem;
   font-weight: 700;
 }
@@ -59,14 +59,14 @@
 .uptime-week-calendar__axis {
   position: relative;
   min-height: 700px;
-  border-right: 1px solid rgba(79, 114, 170, 0.35);
+  border-right: 1px solid var(--timeline-axis-line);
 }
 
 .uptime-week-calendar__axis-label {
   position: absolute;
   left: 0;
   transform: translateY(-50%);
-  color: #8fa6cf;
+  color: var(--timeline-axis-text);
   font-size: 0.66rem;
 }
 
@@ -92,11 +92,11 @@
   position: relative;
   min-height: 700px;
   overflow: hidden;
-  background: rgba(9, 22, 42, 0.88);
+  background: var(--timeline-column-bg);
 }
 
 .uptime-week-calendar__column + .uptime-week-calendar__column {
-  border-left: 1px solid rgba(79, 114, 170, 0.35);
+  border-left: 1px solid var(--timeline-axis-line);
 }
 
 .uptime-week-calendar__hour-line {
@@ -104,7 +104,7 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: rgba(79, 114, 170, 0.32);
+  background: var(--timeline-hour-line);
   pointer-events: none;
 }
 
@@ -113,14 +113,14 @@
   left: 3%;
   right: 3%;
   border-radius: 8px;
-  background: rgba(59, 130, 246, 0.95);
-  box-shadow: 0 8px 16px rgba(15, 42, 86, 0.42);
+  background: var(--timeline-event-bg);
+  box-shadow: 0 8px 16px var(--timeline-event-shadow);
   padding: 4px 5px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 4px;
-  color: #f5f9ff;
+  color: var(--timeline-event-text);
   font-size: 0.66rem;
   line-height: 1.1;
   font-weight: 700;
@@ -203,7 +203,7 @@
   .uptime-week-calendar__axis {
     position: sticky;
     left: 0;
-    background: rgba(8, 22, 44, 0.96);
+    background: var(--surface-strong);
   }
 
   .uptime-week-calendar__axis-spacer {

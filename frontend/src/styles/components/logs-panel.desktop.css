@@ -44,7 +44,7 @@
     position: sticky;
     top: var(--logs-table-head-height);
     z-index: 2;
-    background: rgba(13, 36, 68, 0.95);
+    background: var(--group-sticky-bg);
   }
 
   .logs-table__group-toggle {
@@ -67,8 +67,7 @@
   }
 
   .logs-time-cell__time {
-    color: #b9caea;
+    color: var(--text-sub);
     font-size: 0.78rem;
   }
 }
-

@@ -1,10 +1,12 @@
 import LoadingDots from './LoadingDots'
+import settingsIcon from './icons/setting.svg'
 
 interface AppHeaderProps {
   totalCount: number
   onlineCount: number
   refreshAllLoading: boolean
   onRefreshAllStatuses: () => Promise<void> | void
+  onOpenSettings: () => void
 }
 
 function AppHeader({
@@ -12,6 +14,7 @@ function AppHeader({
   onlineCount,
   refreshAllLoading,
   onRefreshAllStatuses,
+  onOpenSettings,
 }: AppHeaderProps) {
   return (
     <header className="hero hero--compact">
@@ -42,6 +45,15 @@ function AppHeader({
           disabled={refreshAllLoading}
         >
           {refreshAllLoading ? <LoadingDots label="更新ジョブ投入中" /> : '全PCステータス更新'}
+        </button>
+        <button
+          type="button"
+          className="hero__settings-btn"
+          onClick={onOpenSettings}
+          aria-label="設定を開く"
+          title="設定"
+        >
+          <img src={settingsIcon} alt="" aria-hidden="true" className="hero__settings-icon" />
         </button>
       </div>
     </header>
