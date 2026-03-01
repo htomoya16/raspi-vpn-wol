@@ -11,7 +11,7 @@
   position: relative;
   min-height: 0;
   height: 236px;
-  border-right: 1px solid rgba(79, 114, 170, 0.35);
+  border-right: 1px solid var(--chart-axis-line);
 }
 
 .uptime-chart__axis::after {
@@ -20,13 +20,13 @@
   left: 0;
   right: 0;
   bottom: 0;
-  border-bottom: 1px solid rgba(79, 114, 170, 0.45);
+  border-bottom: 1px solid var(--chart-axis-line);
 }
 
 .uptime-chart__axis-label {
   position: absolute;
   right: 6px;
-  color: #8fa6cf;
+  color: var(--chart-axis-text);
   font-size: 0.68rem;
   transform: translateY(-50%);
 }
@@ -54,10 +54,10 @@
   height: 236px;
   min-height: 236px;
   border-radius: 12px;
-  border: 1px solid rgba(99, 128, 179, 0.36);
+  border: 1px solid var(--chart-axis-line);
   background:
-    linear-gradient(180deg, rgba(126, 159, 211, 0.2) 1px, transparent 1px) 0 0 / 100% 25%,
-    rgba(7, 19, 38, 0.76);
+    linear-gradient(180deg, var(--chart-grid-line) 1px, transparent 1px) 0 0 / 100% 25%,
+    var(--chart-plot-bg);
 }
 
 .uptime-chart__plot::after {
@@ -66,7 +66,7 @@
   left: -1px;
   right: -1px;
   bottom: 0;
-  border-bottom: 1px solid rgba(79, 114, 170, 0.45);
+  border-bottom: 1px solid var(--chart-axis-line);
   pointer-events: none;
 }
 
@@ -84,7 +84,7 @@
   left: 0;
   right: 0;
   top: 0;
-  border-top: 2px dashed rgba(72, 197, 133, 0.9);
+  border-top: 2px dashed var(--chart-avg-line);
 }
 
 .uptime-chart__avg-label {
@@ -92,9 +92,9 @@
   right: 8px;
   top: -18px;
   font-size: 0.68rem;
-  color: #82e2b2;
-  background: rgba(9, 26, 44, 0.92);
-  border: 1px solid rgba(72, 197, 133, 0.5);
+  color: var(--chart-avg-text);
+  background: var(--chart-avg-bg);
+  border: 1px solid var(--chart-avg-border);
   border-radius: 999px;
   padding: 1px 8px;
 }
@@ -129,8 +129,8 @@
   width: 50%;
   border-radius: 8px 8px 3px 3px;
   min-height: 0;
-  background: #4f93ff;
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28);
+  background: var(--chart-bar-bg);
+  box-shadow: 0 8px 20px var(--chart-bar-shadow);
   transition: height 0.25s ease;
 }
 
@@ -162,7 +162,7 @@
 
 .uptime-chart__label {
   margin: 0;
-  color: #9fb2d9;
+  color: var(--text-sub);
   font-size: 0.75rem;
   line-height: 1.1;
   text-align: center;
@@ -176,7 +176,7 @@
   font-size: 0.72rem;
   line-height: 1.1;
   text-align: center;
-  color: #c8d8f3;
+  color: var(--text-main);
 }
 
 @keyframes uptime-bar-grow {

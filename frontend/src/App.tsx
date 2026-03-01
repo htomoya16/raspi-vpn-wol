@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 
 import './App.css'
 import AppHeader from './components/AppHeader'
+import SettingsDialog from './components/SettingsDialog'
 import DesktopWorkspace from './components/workspace/DesktopWorkspace'
 import MobileWorkspace from './components/workspace/MobileWorkspace'
 import yajirusiIcon from './components/icons/yajirusi.svg'
@@ -13,6 +14,8 @@ import type { MobileView } from './components/workspace/MobileWorkspace'
 import type { DashboardWorkspaceData } from './components/workspace/types'
 import { useDashboardData } from './hooks/useDashboardData'
 import { useMediaQuery } from './hooks/useMediaQuery'
+import { useThemeSettings } from './hooks/useThemeSettings'
+import { THEME_OPTIONS } from './theme/theme-options'
 import type { PcCreatePayload } from './types/models'
 
 const MOBILE_BREAKPOINT = '(max-width: 760px)'
@@ -22,8 +25,16 @@ function App() {
   const [leftView, setLeftView] = useState<LeftView>('list')
   const [mobileView, setMobileView] = useState<MobileView>('pcs')
   const [desktopView, setDesktopView] = useState<DesktopView>('dashboard')
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [selectedPcId, setSelectedPcId] = useState('')
   const isMobile = useMediaQuery(MOBILE_BREAKPOINT)
+  const {
+    themeId,
+    appearanceMode,
+    effectiveAppearanceMode,
+    onThemeChange,
+    onAppearanceChange,
+  } = useThemeSettings(THEME_OPTIONS)
   const {
     notice,
     pcs,
@@ -80,6 +91,18 @@ function App() {
     [createPcEntry],
   )
 
+  const handleOpenSettings = useCallback(() => {
+    if (isMobile) {
+      setMobileView('settings')
+      return
+    }
+    setSettingsOpen(true)
+  }, [isMobile])
+
+  const handleCloseSettings = useCallback(() => {
+    setSettingsOpen(false)
+  }, [])
+
   const pcListProps: PcListProps = {
     items: pcs,
     loading: pcLoading,
@@ -124,6 +147,7 @@ function App() {
         onlineCount={onlineCount}
         refreshAllLoading={refreshAllLoading}
         onRefreshAllStatuses={refreshAllStatusesEntry}
+        onOpenSettings={handleOpenSettings}
       />
 
       {notice ? <p className="feedback feedback--notice">{notice}</p> : null}
@@ -132,6 +156,12 @@ function App() {
         <MobileWorkspace
           mobileView={mobileView}
           onChangeMobileView={setMobileView}
+          selectedThemeId={themeId}
+          appearanceMode={appearanceMode}
+          effectiveAppearanceMode={effectiveAppearanceMode}
+          themeOptions={THEME_OPTIONS}
+          onThemeChange={onThemeChange}
+          onAppearanceChange={onAppearanceChange}
           dashboard={dashboardWorkspaceData}
           pcs={pcs}
           selectedPcId={activeSelectedPcId}
@@ -173,6 +203,17 @@ function App() {
           </button>
         </div>
       )}
+
+      <SettingsDialog
+        open={settingsOpen && !isMobile}
+        selectedThemeId={themeId}
+        appearanceMode={appearanceMode}
+        effectiveAppearanceMode={effectiveAppearanceMode}
+        themeOptions={THEME_OPTIONS}
+        onThemeChange={onThemeChange}
+        onAppearanceChange={onAppearanceChange}
+        onClose={handleCloseSettings}
+      />
     </main>
   )
 }

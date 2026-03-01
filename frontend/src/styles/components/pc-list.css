@@ -36,16 +36,16 @@
   margin: 0;
   padding: 6px 10px;
   border-radius: 10px;
-  background: rgba(10, 24, 47, 0.72);
+  background: var(--surface-elevated);
   border: 1px solid var(--line);
-  color: #b9cae9;
+  color: var(--text-sub);
   font-size: 0.82rem;
   white-space: nowrap;
 }
 
 .pc-list__status-help {
   margin: 6px 0 0;
-  color: #b8c9e8;
+  color: var(--text-sub);
   font-size: 0.78rem;
   line-height: 1.45;
 }
@@ -75,8 +75,8 @@
   position: absolute;
   inset: 0;
   border-radius: 12px;
-  border: 1px dashed rgba(95, 133, 192, 0.4);
-  background: rgba(7, 19, 38, 0.6);
+  border: 1px dashed var(--line);
+  background: var(--surface-overlay);
   backdrop-filter: blur(1px);
   display: flex;
   align-items: center;
@@ -87,13 +87,13 @@
 .pc-row {
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: rgba(8, 22, 44, 0.85);
+  background: var(--surface-strong);
   overflow: hidden;
 }
 
 .pc-row--active {
-  border-color: #3c6dc4;
-  box-shadow: 0 0 0 1px rgba(60, 109, 196, 0.35);
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 1px var(--focus-ring-shadow);
 }
 
 .pc-row__summary {
@@ -124,11 +124,11 @@
 }
 
 .pc-row__summary:hover {
-  background: rgba(13, 28, 52, 0.8);
+  background: var(--surface-muted);
 }
 
 .pc-row__summary-trigger:focus-visible {
-  outline: 2px solid #5b9bff;
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
   border-radius: 8px;
 }
@@ -157,7 +157,7 @@
 
 .pc-row__last-seen {
   margin: 0;
-  color: #bccae5;
+  color: var(--text-sub);
   font-size: 0.82rem;
   white-space: nowrap;
 }
@@ -183,7 +183,7 @@
 .pc-row__tags {
   margin: 6px 0 0;
   font-size: 0.78rem;
-  color: #b6c9eb;
+  color: var(--text-sub);
   white-space: normal;
   word-break: break-word;
 }
@@ -191,7 +191,7 @@
 .pc-row__cell {
   margin: 0;
   font-size: 0.86rem;
-  color: #cedaf4;
+  color: var(--text-main);
   white-space: normal;
   word-break: break-word;
 }
@@ -205,7 +205,7 @@
   margin-top: 10px;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: rgba(10, 24, 47, 0.72);
+  background: var(--surface-elevated);
   padding: 12px;
 }
 
@@ -217,7 +217,7 @@
   place-items: center;
   padding: 16px;
   overflow: hidden;
-  background: rgba(2, 9, 23, 0.68);
+  background: var(--overlay-backdrop);
   backdrop-filter: blur(3px);
 }
 
@@ -226,8 +226,8 @@
   width: min(760px, 100%);
   max-height: min(920px, calc(100dvh - 32px));
   overflow: auto;
-  background: rgba(10, 31, 60, 0.84);
-  border-color: #2e4f80;
+  background: var(--modal-bg);
+  border-color: var(--modal-border);
   box-shadow: 0 18px 42px rgba(2, 8, 24, 0.55);
 }
 
@@ -253,10 +253,10 @@
 .pc-detail__close-btn {
   width: 34px;
   height: 34px;
-  border: 1px solid #2f4f80;
+  border: 1px solid var(--btn-soft-border);
   border-radius: 999px;
-  background: rgba(15, 42, 75, 0.65);
-  color: #d6e5ff;
+  background: var(--btn-soft-bg);
+  color: var(--btn-soft-text);
   font-size: 1rem;
   line-height: 1;
   display: inline-flex;
@@ -266,7 +266,7 @@
 }
 
 .pc-detail__close-btn:hover {
-  background: rgba(32, 73, 126, 0.6);
+  background: var(--surface-muted);
 }
 
 .pc-detail__header h3 {
@@ -291,9 +291,9 @@
 .pc-detail__item {
   margin: 0;
   padding: 8px;
-  border: 1px solid #1f3659;
+  border: 1px solid var(--line);
   border-radius: 10px;
-  background: rgba(10, 24, 47, 0.65);
+  background: var(--surface-elevated);
   min-width: 0;
 }
 
@@ -342,28 +342,28 @@
 }
 
 .status-badge--online {
-  background: rgba(16, 80, 56, 0.78);
-  color: #9ef5ca;
+  background: var(--state-ok-bg);
+  color: var(--state-ok-text);
 }
 
 .status-badge--offline {
-  background: rgba(88, 32, 32, 0.78);
-  color: #ffc1b2;
+  background: var(--state-ng-bg);
+  color: var(--state-ng-text);
 }
 
 .status-badge--unknown {
-  background: rgba(56, 70, 95, 0.78);
-  color: #c3d1f2;
+  background: var(--state-unknown-bg);
+  color: var(--state-unknown-text);
 }
 
 .status-badge--booting {
-  background: rgba(103, 74, 18, 0.78);
-  color: #ffe08f;
+  background: var(--state-running-bg);
+  color: var(--state-running-text);
 }
 
 .status-badge--unreachable {
-  background: rgba(92, 38, 55, 0.78);
-  color: #ffc0d4;
+  background: var(--state-unreachable-bg);
+  color: var(--state-unreachable-text);
 }
 
 @media (min-width: 761px) {

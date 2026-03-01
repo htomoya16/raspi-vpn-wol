@@ -6,16 +6,16 @@
   place-items: center;
   padding: 16px;
   overflow: hidden;
-  background: rgba(2, 9, 23, 0.68);
+  background: var(--overlay-backdrop);
   backdrop-filter: blur(3px);
 }
 
 .confirm-dialog {
   width: min(460px, 100%);
-  border: 1px solid #2e4f80;
+  border: 1px solid var(--modal-border);
   border-radius: 16px;
-  background: #0a1f3c;
-  box-shadow: 0 18px 42px rgba(2, 8, 24, 0.55);
+  background: var(--modal-bg);
+  box-shadow: var(--panel-shadow);
   padding: 16px;
 }
 
@@ -26,7 +26,7 @@
 
 .confirm-dialog p {
   margin: 10px 0 0;
-  color: #b7caec;
+  color: var(--modal-text-sub);
   line-height: 1.45;
 }
 

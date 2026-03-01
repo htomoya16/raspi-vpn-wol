@@ -34,7 +34,7 @@
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 12px;
-  background: rgba(8, 22, 44, 0.72);
+  background: var(--surface-elevated);
 }
 
 .uptime-section__content {
@@ -56,10 +56,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #d6e5ff;
+  color: var(--text-main);
   font-weight: 700;
   font-size: 0.9rem;
-  background: rgba(7, 19, 38, 0.46);
+  background: var(--surface-overlay);
   backdrop-filter: blur(1px);
   pointer-events: none;
   z-index: 5;
@@ -68,11 +68,11 @@
 .uptime-summary-placeholder {
   margin-top: 12px;
   min-height: 280px;
-  border: 1px dashed rgba(95, 133, 192, 0.38);
+  border: 1px dashed var(--line);
   border-radius: 12px;
   display: grid;
   place-items: center;
-  background: rgba(7, 19, 38, 0.6);
+  background: var(--surface-overlay);
 }
 
 .uptime-summary-placeholder .empty-state {
@@ -130,11 +130,11 @@
 }
 
 .uptime-nav--summary .uptime-nav__arrow {
-  border-color: rgba(97, 137, 205, 0.7);
+  border-color: var(--line);
 }
 
 .uptime-nav--weekly .uptime-nav__arrow {
-  border-color: rgba(92, 174, 220, 0.6);
+  border-color: var(--line);
 }
 
 .uptime-slide-surface {

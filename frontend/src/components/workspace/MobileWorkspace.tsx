@@ -2,19 +2,28 @@ import JobQueue from '../JobQueue'
 import LogsPanel from '../LogsPanel'
 import PcForm from '../PcForm'
 import PcList from '../PcList'
+import { SettingsPanel } from '../SettingsDialog'
 import UptimePanel from '../UptimePanel'
 import homeIcon from '../icons/home.svg'
 import logIcon from '../icons/log.svg'
 import registerIcon from '../icons/register.svg'
+import settingsIcon from '../icons/setting.svg'
 import uptimeIcon from '../icons/uptime.svg'
+import type { AppearanceMode, EffectiveAppearanceMode, ThemeOption } from '../../theme/types'
 import type { Pc } from '../../types/models'
 import type { DashboardWorkspaceData } from './types'
 
-export type MobileView = 'pcs' | 'create' | 'logs' | 'uptime'
+export type MobileView = 'pcs' | 'create' | 'logs' | 'uptime' | 'settings'
 
 interface MobileWorkspaceProps {
   mobileView: MobileView
   onChangeMobileView: (view: MobileView) => void
+  selectedThemeId: string
+  appearanceMode: AppearanceMode
+  effectiveAppearanceMode: EffectiveAppearanceMode
+  themeOptions: ThemeOption[]
+  onThemeChange: (themeId: string) => void
+  onAppearanceChange: (mode: AppearanceMode) => void
   dashboard: DashboardWorkspaceData
   pcs: Pc[]
   selectedPcId: string
@@ -22,9 +31,31 @@ interface MobileWorkspaceProps {
   uptimeDataVersion?: string
 }
 
+interface MobileNavItem {
+  view: MobileView
+  label: string
+  icon: string
+  variant: 'stack' | 'register'
+  ariaLabel?: string
+}
+
+const MOBILE_NAV_ITEMS: MobileNavItem[] = [
+  { view: 'pcs', label: 'PC一覧', icon: homeIcon, variant: 'stack' },
+  { view: 'logs', label: 'ログ', icon: logIcon, variant: 'stack' },
+  { view: 'create', label: 'PC登録', icon: registerIcon, variant: 'register', ariaLabel: 'PC登録' },
+  { view: 'uptime', label: '稼働時間', icon: uptimeIcon, variant: 'stack' },
+  { view: 'settings', label: '設定', icon: settingsIcon, variant: 'stack', ariaLabel: '設定' },
+]
+
 function MobileWorkspace({
   mobileView,
   onChangeMobileView,
+  selectedThemeId,
+  appearanceMode,
+  effectiveAppearanceMode,
+  themeOptions,
+  onThemeChange,
+  onAppearanceChange,
   dashboard,
   pcs,
   selectedPcId,
@@ -66,43 +97,53 @@ function MobileWorkspace({
             dataVersion={uptimeDataVersion}
           />
         ) : null}
+
+        {mobileView === 'settings' ? (
+          <section className="panel">
+            <SettingsPanel
+              selectedThemeId={selectedThemeId}
+              appearanceMode={appearanceMode}
+              effectiveAppearanceMode={effectiveAppearanceMode}
+              themeOptions={themeOptions}
+              onThemeChange={onThemeChange}
+              onAppearanceChange={onAppearanceChange}
+            />
+          </section>
+        ) : null}
       </section>
 
       <nav className="mobile-bottom-nav" aria-label="表示切替メニュー">
-        <button
-          type="button"
-          className={`mobile-bottom-nav__btn mobile-bottom-nav__btn--stack ${mobileView === 'pcs' ? 'mobile-bottom-nav__btn--active' : ''}`}
-          onClick={() => onChangeMobileView('pcs')}
-        >
-          <img src={homeIcon} alt="" aria-hidden="true" className="mobile-bottom-nav__icon" />
-          <span className="mobile-bottom-nav__label">PC一覧</span>
-        </button>
-        <button
-          type="button"
-          className={`mobile-bottom-nav__btn mobile-bottom-nav__btn--register ${mobileView === 'create' ? 'mobile-bottom-nav__btn--active' : ''}`}
-          onClick={() => onChangeMobileView('create')}
-          aria-label="PC登録"
-        >
-          <span className="mobile-bottom-nav__register-circle" aria-hidden="true">
-            <img src={registerIcon} alt="" className="mobile-bottom-nav__icon mobile-bottom-nav__icon--register" />
-          </span>
-        </button>
-        <button
-          type="button"
-          className={`mobile-bottom-nav__btn mobile-bottom-nav__btn--stack ${mobileView === 'logs' ? 'mobile-bottom-nav__btn--active' : ''}`}
-          onClick={() => onChangeMobileView('logs')}
-        >
-          <img src={logIcon} alt="" aria-hidden="true" className="mobile-bottom-nav__icon" />
-          <span className="mobile-bottom-nav__label">ログ</span>
-        </button>
-        <button
-          type="button"
-          className={`mobile-bottom-nav__btn mobile-bottom-nav__btn--stack ${mobileView === 'uptime' ? 'mobile-bottom-nav__btn--active' : ''}`}
-          onClick={() => onChangeMobileView('uptime')}
-        >
-          <img src={uptimeIcon} alt="" aria-hidden="true" className="mobile-bottom-nav__icon" />
-          <span className="mobile-bottom-nav__label">稼働時間</span>
-        </button>
+        {MOBILE_NAV_ITEMS.map((item) => {
+          const active = mobileView === item.view
+          if (item.variant === 'register') {
+            return (
+              <button
+                key={item.view}
+                type="button"
+                className={`mobile-bottom-nav__btn mobile-bottom-nav__btn--register ${active ? 'mobile-bottom-nav__btn--active' : ''}`}
+                onClick={() => onChangeMobileView(item.view)}
+                aria-label={item.ariaLabel ?? item.label}
+              >
+                <span className="mobile-bottom-nav__register-circle" aria-hidden="true">
+                  <img src={item.icon} alt="" className="mobile-bottom-nav__icon mobile-bottom-nav__icon--register" />
+                </span>
+              </button>
+            )
+          }
+
+          return (
+            <button
+              key={item.view}
+              type="button"
+              className={`mobile-bottom-nav__btn mobile-bottom-nav__btn--stack ${active ? 'mobile-bottom-nav__btn--active' : ''}`}
+              onClick={() => onChangeMobileView(item.view)}
+              aria-label={item.ariaLabel}
+            >
+              <img src={item.icon} alt="" aria-hidden="true" className="mobile-bottom-nav__icon" />
+              <span className="mobile-bottom-nav__label">{item.label}</span>
+            </button>
+          )
+        })}
       </nav>
     </>
   )
