@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { formatApiError } from '../api/http'
 import { invalidateLogsCache } from '../api/logs'
-import { refreshAllStatuses, sendPcWol } from '../api/pcs'
+import { invalidatePcsAndUptimeCache, refreshAllStatuses, sendPcWol } from '../api/pcs'
 import type { PcCreatePayload, PcFilterState, PcUpdatePayload } from '../types/models'
 import { useDashboardSse } from './useDashboardSse'
 import { useJobTracker } from './useJobTracker'
@@ -88,6 +88,8 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
   } = usePcData({ loadLogs, setNotice })
 
   const refreshFromTerminal = useCallback(async () => {
+    invalidatePcsAndUptimeCache()
+    invalidateLogsCache()
     await Promise.all([loadPcs(), loadLogs()])
   }, [loadLogs, loadPcs])
 

@@ -306,4 +306,73 @@ describe('useDashboardData SSE cache invalidation', () => {
     expect(loadPcs).not.toHaveBeenCalled()
     expect(openEventsMock).not.toHaveBeenCalled()
   })
+
+  it('invalidates caches when job tracker requests progress or terminal refresh', async () => {
+    const loadLogs = vi.fn().mockResolvedValue(undefined)
+    const loadPcs = vi.fn().mockResolvedValue(undefined)
+    let trackerParams: { onTerminal: () => Promise<void>; onProgress?: () => Promise<void> } | null = null
+
+    openEventsMock.mockReturnValue(null)
+    useLogsDataMock.mockReturnValue({
+      logs: [],
+      logsLoading: false,
+      logsError: '',
+      loadLogs,
+      clearLogsEntry: vi.fn().mockResolvedValue(undefined),
+    })
+    usePcDataMock.mockReturnValue({
+      pcs: [],
+      pcLoading: false,
+      pcError: '',
+      pcFilters: { q: '', status: '' },
+      appliedPcFilters: { q: '', status: '' },
+      createLoading: false,
+      createError: '',
+      busyById: {},
+      rowErrorById: {},
+      lastSyncedAt: '',
+      onlineCount: 0,
+      loadPcs,
+      setBusy: vi.fn(),
+      setPcError: vi.fn(),
+      setRowError: vi.fn(),
+      createPcEntry: vi.fn(),
+      deletePcEntry: vi.fn(),
+      updatePcEntry: vi.fn(),
+      refreshPcStatusEntry: vi.fn(),
+      applyPcStatusEvent: vi.fn(),
+      setPcStatusLocal: vi.fn(),
+      handleFilterChange: vi.fn(),
+      handleApplyFilters: vi.fn(),
+      handleClearFilters: vi.fn(),
+    })
+    useJobTrackerMock.mockImplementation((params) => {
+      trackerParams = params as { onTerminal: () => Promise<void>; onProgress?: () => Promise<void> }
+      return {
+        jobs: [],
+        trackJob: vi.fn().mockResolvedValue(undefined),
+      }
+    })
+
+    renderHook(() => useDashboardData())
+    expect(trackerParams).not.toBeNull()
+
+    vi.clearAllMocks()
+    await act(async () => {
+      await trackerParams?.onProgress?.()
+    })
+    expect(invalidateLogsCache).toHaveBeenCalledTimes(1)
+    expect(invalidatePcsAndUptimeCache).not.toHaveBeenCalled()
+    expect(loadLogs).toHaveBeenCalledTimes(1)
+    expect(loadPcs).not.toHaveBeenCalled()
+
+    vi.clearAllMocks()
+    await act(async () => {
+      await trackerParams?.onTerminal()
+    })
+    expect(invalidatePcsAndUptimeCache).toHaveBeenCalledWith()
+    expect(invalidateLogsCache).toHaveBeenCalledTimes(1)
+    expect(loadPcs).toHaveBeenCalledTimes(1)
+    expect(loadLogs).toHaveBeenCalledTimes(1)
+  })
 })

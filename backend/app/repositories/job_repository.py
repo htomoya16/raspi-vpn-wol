@@ -189,3 +189,22 @@ def mark_failed(job_id: str, error_message: str) -> None:
             """,
             (error_message, now_iso, now_iso, job_id),
         )
+
+
+def mark_failed_if_active(job_id: str, error_message: str) -> bool:
+    now_iso = datetime.now(timezone.utc).isoformat()
+    with connection() as conn:
+        result = conn.execute(
+            """
+            UPDATE jobs
+            SET
+                state = 'failed',
+                error_message = ?,
+                finished_at = ?,
+                updated_at = ?
+            WHERE id = ?
+              AND state IN ('queued', 'running')
+            """,
+            (error_message, now_iso, now_iso, job_id),
+        )
+    return result.rowcount > 0

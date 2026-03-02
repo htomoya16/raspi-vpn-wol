@@ -1,0 +1,37 @@
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+  white-space: nowrap;
+}
+
+.status-badge--online {
+  background: var(--state-ok-bg);
+  color: var(--state-ok-text);
+  border-color: var(--state-ok-text);
+}
+
+.status-badge--offline {
+  background: var(--state-ng-bg);
+  color: var(--state-ng-text);
+  border-color: var(--state-ng-text);
+}
+
+.status-badge--unknown {
+  background: var(--state-unknown-bg);
+  color: var(--state-unknown-text);
+  border-color: var(--state-unknown-text);
+}
+
+.status-badge--booting {
+  background: var(--state-running-bg);
+  color: var(--state-running-text);
+  border-color: var(--state-running-text);
+}
+
+.status-badge--unreachable {
+  background: var(--state-unreachable-bg);
+  color: var(--state-unreachable-text);
+  border-color: var(--state-unreachable-text);
+}

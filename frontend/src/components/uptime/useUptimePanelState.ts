@@ -4,21 +4,16 @@ import type { Pc, PcWeeklyTimelineResponse, UptimeBucket, UptimeSummaryItem } fr
 import type { SlideDirection, SummaryAxisTick, SummaryBucket, TimelineDay } from './types'
 import {
   HOUR_MARKERS,
-  addDays,
-  buildSummaryAxisTicks,
-  buildTimelineDays,
-  buildWeeklyFallback,
   canMoveSummaryNext,
   formatDateRange,
   getCurrentWeekStart,
   getSummaryQuery,
-  moveSummaryAnchor,
   parseIsoDateLocal,
   startOfWeekSunday,
-  toBucketedMaxSeconds,
   toIsoDateLocal,
 } from './utils'
-import { useSwipeNavigation } from './useSwipeNavigation'
+import { useUptimeDerivedMetrics } from './useUptimeDerivedMetrics'
+import { useUptimeNavigation } from './useUptimeNavigation'
 import { useUptimeSummaryData } from './useUptimeSummaryData'
 import { useUptimeTimelineData } from './useUptimeTimelineData'
 
@@ -126,11 +121,9 @@ export function useUptimePanelState({
   )
   const todayIsoDate = toIsoDateLocal(new Date())
 
-  const isWeeklyNextDisabled = weekStartDate >= currentWeekStartDate
-
   const summaryQuery = useMemo(
-    () => getSummaryQuery(summaryAnchor, summaryBucket),
-    [summaryAnchor, summaryBucket],
+    () => getSummaryQuery(summaryAnchor, summaryBucket, isMobile && summaryBucket === 'month' ? 6 : 12),
+    [isMobile, summaryAnchor, summaryBucket],
   )
 
   const summaryDateRangeLabel = useMemo(
@@ -239,52 +232,30 @@ export function useUptimePanelState({
     onError: handleTimelineFetchError,
   })
 
-  const summaryItems = useMemo(
-    () => (summary ? [...summary.items].sort((a, b) => a.period_start.localeCompare(b.period_start)) : []),
-    [summary],
-  )
-
-  const summaryMaxSeconds = useMemo(() => {
-    const maxSeconds = summaryItems.length === 0 ? 0 : Math.max(...summaryItems.map((item) => item.online_seconds))
-    return toBucketedMaxSeconds(maxSeconds, summaryBucket)
-  }, [summaryBucket, summaryItems])
-
-  const summaryAverageSeconds = useMemo(() => {
-    if (summaryItems.length === 0) {
-      return 0
-    }
-    const total = summaryItems.reduce((sum, item) => sum + item.online_seconds, 0)
-    return total / summaryItems.length
-  }, [summaryItems])
-
-  const summaryAveragePercent = useMemo(() => {
-    if (summaryMaxSeconds <= 0) {
-      return 0
-    }
-    return Math.max(0, Math.min(100, (summaryAverageSeconds / summaryMaxSeconds) * 100))
-  }, [summaryAverageSeconds, summaryMaxSeconds])
-
-  const summaryAxisTicks = useMemo(() => buildSummaryAxisTicks(summaryMaxSeconds), [summaryMaxSeconds])
-
-  const summaryColumnMinWidth = useMemo(() => {
-    if (isMobile) {
-      return 0
-    }
-    if (summaryBucket === 'month') {
-      return 64
-    }
-    if (summaryBucket === 'year') {
-      return 90
-    }
-    return 76
-  }, [isMobile, summaryBucket])
-
-  const summaryGridStyle = useMemo<CSSProperties>(
-    () => ({
-      gridTemplateColumns: `repeat(${Math.max(summaryItems.length, 1)}, minmax(${summaryColumnMinWidth}px, 1fr))`,
-    }),
-    [summaryColumnMinWidth, summaryItems.length],
-  )
+  const {
+    summaryItems,
+    summaryMaxSeconds,
+    summaryAverageSeconds,
+    summaryAveragePercent,
+    summaryAxisTicks,
+    summaryGridStyle,
+    weeklyData,
+    timelineDays,
+    visibleTimelineDays,
+    activeTimelineDay,
+    isTimelineNextDisabled,
+  } = useUptimeDerivedMetrics({
+    summary,
+    weekly,
+    weekStart,
+    summaryBucket,
+    isMobile,
+    mobileCursorDate,
+    todayIsoDate,
+    weekStartDate,
+    currentWeekStartDate,
+    tz: DEFAULT_TZ,
+  })
 
   useEffect(() => {
     if (!summarySlide) {
@@ -302,114 +273,6 @@ export function useUptimePanelState({
     return () => window.clearTimeout(timer)
   }, [weeklySlide])
 
-  const weeklyData = useMemo(
-    () => weekly || buildWeeklyFallback(weekStart, DEFAULT_TZ),
-    [weekStart, weekly],
-  )
-  const timelineDays = useMemo(() => buildTimelineDays(weeklyData.days), [weeklyData.days])
-
-  const visibleTimelineDays = useMemo(() => {
-    if (!isMobile) {
-      return timelineDays
-    }
-    if (timelineDays.length === 0) {
-      return []
-    }
-    const cursorIndex = timelineDays.findIndex((day) => day.date === mobileCursorDate)
-    if (cursorIndex >= 0) {
-      return [timelineDays[cursorIndex]]
-    }
-    if (mobileCursorDate <= timelineDays[0].date) {
-      return [timelineDays[0]]
-    }
-    return [timelineDays[timelineDays.length - 1]]
-  }, [isMobile, mobileCursorDate, timelineDays])
-
-  const activeTimelineDay = useMemo(() => {
-    if (visibleTimelineDays.length === 0) {
-      return null
-    }
-    return visibleTimelineDays[0]
-  }, [visibleTimelineDays])
-
-  useEffect(() => {
-    if (!isMobile) {
-      pendingMobileCursorRef.current = null
-      return
-    }
-    if (timelineDays.length === 0) {
-      return
-    }
-    const pendingCursor = pendingMobileCursorRef.current
-    if (pendingCursor) {
-      if (timelineDays.some((day) => day.date === pendingCursor)) {
-        if (mobileCursorDate !== pendingCursor) {
-          setMobileCursorDate(pendingCursor)
-        }
-        pendingMobileCursorRef.current = null
-      }
-      return
-    }
-    if (timelineDays.some((day) => day.date === mobileCursorDate)) {
-      return
-    }
-    if (mobileCursorDate <= timelineDays[0].date) {
-      setMobileCursorDate(timelineDays[0].date)
-      return
-    }
-    setMobileCursorDate(timelineDays[timelineDays.length - 1].date)
-  }, [isMobile, mobileCursorDate, timelineDays])
-
-  const isTimelineNextDisabled = useMemo(() => {
-    if (!isMobile) {
-      return isWeeklyNextDisabled
-    }
-    if (timelineDays.length === 0) {
-      return true
-    }
-    const activeDate = activeTimelineDay?.date || mobileCursorDate
-    return activeDate >= todayIsoDate
-  }, [activeTimelineDay?.date, isMobile, isWeeklyNextDisabled, mobileCursorDate, timelineDays.length, todayIsoDate])
-
-  const moveSummary = (direction: 1 | -1): void => {
-    pendingSummarySlideRef.current = direction < 0 ? 'prev' : 'next'
-    setSummaryAnchor((prev) => moveSummaryAnchor(prev, summaryBucket, direction))
-  }
-
-  const moveWeekly = (offset: number): void => {
-    pendingWeeklySlideRef.current = offset < 0 ? 'prev' : 'next'
-    const base = parseIsoDateLocal(weekStart) || weekStartDate
-    setWeekStart(toIsoDateLocal(addDays(base, offset * 7)))
-  }
-
-  const moveTimeline = (direction: 1 | -1): void => {
-    if (!isMobile) {
-      moveWeekly(direction)
-      return
-    }
-
-    const activeDate = activeTimelineDay?.date || mobileCursorDate
-    const activeDateObj = parseIsoDateLocal(activeDate)
-    if (!activeDateObj) {
-      return
-    }
-
-    const nextDateObj = addDays(activeDateObj, direction)
-    const nextDate = toIsoDateLocal(nextDateObj)
-    if (direction > 0 && nextDate > todayIsoDate) {
-      return
-    }
-
-    setWeeklySlide(direction < 0 ? 'prev' : 'next')
-    setMobileCursorDate(nextDate)
-    const nextWeekStart = toIsoDateLocal(startOfWeekSunday(nextDateObj))
-    if (nextWeekStart !== weekStart) {
-      pendingMobileCursorRef.current = nextDate
-      pendingWeeklySlideRef.current = direction < 0 ? 'prev' : 'next'
-      setWeekStart(nextWeekStart)
-    }
-  }
-
   const handleToggleMockData = (): void => {
     if (!ENABLE_UPTIME_MOCK) {
       return
@@ -423,58 +286,38 @@ export function useUptimePanelState({
     })
   }
 
-  const handlePcSelectionChange = (nextPcId: string, onSelectPc: (pcId: string) => void): void => {
-    if (nextPcId !== activePcId) {
-      pendingSummarySlideRef.current = 'next'
-      pendingWeeklySlideRef.current = 'next'
-    }
-    onSelectPc(nextPcId)
-  }
-
-  const changeSummaryBucket = (next: SummaryBucket): void => {
-    pendingSummarySlideRef.current = 'next'
-    setSummaryBucket(next)
-    setSummaryAnchor(new Date())
-  }
-
-  const changeReferenceDate = (nextIsoDate: string): void => {
-    const parsed = parseIsoDateLocal(nextIsoDate)
-    if (!parsed) {
-      return
-    }
-
-    const today = parseIsoDateLocal(toIsoDateLocal(new Date())) || new Date()
-    const normalized = parsed > today ? today : parsed
-    const normalizedIso = toIsoDateLocal(normalized)
-    pendingSummarySlideRef.current = 'next'
-    pendingWeeklySlideRef.current = 'next'
-    pendingMobileCursorRef.current = normalizedIso
-    setReferenceDate(normalizedIso)
-    setSummaryAnchor(normalized)
-    setWeekStart(toIsoDateLocal(startOfWeekSunday(normalized)))
-    setMobileCursorDate(normalizedIso)
-  }
-
-  const summarySwipe = useSwipeNavigation({
-    enabled: isMobile,
-    onSwipePrev: () => {
-      moveSummary(-1)
-    },
-    onSwipeNext: () => {
-      if (!isSummaryNextDisabled) {
-        moveSummary(1)
-      }
-    },
-  })
-
-  const timelineSwipe = useSwipeNavigation({
-    enabled: isMobile,
-    onSwipePrev: () => {
-      moveTimeline(-1)
-    },
-    onSwipeNext: () => {
-      moveTimeline(1)
-    },
+  const {
+    changeSummaryBucket,
+    changeReferenceDate,
+    moveSummary,
+    moveTimeline,
+    handlePcSelectionChange,
+    handleSummaryTouchStart,
+    handleSummaryTouchEnd,
+    handleSummaryTouchCancel,
+    handleTimelineTouchStart,
+    handleTimelineTouchEnd,
+    handleTimelineTouchCancel,
+  } = useUptimeNavigation({
+    isMobile,
+    summaryBucket,
+    weekStart,
+    weekStartDate,
+    todayIsoDate,
+    isSummaryNextDisabled,
+    activePcId,
+    activeTimelineDay,
+    timelineDays,
+    mobileCursorDate,
+    pendingSummarySlideRef,
+    pendingWeeklySlideRef,
+    pendingMobileCursorRef,
+    setSummaryBucket,
+    setSummaryAnchor,
+    setReferenceDate,
+    setWeekStart,
+    setWeeklySlide,
+    setMobileCursorDate,
   })
 
   return {
@@ -511,11 +354,11 @@ export function useUptimePanelState({
     moveSummary,
     moveTimeline,
     handlePcSelectionChange,
-    handleSummaryTouchStart: summarySwipe.onTouchStart,
-    handleSummaryTouchEnd: summarySwipe.onTouchEnd,
-    handleSummaryTouchCancel: summarySwipe.onTouchCancel,
-    handleTimelineTouchStart: timelineSwipe.onTouchStart,
-    handleTimelineTouchEnd: timelineSwipe.onTouchEnd,
-    handleTimelineTouchCancel: timelineSwipe.onTouchCancel,
+    handleSummaryTouchStart,
+    handleSummaryTouchEnd,
+    handleSummaryTouchCancel,
+    handleTimelineTouchStart,
+    handleTimelineTouchEnd,
+    handleTimelineTouchCancel,
   }
 }
