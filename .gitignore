@@ -19,6 +19,7 @@ backend/app/db/*.db-wal
 backend/app/db/*.db-shm
 backend/app/db/*.db-journal
 backend/app/db/*.sqlite3
+backend/backups/
 
 # Frontend (Vite)
 frontend/node_modules/
