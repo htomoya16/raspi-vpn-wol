@@ -50,5 +50,9 @@
 - `ping` は ICMP遮断端末で `offline` になる。
 - デフォルトは `status_method=tcp`, `status_port=445` なので、端末に合わせて変更する。
 - `POST /api/pcs/status/refresh` で全PCの非同期更新も可能。
+- レート制限:
+  - `POST /api/pcs/{pc_id}/status/refresh`: 1トークンあたり `6回/60秒`
+  - `POST /api/pcs/status/refresh`: 1トークンあたり `1回/30秒`
+  - 超過時は `429` と `Retry-After` を返す。
 - バックエンド起動中は、60秒ごとに全PCステータス更新ジョブを自動投入する。
 - 自動投入時は `status_refresh_all` の重複起動を抑止し、既存 `queued/running` ジョブを再利用する。

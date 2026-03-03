@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { formatApiError } from '../api/http'
 import { invalidateLogsCache } from '../api/logs'
-import { refreshAllStatuses, sendPcWol } from '../api/pcs'
+import { invalidatePcsAndUptimeCache, refreshAllStatuses, sendPcWol } from '../api/pcs'
 import type { PcCreatePayload, PcFilterState, PcUpdatePayload } from '../types/models'
 import { useDashboardSse } from './useDashboardSse'
 import { useJobTracker } from './useJobTracker'
@@ -41,7 +41,12 @@ export interface UseDashboardDataResult {
   handleClearFilters: () => void
 }
 
-export function useDashboardData(): UseDashboardDataResult {
+interface UseDashboardDataOptions {
+  enabled?: boolean
+}
+
+export function useDashboardData(options: UseDashboardDataOptions = {}): UseDashboardDataResult {
+  const enabled = options.enabled ?? true
   const [notice, setNotice] = useState('')
   const [refreshAllLoading, setRefreshAllLoading] = useState(false)
   const refreshAllInFlightRef = useRef(false)
@@ -83,6 +88,8 @@ export function useDashboardData(): UseDashboardDataResult {
   } = usePcData({ loadLogs, setNotice })
 
   const refreshFromTerminal = useCallback(async () => {
+    invalidatePcsAndUptimeCache()
+    invalidateLogsCache()
     await Promise.all([loadPcs(), loadLogs()])
   }, [loadLogs, loadPcs])
 
@@ -101,6 +108,7 @@ export function useDashboardData(): UseDashboardDataResult {
   }, [jobs])
 
   useDashboardSse({
+    enabled,
     trackedJobIdsRef,
     applyPcStatusEvent,
     loadLogs,
@@ -146,12 +154,18 @@ export function useDashboardData(): UseDashboardDataResult {
   }, [setPcError, trackJob])
 
   useEffect(() => {
+    if (!enabled) {
+      return
+    }
     void loadLogs()
-  }, [loadLogs])
+  }, [enabled, loadLogs])
 
   useEffect(() => {
+    if (!enabled) {
+      return
+    }
     void loadPcs()
-  }, [loadPcs])
+  }, [enabled, loadPcs])
 
   return {
     notice,

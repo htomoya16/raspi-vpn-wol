@@ -19,8 +19,13 @@
 - `idx_logs_action_id_desc` on `logs(action, id DESC)`
 - `idx_logs_ok_id_desc` on `logs(ok, id DESC)`
 - `idx_logs_job_id_id_desc` on `logs(job_id, id DESC)`
+- `idx_logs_api_token_id_id_desc` on `logs(api_token_id, id DESC)`
 - `idx_logs_event_kind_id_desc` on `logs(event_kind, id DESC)`
 - `idx_logs_created_at` on `logs(created_at)`
+- `uq_api_tokens_token_hash` on `api_tokens(token_hash)` (UNIQUE)
+- `idx_api_tokens_name` on `api_tokens(name)`
+- `idx_api_tokens_revoked_expires` on `api_tokens(revoked_at, expires_at)`
+- `idx_api_tokens_role_revoked_expires` on `api_tokens(role, revoked_at, expires_at)`
 - `idx_jobs_job_type_state_created_at` on `jobs(job_type, state, created_at DESC)`
 - `idx_status_history_pc_changed_id` on `status_history(pc_id, changed_at DESC, id DESC)`
 - `idx_status_history_changed_at` on `status_history(changed_at DESC)`
@@ -52,6 +57,10 @@
   - 対応: `backend/app/repositories/log_repository.py` の `WHERE job_id = ?` + `ORDER BY id DESC`（ジョブ単位表示向け）
   - 目的: ジョブ単位ログ取得の高速化
 
+- `idx_logs_api_token_id_id_desc`
+  - 対応: 監査用途の主体別ログ取得（`WHERE api_token_id = ? ORDER BY id DESC`）向け
+  - 目的: トークン単位の操作追跡を高速化
+
 - `idx_logs_event_kind_id_desc`
   - 対応: `backend/app/repositories/log_repository.py` の `WHERE event_kind = ?` + `ORDER BY id DESC`（定期/通常ログ分離向け）
   - 目的: 種別単位ログ取得の高速化
@@ -64,6 +73,22 @@
 - `idx_jobs_job_type_state_created_at`
   - 対応: `backend/app/repositories/job_repository.py` の `WHERE job_type = ? AND state IN (...) ORDER BY created_at DESC LIMIT 1`
   - 目的: 同種ジョブのアクティブ最新1件取得
+
+- `uq_api_tokens_token_hash`
+  - 対応: `backend/app/repositories/api_token_repository.py` のハッシュ照合
+  - 目的: Bearerトークンの一意性担保
+
+- `idx_api_tokens_name`
+  - 対応: `backend/app/repositories/api_token_repository.py` の一覧表示/運用検索
+  - 目的: 管理画面表示と運用検索の効率化
+
+- `idx_api_tokens_revoked_expires`
+  - 対応: `backend/app/repositories/api_token_repository.py` の有効トークン判定
+  - 目的: 失効/期限条件での絞り込み効率化
+
+- `idx_api_tokens_role_revoked_expires`
+  - 対応: `backend/app/repositories/api_token_repository.py` の role別有効トークン数判定（admin保護）
+  - 目的: admin/device の認可判定と運用制約の効率化
 
 - `idx_status_history_pc_changed_id`
   - 対応: `backend/app/repositories/uptime_repository.py` の最新状態取得と期間履歴取得

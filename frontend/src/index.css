@@ -35,6 +35,13 @@
   --btn-danger-bg: #6a2236;
   --btn-danger-text: #ffd7de;
   --btn-danger-border: #8a3350;
+  --badge-device-bg: rgba(76, 157, 255, 0.2);
+  --badge-device-text: #e9f0ff;
+  --badge-device-border: rgba(104, 173, 255, 0.72);
+  --loading-spinner-track: rgba(163, 190, 240, 0.35);
+  --feedback-success-bg: rgba(56, 164, 110, 0.18);
+  --feedback-success-text: #d9f8e8;
+  --feedback-success-border: rgba(56, 164, 110, 0.34);
   --focus-ring: #5b9bff;
   --focus-ring-shadow: rgba(91, 155, 255, 0.3);
   --surface-elevated: rgba(10, 24, 47, 0.72);
@@ -47,9 +54,11 @@
   --overlay-backdrop: rgba(2, 9, 23, 0.72);
   --panel-border: rgba(150, 178, 227, 0.2);
   --panel-shadow: 0 20px 45px rgba(2, 8, 24, 0.45);
+  --overlay-panel-shadow: 0 18px 42px rgba(2, 8, 24, 0.55);
   --modal-bg: #0a1f3c;
   --modal-border: #2e4f80;
   --modal-text-sub: #b7caec;
+  --theme-swatch-border: rgba(220, 234, 255, 0.35);
   --notice-bg: #112845;
   --notice-text: #b7d5ff;
   --error-bg: #3a1822;
@@ -83,6 +92,7 @@
   --chart-bar-shadow: rgba(37, 99, 235, 0.28);
   --timeline-axis-line: rgba(79, 114, 170, 0.35);
   --timeline-axis-text: #8fa6cf;
+  --timeline-axis-hourly: rgba(155, 179, 221, 0.95);
   --timeline-day-border: rgba(85, 117, 171, 0.4);
   --timeline-day-title: #d8e5ff;
   --timeline-day-date: #9ad5ff;
@@ -100,16 +110,46 @@
     contrast(92%);
   --mobile-nav-icon-active-filter: brightness(0) saturate(100%) invert(100%);
   --header-settings-icon-filter: brightness(0) saturate(100%) invert(100%);
+  --floating-switch-icon-filter: brightness(0) saturate(100%) invert(100%);
   --mobile-register-bg-start: rgba(14, 35, 66, 0.86);
   --mobile-register-bg-end: rgba(20, 48, 87, 0.78);
   --mobile-register-border: rgba(97, 132, 188, 0.42);
   --mobile-register-active-start: #3b82f6;
   --mobile-register-active-end: #1e3a8a;
   --mobile-register-active-shadow: rgba(22, 84, 194, 0.32);
+  --scrollbar-track: rgba(20, 41, 76, 0.48);
+  --scrollbar-thumb: rgba(114, 157, 224, 0.8);
+  --scrollbar-thumb-hover: rgba(139, 181, 244, 0.92);
 }
 
 * {
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--scrollbar-thumb) 0%, var(--scrollbar-thumb-hover) 100%);
+  border: 2px solid var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--scrollbar-thumb-hover) 0%, var(--scrollbar-thumb) 100%);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 body {

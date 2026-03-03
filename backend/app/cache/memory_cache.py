@@ -14,16 +14,26 @@ class _CacheItem:
 
 
 class MemoryCache:
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        *,
+        max_items: int = 1000,
+        sweep_interval_seconds: int = 60,
+    ) -> None:
         self._items: dict[str, _CacheItem] = {}
         self._lock = threading.RLock()
+        self._max_items = max_items if max_items > 0 else 1000
+        self._sweep_interval_seconds = sweep_interval_seconds if sweep_interval_seconds > 0 else 60
+        self._next_sweep_at = 0.0
 
     def get(self, key: str) -> Any | None:
         with self._lock:
+            current = monotonic()
+            self._maybe_sweep_expired(current)
             item = self._items.get(key)
             if item is None:
                 return None
-            if item.expires_at <= monotonic():
+            if item.expires_at <= current:
                 self._items.pop(key, None)
                 return None
             return copy.deepcopy(item.value)
@@ -33,10 +43,15 @@ class MemoryCache:
             self.invalidate(key)
             return
         with self._lock:
+            current = monotonic()
+            self._maybe_sweep_expired(current)
+            if key in self._items:
+                self._items.pop(key, None)
             self._items[key] = _CacheItem(
                 value=copy.deepcopy(value),
-                expires_at=monotonic() + ttl_seconds,
+                expires_at=current + ttl_seconds,
             )
+            self._trim_over_capacity()
 
     def invalidate(self, key: str) -> bool:
         with self._lock:
@@ -52,6 +67,20 @@ class MemoryCache:
     def clear(self) -> None:
         with self._lock:
             self._items.clear()
+            self._next_sweep_at = 0.0
+
+    def _maybe_sweep_expired(self, current: float) -> None:
+        if current < self._next_sweep_at:
+            return
+        self._next_sweep_at = current + float(self._sweep_interval_seconds)
+        expired_keys = [key for key, item in self._items.items() if item.expires_at <= current]
+        for key in expired_keys:
+            self._items.pop(key, None)
+
+    def _trim_over_capacity(self) -> None:
+        while len(self._items) > self._max_items:
+            oldest_key = next(iter(self._items))
+            self._items.pop(oldest_key, None)
 
 
 cache = MemoryCache()

@@ -111,6 +111,13 @@ function UptimeTimelineSection({
 
               <div className="uptime-week-calendar__body">
                 <div className="uptime-week-calendar__axis">
+                  {hourMarkers.slice(1, -1).map((hour) => (
+                    <span
+                      key={`axis-line-${hour}`}
+                      className="uptime-week-calendar__axis-hour-line"
+                      style={{ top: `${(hour / 24) * 100}%` }}
+                    />
+                  ))}
                   {hourMarkers.map((hour) => (
                     <span
                       key={`axis-${hour}`}

@@ -1,0 +1,228 @@
+.settings-tokens {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+}
+
+.settings-tokens__description {
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.settings-tokens__panel {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-elevated);
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.settings-tokens__panel h5 {
+  margin: 0;
+  font-size: 0.84rem;
+}
+
+.settings-tokens__title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.settings-admin-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-color: var(--state-running-text);
+  background: var(--state-running-bg);
+  color: var(--state-running-text);
+  min-height: 22px;
+  white-space: nowrap;
+}
+
+.settings-tokens__panel--list {
+  min-height: 0;
+}
+
+.settings-tokens__label {
+  font-size: 0.78rem;
+  color: var(--text-sub);
+}
+
+.settings-tokens__inline {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+}
+
+.settings-tokens__form {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-tokens__input {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-card);
+  color: var(--text-main);
+  padding: 8px 10px;
+  font-size: 0.84rem;
+}
+
+.settings-tokens__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.settings-tokens__created {
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  background: var(--surface-elevated-soft);
+}
+
+.settings-tokens__created-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.settings-tokens__created-label {
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  color: var(--text-sub);
+}
+
+.settings-tokens__copy-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--btn-soft-bg);
+  color: var(--text-main);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.settings-tokens__copy-btn:hover {
+  background: var(--btn-soft-hover-bg);
+}
+
+.settings-tokens__copy-icon {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+}
+
+.settings-tokens__created code {
+  display: block;
+  word-break: break-all;
+  font-size: 0.82rem;
+}
+
+.settings-tokens__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.settings-tokens__meta {
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 0.78rem;
+}
+
+.settings-token-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.settings-token-list__item {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-card);
+  padding: 10px;
+  display: grid;
+  gap: 5px;
+}
+
+.settings-token-list__item p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--text-sub);
+}
+
+.settings-token-list__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.settings-token-list__badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.settings-token-list__head strong {
+  font-size: 0.86rem;
+}
+
+.settings-token-list__role {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+}
+
+.settings-token-list__role--admin {
+  background: var(--state-running-bg);
+  color: var(--state-running-text);
+  border-color: var(--state-running-text);
+}
+
+.settings-token-list__role--device {
+  background: var(--badge-device-bg);
+  color: var(--badge-device-text);
+  border-color: var(--badge-device-border);
+}
+
+.settings-token-list__status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 22px;
+}
+
+.settings-token-list__status--active {
+  background: var(--state-ok-bg);
+  color: var(--state-ok-text);
+  border-color: var(--state-ok-text);
+}
+
+.settings-token-list__status--inactive {
+  background: var(--state-ng-bg);
+  color: var(--state-ng-text);
+  border-color: var(--state-ng-text);
+}
+
+.settings-token-list__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}

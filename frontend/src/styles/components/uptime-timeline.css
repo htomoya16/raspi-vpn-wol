@@ -4,24 +4,21 @@
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x;
-  padding-bottom: 2px;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-
-.uptime-week-calendar::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+  padding-bottom: 0;
+  border-radius: 0;
 }
 
 .uptime-week-calendar__head {
   display: grid;
   grid-template-columns: 54px repeat(7, minmax(96px, 1fr));
   min-width: 780px;
+  border-radius: 0;
+  overflow: hidden;
 }
 
 .uptime-week-calendar__axis-spacer {
   border-bottom: 1px solid var(--timeline-day-border);
+  border-right: 1px solid var(--timeline-axis-line);
 }
 
 .uptime-week-calendar__day-head {
@@ -54,33 +51,52 @@
   display: grid;
   grid-template-columns: 54px minmax(0, 1fr);
   min-width: 780px;
+  border-radius: 0;
+  overflow: hidden;
 }
 
 .uptime-week-calendar__axis {
   position: relative;
   min-height: 700px;
   border-right: 1px solid var(--timeline-axis-line);
+  border-bottom: 1px solid var(--timeline-hour-line);
+  border-bottom-left-radius: 0;
+  background: var(--timeline-column-bg);
+  overflow: hidden;
+}
+
+.uptime-week-calendar__axis-hour-line {
+  position: absolute;
+  left: 24px;
+  right: 0;
+  height: 1px;
+  background: var(--timeline-hour-line);
+  pointer-events: none;
 }
 
 .uptime-week-calendar__axis-label {
   position: absolute;
-  left: 0;
+  left: 1px;
+  padding: 0;
   transform: translateY(-50%);
   color: var(--timeline-axis-text);
   font-size: 0.66rem;
+  z-index: 1;
 }
 
 .uptime-week-calendar__axis-label--hourly {
-  color: rgba(155, 179, 221, 0.95);
+  color: var(--timeline-axis-hourly);
   font-size: 0.56rem;
 }
 
 .uptime-week-calendar__axis-label--start {
   transform: translateY(0);
+  color: var(--timeline-axis-hourly);
 }
 
 .uptime-week-calendar__axis-label--end {
   transform: translateY(-100%);
+  color: var(--timeline-axis-hourly);
 }
 
 .uptime-week-calendar__columns {
@@ -93,6 +109,11 @@
   min-height: 700px;
   overflow: hidden;
   background: var(--timeline-column-bg);
+  border-bottom: 1px solid var(--timeline-hour-line);
+}
+
+.uptime-week-calendar__column:last-child {
+  border-bottom-right-radius: 0;
 }
 
 .uptime-week-calendar__column + .uptime-week-calendar__column {
@@ -173,12 +194,12 @@
 
 @media (max-width: 760px) {
   .uptime-week-calendar__head {
-    grid-template-columns: 44px repeat(7, minmax(84px, 1fr));
+    grid-template-columns: 54px repeat(7, minmax(84px, 1fr));
     min-width: 680px;
   }
 
   .uptime-week-calendar__body {
-    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-columns: 54px minmax(0, 1fr);
     min-width: 680px;
   }
 
@@ -192,18 +213,25 @@
   }
 
   .uptime-week-calendar__axis-label {
-    font-size: 0.58rem;
+    font-size: 0.66rem;
+    color: var(--timeline-axis-text);
   }
 
   .uptime-week-calendar__axis-label--hourly {
-    font-size: 0.52rem;
+    font-size: 0.56rem;
+    color: var(--timeline-axis-hourly);
+  }
+
+  .uptime-week-calendar__axis-label--start,
+  .uptime-week-calendar__axis-label--end {
+    color: var(--timeline-axis-hourly);
   }
 
   .uptime-week-calendar__axis-spacer,
   .uptime-week-calendar__axis {
     position: sticky;
     left: 0;
-    background: var(--surface-strong);
+    box-shadow: inset -1px 0 0 var(--timeline-axis-line);
   }
 
   .uptime-week-calendar__axis-spacer {
@@ -220,16 +248,20 @@
   }
 
   .uptime-week-calendar--single-day .uptime-week-calendar__head {
-    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-columns: 54px minmax(0, 1fr);
     min-width: 0;
   }
 
   .uptime-week-calendar--single-day .uptime-week-calendar__body {
-    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-columns: 54px minmax(0, 1fr);
     min-width: 0;
   }
 
   .uptime-week-calendar--single-day .uptime-week-calendar__columns {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .uptime-week-calendar--single-day .uptime-week-calendar__column {
+    border-bottom-right-radius: 0;
   }
 }

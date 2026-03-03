@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Response
 from fastapi import HTTPException
 
 from app.models.logs import LogClearResponse, LogListResponse
@@ -37,6 +37,7 @@ def _normalize_iso8601_datetime(value: str, field_name: str) -> str:
     },
 )
 def get_logs(
+    response: Response,
     pc_id: str | None = Query(default=None),
     action: str | None = Query(default=None),
     ok: bool | None = Query(default=None),
@@ -45,6 +46,7 @@ def get_logs(
     limit: int = Query(default=50, ge=1, le=200),
     cursor: int | None = Query(default=None, ge=1),
 ) -> LogListResponse:
+    response.headers["Cache-Control"] = "no-store"
     try:
         normalized_since = _normalize_iso8601_datetime(since, "since") if since is not None else None
         normalized_until = _normalize_iso8601_datetime(until, "until") if until is not None else None

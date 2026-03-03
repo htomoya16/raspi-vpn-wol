@@ -102,7 +102,7 @@ function UptimePanel({
     return <div className="panel-embedded panel-embedded--uptime">{content}</div>
   }
 
-  return <section className="panel">{content}</section>
+  return <section className="panel panel--uptime">{content}</section>
 }
 
 export default UptimePanel

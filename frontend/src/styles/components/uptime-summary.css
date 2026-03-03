@@ -55,6 +55,7 @@
   min-height: 236px;
   border-radius: 12px;
   border: 1px solid var(--chart-axis-line);
+  overflow: hidden;
   background:
     linear-gradient(180deg, var(--chart-grid-line) 1px, transparent 1px) 0 0 / 100% 25%,
     var(--chart-plot-bg);
@@ -63,8 +64,8 @@
 .uptime-chart__plot::after {
   content: '';
   position: absolute;
-  left: -1px;
-  right: -1px;
+  left: 0;
+  right: 0;
   bottom: 0;
   border-bottom: 1px solid var(--chart-axis-line);
   pointer-events: none;

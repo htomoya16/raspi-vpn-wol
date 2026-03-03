@@ -17,9 +17,19 @@
   - `jobs.ts`
   - `events.ts`
   - `health.ts`
+  - `adminTokens.ts`
+  - `authMe.ts`
+- `adminTokens.ts` は管理トークンAPI（一覧/発行/失効/削除）を提供する。
+- `authMe.ts` は現在利用中Bearerトークン情報（`/api/auth/me`）を取得する。
 - `formatApiError` で HTTPステータスごとの表示文言を統一。
+- `formatApiError` は `401`（認証）/`403`（権限）も専用メッセージへ変換する。
+- `request()` は `429` 応答の `Retry-After` を `ApiError.retryAfterSeconds` に保持し、`formatApiError` で「何秒後に再試行」メッセージへ変換する。
+- `request()` は `localStorage` の Bearer トークン（`wol:api-bearer-token`）を `Authorization` ヘッダーへ自動付与する。
+- `request()` は保護API（`/api/*`）呼び出し時に Bearer 未設定なら fetch 前に `401` を返し、通信自体を送らない（`/api/health` は例外）。
+- `events.ts` は EventSource 制約（カスタムヘッダー不可）に合わせ、`/api/events?token=<bearer>` でSSE接続する。
 
 ## 運用時の注意点
 
 - API I/F 変更時は `src/api/*` と UI/Hook 呼び出し側を同時更新する。
 - バックエンド仕様との整合確認は `docs/backend/api/openapi.md` を正とする。
+- レート制限があるAPI（WOL/ステータス更新/管理API更新系）は `429` の可能性を前提にUI設計する。

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 
 from app.models.jobs import JobResponse
 from app.services import job_service
@@ -17,7 +17,8 @@ router = APIRouter()
         404: {"description": "対象が存在しない"},
     },
 )
-def get_job(job_id: str) -> JobResponse:
+def get_job(response: Response, job_id: str) -> JobResponse:
+    response.headers["Cache-Control"] = "no-store"
     try:
         job = job_service.get_job(job_id)
     except LookupError as exc:

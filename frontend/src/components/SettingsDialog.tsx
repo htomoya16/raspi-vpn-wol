@@ -1,52 +1,22 @@
-import { useState, type CSSProperties } from 'react'
+import { useEffect, useState } from 'react'
 
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock'
+import { useAdminTokens } from '../hooks/useAdminTokens'
 import type { AppearanceMode, EffectiveAppearanceMode, ThemeOption } from '../theme/types'
-
-interface AppearanceOption {
-  id: AppearanceMode
-  label: string
-  description: string
-}
-
-const APPEARANCE_OPTIONS: AppearanceOption[] = [
-  { id: 'system', label: 'システム', description: '端末の設定に合わせます。' },
-  { id: 'dark', label: 'ダーク', description: '暗い背景で表示します。' },
-  { id: 'light', label: 'ライト', description: '明るい背景で表示します。' },
-]
-
-type SettingsSection = 'theme' | 'appearance'
-
-const SETTINGS_SECTIONS: Array<{ id: SettingsSection; label: string }> = [
-  { id: 'theme', label: 'テーマ色' },
-  { id: 'appearance', label: '外観' },
-]
+import AppearanceSection from './settings/AppearanceSection'
+import { SETTINGS_SECTIONS, type SettingsSection } from './settings/constants'
+import ThemeSection from './settings/ThemeSection'
+import TokensSection from './settings/TokensSection'
 
 export interface SettingsPanelProps {
   selectedThemeId: string
   appearanceMode: AppearanceMode
   effectiveAppearanceMode: EffectiveAppearanceMode
   themeOptions: ThemeOption[]
+  initialSection?: SettingsSection
   onThemeChange: (themeId: string) => void
   onAppearanceChange: (mode: AppearanceMode) => void
   onClose?: () => void
-}
-
-function buildSwatchStyle(option: ThemeOption, effectiveAppearanceMode: EffectiveAppearanceMode): CSSProperties {
-  if (option.id === 'default') {
-    const solid = effectiveAppearanceMode === 'dark' ? '#121212' : '#f6f6f6'
-    const border = effectiveAppearanceMode === 'dark' ? 'rgba(255, 255, 255, 0.24)' : 'rgba(0, 0, 0, 0.2)'
-    return {
-      '--theme-primary': solid,
-      '--theme-accent': solid,
-      '--theme-solid': solid,
-      '--theme-swatch-border': border,
-    } as CSSProperties
-  }
-
-  return {
-    '--theme-primary': option.primary,
-    '--theme-accent': option.accent,
-  } as CSSProperties
 }
 
 export function SettingsPanel({
@@ -54,26 +24,29 @@ export function SettingsPanel({
   appearanceMode,
   effectiveAppearanceMode,
   themeOptions,
+  initialSection = 'theme',
   onThemeChange,
   onAppearanceChange,
   onClose,
 }: SettingsPanelProps) {
-  const [activeSection, setActiveSection] = useState<SettingsSection>('theme')
+  const [activeSection, setActiveSection] = useState<SettingsSection>(initialSection)
+  const tokens = useAdminTokens(activeSection === 'tokens')
+
+  useEffect(() => {
+    setActiveSection(initialSection)
+  }, [initialSection])
+
+  const panelClassName = `settings-panel ${onClose ? 'settings-panel--dialog' : 'settings-panel--embedded'}`
 
   return (
-    <div className="settings-panel">
+    <div className={panelClassName}>
       <div className="settings-dialog__header">
         <div>
-          <h3>表示設定</h3>
-          <p>テーマ色と外観モードを選択できます。</p>
+          <h3>設定</h3>
+          <p>テーマ色・外観・APIトークンを設定できます。</p>
         </div>
         {onClose ? (
-          <button
-            type="button"
-            className="settings-dialog__close-btn"
-            onClick={onClose}
-            aria-label="設定を閉じる"
-          >
+          <button type="button" className="settings-dialog__close-btn" onClick={onClose} aria-label="設定を閉じる">
             ×
           </button>
         ) : null}
@@ -97,55 +70,16 @@ export function SettingsPanel({
 
         <section className="settings-dialog__content" role="tabpanel">
           {activeSection === 'theme' ? (
-            <div className="settings-dialog__section">
-              <h4>テーマ色</h4>
-              <div className="settings-theme-grid" role="radiogroup" aria-label="テーマ色選択">
-                {themeOptions.map((option) => {
-                  const selected = option.id === selectedThemeId
-                  const swatchStyle = buildSwatchStyle(option, effectiveAppearanceMode)
-                  const isDefault = option.id === 'default'
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      className={`settings-theme-chip${selected ? ' settings-theme-chip--active' : ''}`}
-                      onClick={() => onThemeChange(option.id)}
-                    >
-                      <span
-                        className={`settings-theme-chip__swatch${isDefault ? ' settings-theme-chip__swatch--solid' : ''}`}
-                        style={swatchStyle}
-                        aria-hidden="true"
-                      />
-                      <span className="settings-theme-chip__label">{option.label}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+            <ThemeSection
+              selectedThemeId={selectedThemeId}
+              effectiveAppearanceMode={effectiveAppearanceMode}
+              themeOptions={themeOptions}
+              onThemeChange={onThemeChange}
+            />
+          ) : activeSection === 'appearance' ? (
+            <AppearanceSection appearanceMode={appearanceMode} onAppearanceChange={onAppearanceChange} />
           ) : (
-            <div className="settings-dialog__section">
-              <h4>外観モード</h4>
-              <div className="settings-appearance-list" role="radiogroup" aria-label="外観モード選択">
-                {APPEARANCE_OPTIONS.map((option) => {
-                  const selected = option.id === appearanceMode
-                  return (
-                    <button
-                      key={option.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={selected}
-                      className={`settings-appearance-item${selected ? ' settings-appearance-item--active' : ''}`}
-                      onClick={() => onAppearanceChange(option.id)}
-                    >
-                      <span className="settings-appearance-item__label">{option.label}</span>
-                      <span className="settings-appearance-item__description">{option.description}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
+            <TokensSection tokens={tokens} />
           )}
         </section>
       </div>
@@ -168,6 +102,8 @@ function SettingsDialog({
   onThemeChange,
   onAppearanceChange,
 }: SettingsDialogProps) {
+  useBodyScrollLock(open, { strategy: 'fixed' })
+
   if (!open) {
     return null
   }
@@ -178,7 +114,7 @@ function SettingsDialog({
         className="confirm-dialog settings-dialog"
         role="dialog"
         aria-modal="true"
-        aria-label="表示設定"
+        aria-label="設定"
         onClick={(event) => event.stopPropagation()}
       >
         <SettingsPanel

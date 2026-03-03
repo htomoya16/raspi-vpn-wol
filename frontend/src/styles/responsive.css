@@ -199,6 +199,7 @@
 
   .settings-dialog {
     width: 100%;
+    height: auto;
     max-height: calc(100dvh - 20px);
     overflow: auto;
   }
@@ -210,7 +211,7 @@
   }
 
   .settings-dialog__menu {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     border-right: 0;
     border-bottom: 1px solid var(--line);
     padding-right: 0;
@@ -220,4 +221,23 @@
   .settings-theme-grid {
     grid-template-columns: 1fr;
   }
+
+  .settings-tokens__inline {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-tokens__actions {
+    justify-content: stretch;
+  }
+
+  .settings-tokens__actions .btn {
+    width: 100%;
+  }
+
+  .mobile-workspace .settings-dialog__content {
+    overflow: visible;
+    padding-right: 0;
+    -webkit-overflow-scrolling: auto;
+  }
+
 }

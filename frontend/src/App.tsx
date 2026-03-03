@@ -3,18 +3,17 @@ import { useCallback, useMemo, useState } from 'react'
 import './App.css'
 import AppHeader from './components/AppHeader'
 import SettingsDialog from './components/SettingsDialog'
-import DesktopWorkspace from './components/workspace/DesktopWorkspace'
-import MobileWorkspace from './components/workspace/MobileWorkspace'
-import yajirusiIcon from './components/icons/yajirusi.svg'
+import DashboardShell from './components/app/DashboardShell'
+import TokenGateScreen from './components/app/TokenGateScreen'
 import type { LogsPanelProps } from './components/LogsPanel'
 import type { PcListProps } from './components/PcList'
-import UptimePanel from './components/UptimePanel'
 import type { LeftView } from './components/workspace/DesktopWorkspace'
 import type { MobileView } from './components/workspace/MobileWorkspace'
 import type { DashboardWorkspaceData } from './components/workspace/types'
 import { useDashboardData } from './hooks/useDashboardData'
 import { useMediaQuery } from './hooks/useMediaQuery'
 import { useThemeSettings } from './hooks/useThemeSettings'
+import { useTokenValidation } from './hooks/useTokenValidation'
 import { THEME_OPTIONS } from './theme/theme-options'
 import type { PcCreatePayload } from './types/models'
 
@@ -27,7 +26,17 @@ function App() {
   const [desktopView, setDesktopView] = useState<DesktopView>('dashboard')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [selectedPcId, setSelectedPcId] = useState('')
+
+  const {
+    hasBearerToken,
+    isTokenVerified,
+    isTokenValidationPending,
+    isTokenInvalid,
+    activeTokenName,
+    activeTokenRole,
+  } = useTokenValidation()
   const isMobile = useMediaQuery(MOBILE_BREAKPOINT)
+
   const {
     themeId,
     appearanceMode,
@@ -35,6 +44,7 @@ function App() {
     onThemeChange,
     onAppearanceChange,
   } = useThemeSettings(THEME_OPTIONS)
+
   const {
     notice,
     pcs,
@@ -65,7 +75,7 @@ function App() {
     handleFilterChange,
     handleApplyFilters,
     handleClearFilters,
-  } = useDashboardData()
+  } = useDashboardData({ enabled: isTokenVerified })
 
   const activeSelectedPcId = useMemo(() => {
     if (pcs.length === 0) {
@@ -92,15 +102,22 @@ function App() {
   )
 
   const handleOpenSettings = useCallback(() => {
+    if (!hasBearerToken) {
+      return
+    }
     if (isMobile) {
       setMobileView('settings')
       return
     }
     setSettingsOpen(true)
-  }, [isMobile])
+  }, [hasBearerToken, isMobile])
 
   const handleCloseSettings = useCallback(() => {
     setSettingsOpen(false)
+  }, [])
+
+  const toggleDesktopView = useCallback(() => {
+    setDesktopView((prev) => (prev === 'dashboard' ? 'uptime' : 'dashboard'))
   }, [])
 
   const pcListProps: PcListProps = {
@@ -143,19 +160,27 @@ function App() {
   return (
     <main className="app-layout">
       <AppHeader
-        totalCount={pcs.length}
-        onlineCount={onlineCount}
-        refreshAllLoading={refreshAllLoading}
-        onRefreshAllStatuses={refreshAllStatusesEntry}
+        totalCount={isTokenVerified ? pcs.length : 0}
+        onlineCount={isTokenVerified ? onlineCount : 0}
+        refreshAllLoading={isTokenVerified ? refreshAllLoading : false}
+        tokenConfigured={isTokenVerified}
+        activeTokenName={activeTokenName}
+        activeTokenRole={activeTokenRole}
+        onRefreshAllStatuses={isTokenVerified ? refreshAllStatusesEntry : () => undefined}
         onOpenSettings={handleOpenSettings}
       />
 
       {notice ? <p className="feedback feedback--notice">{notice}</p> : null}
 
-      {isMobile ? (
-        <MobileWorkspace
+      {isTokenVerified ? (
+        <DashboardShell
+          isMobile={isMobile}
           mobileView={mobileView}
           onChangeMobileView={setMobileView}
+          desktopView={desktopView}
+          onToggleDesktopView={toggleDesktopView}
+          leftView={leftView}
+          onChangeLeftView={setLeftView}
           selectedThemeId={themeId}
           appearanceMode={appearanceMode}
           effectiveAppearanceMode={effectiveAppearanceMode}
@@ -169,43 +194,20 @@ function App() {
           uptimeDataVersion={lastSyncedAt}
         />
       ) : (
-        <div className={`desktop-stage desktop-stage--${desktopView}`}>
-          <div className="desktop-stage__track">
-            <div className="desktop-stage__page">
-              <DesktopWorkspace
-                leftView={leftView}
-                onChangeLeftView={setLeftView}
-                dashboard={dashboardWorkspaceData}
-              />
-            </div>
-            <div className="desktop-stage__page">
-              <UptimePanel
-                pcs={pcs}
-                selectedPcId={activeSelectedPcId}
-                onSelectPc={setSelectedPcId}
-                dataVersion={lastSyncedAt}
-                enabled={desktopView === 'uptime'}
-              />
-            </div>
-          </div>
-          <button
-            type="button"
-            className={`desktop-uptime-switch ${desktopView === 'uptime' ? 'desktop-uptime-switch--back desktop-uptime-switch--left' : ''}`}
-            onClick={() => setDesktopView((prev) => (prev === 'dashboard' ? 'uptime' : 'dashboard'))}
-            aria-label={desktopView === 'dashboard' ? '稼働時間ページへ移動' : 'ダッシュボードへ戻る'}
-          >
-            <img
-              src={yajirusiIcon}
-              alt=""
-              aria-hidden="true"
-              className={`desktop-uptime-switch__icon ${desktopView === 'uptime' ? 'desktop-uptime-switch__icon--left' : 'desktop-uptime-switch__icon--right'}`}
-            />
-          </button>
-        </div>
+        <TokenGateScreen
+          isTokenValidationPending={isTokenValidationPending}
+          isTokenInvalid={isTokenInvalid}
+          selectedThemeId={themeId}
+          appearanceMode={appearanceMode}
+          effectiveAppearanceMode={effectiveAppearanceMode}
+          themeOptions={THEME_OPTIONS}
+          onThemeChange={onThemeChange}
+          onAppearanceChange={onAppearanceChange}
+        />
       )}
 
       <SettingsDialog
-        open={settingsOpen && !isMobile}
+        open={settingsOpen && !isMobile && isTokenVerified}
         selectedThemeId={themeId}
         appearanceMode={appearanceMode}
         effectiveAppearanceMode={effectiveAppearanceMode}

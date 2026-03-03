@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { setStoredBearerToken } from './auth'
 import { clearApiCacheForTest } from './cache'
 import { createPc, listPcs } from './pcs'
 
@@ -8,12 +9,14 @@ describe('cache invalidation flow', () => {
 
   beforeEach(() => {
     vi.stubGlobal('fetch', fetchMock)
+    setStoredBearerToken('wol_token_for_test')
   })
 
   afterEach(() => {
     vi.unstubAllGlobals()
     fetchMock.mockReset()
     clearApiCacheForTest()
+    setStoredBearerToken('')
   })
 
   it('re-fetches pcs list after create mutation invalidates cache', async () => {

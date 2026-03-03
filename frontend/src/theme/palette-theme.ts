@@ -1,5 +1,6 @@
-import type { EffectiveAppearanceMode, ThemeOption } from './types'
+import { applyThemeVars, type ThemeVarMap } from './apply-theme-vars'
 import { mixHex, toRgba } from './color-utils'
+import type { EffectiveAppearanceMode, ThemeOption } from './types'
 
 export function applyPaletteTheme(root: HTMLElement, appearanceMode: EffectiveAppearanceMode, selectedTheme: ThemeOption): void {
   const darkBase = mixHex('#050d1d', selectedTheme.primaryStrong, 0.25)
@@ -47,185 +48,225 @@ export function applyPaletteTheme(root: HTMLElement, appearanceMode: EffectiveAp
   const lightDangerText = mixHex('#8f2f4a', selectedTheme.primaryStrong, 0.24)
   const focusRing = mixHex('#5b9bff', selectedTheme.accent, 0.58)
 
-  root.style.setProperty('--primary', selectedTheme.primary)
-  root.style.setProperty('--primary-strong', selectedTheme.primaryStrong)
-  root.style.setProperty('--accent', selectedTheme.accent)
-  root.style.setProperty('--btn-primary-end', selectedTheme.primaryStrong)
-  root.style.setProperty('--btn-primary-shadow', toRgba(selectedTheme.primary, 0.42))
-  root.style.setProperty('--floating-switch-shadow', `0 14px 32px ${toRgba(selectedTheme.primaryStrong, 0.42)}`)
-  root.style.setProperty('--floating-switch-shadow-hover', `0 18px 36px ${toRgba(selectedTheme.primaryStrong, 0.5)}`)
-  root.style.setProperty('--btn-primary-text', '#ffffff')
-  root.style.setProperty('--focus-ring', focusRing)
-  root.style.setProperty('--focus-ring-shadow', toRgba(focusRing, 0.32))
-  root.style.setProperty('--bg-glow-primary', toRgba(selectedTheme.primary, 0.28))
-  root.style.setProperty('--bg-glow-primary-soft', toRgba(selectedTheme.primary, 0.11))
-  root.style.setProperty('--bg-glow-accent', toRgba(selectedTheme.accent, 0.24))
-  root.style.setProperty('--bg-glow-accent-soft', toRgba(selectedTheme.accent, 0.09))
+  const sharedVars: ThemeVarMap = {
+    '--primary': selectedTheme.primary,
+    '--primary-strong': selectedTheme.primaryStrong,
+    '--accent': selectedTheme.accent,
+    '--btn-primary-end': selectedTheme.primaryStrong,
+    '--btn-primary-shadow': toRgba(selectedTheme.primary, 0.42),
+    '--floating-switch-shadow': `0 14px 32px ${toRgba(selectedTheme.primaryStrong, 0.42)}`,
+    '--floating-switch-shadow-hover': `0 18px 36px ${toRgba(selectedTheme.primaryStrong, 0.5)}`,
+    '--btn-primary-text': '#ffffff',
+    '--focus-ring': focusRing,
+    '--focus-ring-shadow': toRgba(focusRing, 0.32),
+    '--bg-glow-primary': toRgba(selectedTheme.primary, 0.28),
+    '--bg-glow-primary-soft': toRgba(selectedTheme.primary, 0.11),
+    '--bg-glow-accent': toRgba(selectedTheme.accent, 0.24),
+    '--bg-glow-accent-soft': toRgba(selectedTheme.accent, 0.09),
+  }
 
   if (appearanceMode === 'dark') {
-    root.style.setProperty('--bg-base', darkBase)
-    root.style.setProperty('--bg-soft', darkSoft)
-    root.style.setProperty('--bg-card', toRgba(darkCard, 0.82))
-    root.style.setProperty('--line', darkLine)
-    root.style.setProperty('--text-main', mixHex('#e9f0ff', selectedTheme.accent, 0.06))
-    root.style.setProperty('--text-sub', mixHex('#9fb2d9', selectedTheme.accent, 0.16))
-    root.style.setProperty('--surface-elevated', toRgba(darkSoft, 0.72))
-    root.style.setProperty('--surface-elevated-soft', toRgba(darkSoft, 0.48))
-    root.style.setProperty('--surface-strong', toRgba(darkSurfaceStrong, 0.86))
-    root.style.setProperty('--surface-muted', toRgba(darkSurfaceMuted, 0.82))
-    root.style.setProperty('--surface-alt', toRgba(darkSurfaceAlt, 0.42))
-    root.style.setProperty('--surface-hover', toRgba(darkSurfaceHover, 0.34))
-    root.style.setProperty('--surface-overlay', toRgba(darkSurfaceStrong, 0.58))
-    root.style.setProperty('--overlay-backdrop', 'rgba(2, 9, 23, 0.72)')
-    root.style.setProperty('--btn-soft-bg', '#12284a')
-    root.style.setProperty('--btn-soft-text', '#d6e5ff')
-    root.style.setProperty('--btn-soft-border', '#2f4f80')
-    root.style.setProperty('--btn-soft-hover-bg', toRgba(darkSurfaceAlt, 0.58))
-    root.style.setProperty('--btn-danger-bg', darkDangerBg)
-    root.style.setProperty('--btn-danger-border', darkDangerBorder)
-    root.style.setProperty('--btn-danger-text', darkDangerText)
-    root.style.setProperty('--panel-border', toRgba(darkLine, 0.34))
-    root.style.setProperty('--panel-shadow', '0 20px 45px rgba(2, 8, 24, 0.45)')
-    root.style.setProperty('--modal-bg', '#0a1f3c')
-    root.style.setProperty('--modal-border', '#2e4f80')
-    root.style.setProperty('--modal-text-sub', '#b7caec')
-    root.style.setProperty('--notice-bg', darkNoticeBg)
-    root.style.setProperty('--notice-text', darkNoticeText)
-    root.style.setProperty('--error-bg', darkErrorBg)
-    root.style.setProperty('--error-text', darkErrorText)
-    root.style.setProperty('--table-head-bg', toRgba(darkTableHead, 0.96))
-    root.style.setProperty('--group-sticky-bg', toRgba(darkTableHead, 0.95))
-    root.style.setProperty('--group-job-bg', toRgba(darkGroupJob, 0.96))
-    root.style.setProperty('--group-normal-bg', toRgba(darkGroupNormal, 0.96))
-    root.style.setProperty('--group-hover-bg', toRgba(darkGroupHover, 0.96))
-    root.style.setProperty('--state-ok-bg', 'rgba(16, 80, 56, 0.78)')
-    root.style.setProperty('--state-ok-text', '#9ef5ca')
-    root.style.setProperty('--state-ng-bg', 'rgba(88, 32, 32, 0.78)')
-    root.style.setProperty('--state-ng-text', '#ffc1b2')
-    root.style.setProperty('--state-unknown-bg', 'rgba(56, 70, 95, 0.78)')
-    root.style.setProperty('--state-unknown-text', '#c3d1f2')
-    root.style.setProperty('--state-running-bg', 'rgba(103, 74, 18, 0.78)')
-    root.style.setProperty('--state-running-text', '#ffe08f')
-    root.style.setProperty('--state-unreachable-bg', 'rgba(92, 38, 55, 0.78)')
-    root.style.setProperty('--state-unreachable-text', '#ffc0d4')
-    root.style.setProperty('--state-total-bg', 'rgba(36, 62, 101, 0.78)')
-    root.style.setProperty('--state-total-text', '#d1e3ff')
-    root.style.setProperty('--chart-axis-line', toRgba(mixHex('#4f72aa', selectedTheme.primary, 0.2), 0.45))
-    root.style.setProperty('--chart-axis-text', mixHex('#8fa6cf', selectedTheme.accent, 0.2))
-    root.style.setProperty('--chart-grid-line', toRgba(mixHex('#7e9fd3', selectedTheme.primary, 0.2), 0.2))
-    root.style.setProperty('--chart-plot-bg', toRgba(darkSurfaceStrong, 0.76))
-    root.style.setProperty('--chart-avg-line', 'rgba(72, 197, 133, 0.9)')
-    root.style.setProperty('--chart-avg-bg', toRgba(darkSurfaceMuted, 0.92))
-    root.style.setProperty('--chart-avg-border', 'rgba(72, 197, 133, 0.5)')
-    root.style.setProperty('--chart-avg-text', '#82e2b2')
-    root.style.setProperty('--chart-bar-bg', mixHex('#4f93ff', selectedTheme.primary, 0.6))
-    root.style.setProperty('--chart-bar-shadow', toRgba(mixHex('#2563eb', selectedTheme.primaryStrong, 0.5), 0.32))
-    root.style.setProperty('--timeline-axis-line', toRgba(mixHex('#4f72aa', selectedTheme.primary, 0.2), 0.35))
-    root.style.setProperty('--timeline-axis-text', mixHex('#8fa6cf', selectedTheme.accent, 0.2))
-    root.style.setProperty('--timeline-day-border', toRgba(mixHex('#5575ab', selectedTheme.primary, 0.2), 0.4))
-    root.style.setProperty('--timeline-day-title', '#d8e5ff')
-    root.style.setProperty('--timeline-day-date', mixHex('#9ad5ff', selectedTheme.accent, 0.3))
-    root.style.setProperty('--timeline-column-bg', toRgba(darkTimelineColumn, 0.88))
-    root.style.setProperty('--timeline-hour-line', toRgba(mixHex('#4f72aa', selectedTheme.primary, 0.2), 0.32))
-    root.style.setProperty('--timeline-event-bg', darkTimelineEvent)
-    root.style.setProperty('--timeline-event-text', '#f5f9ff')
-    root.style.setProperty('--timeline-event-shadow', toRgba(mixHex('#0f2a56', selectedTheme.primaryStrong, 0.5), 0.42))
-    root.style.setProperty('--mobile-nav-bg-start', toRgba(darkBase, 0.86))
-    root.style.setProperty('--mobile-nav-bg-end', toRgba(darkSoft, 0.72))
-    root.style.setProperty('--mobile-nav-border', toRgba(darkLine, 0.34))
-    root.style.setProperty('--mobile-nav-text', '#b5c8eb')
-    root.style.setProperty('--mobile-nav-text-active', '#ffffff')
-    root.style.setProperty('--mobile-nav-icon-filter', 'brightness(0) saturate(100%) invert(74%) sepia(20%) saturate(376%) hue-rotate(185deg) brightness(94%) contrast(92%)')
-    root.style.setProperty('--mobile-nav-icon-active-filter', 'brightness(0) saturate(100%) invert(100%)')
-    root.style.setProperty('--header-settings-icon-filter', 'brightness(0) saturate(100%) invert(100%)')
-    root.style.setProperty('--mobile-register-bg-start', toRgba(darkSurfaceMuted, 0.9))
-    root.style.setProperty('--mobile-register-bg-end', toRgba(darkSurfaceStrong, 0.84))
-    root.style.setProperty('--mobile-register-border', toRgba(darkLine, 0.52))
-    root.style.setProperty('--mobile-register-active-start', selectedTheme.primary)
-    root.style.setProperty('--mobile-register-active-end', mixHex(selectedTheme.accent, selectedTheme.primaryStrong, 0.6))
-    root.style.setProperty('--mobile-register-active-shadow', toRgba(selectedTheme.primary, 0.32))
+    const darkVars: ThemeVarMap = {
+      '--hero-eyebrow-color': mixHex('#d6e8ff', selectedTheme.accent, 0.18),
+      '--bg-base': darkBase,
+      '--bg-soft': darkSoft,
+      '--bg-card': toRgba(darkCard, 0.82),
+      '--line': darkLine,
+      '--text-main': mixHex('#e9f0ff', selectedTheme.accent, 0.06),
+      '--text-sub': mixHex('#9fb2d9', selectedTheme.accent, 0.16),
+      '--surface-elevated': toRgba(darkSoft, 0.72),
+      '--surface-elevated-soft': toRgba(darkSoft, 0.48),
+      '--surface-strong': toRgba(darkSurfaceStrong, 0.86),
+      '--surface-muted': toRgba(darkSurfaceMuted, 0.82),
+      '--surface-alt': toRgba(darkSurfaceAlt, 0.42),
+      '--surface-hover': toRgba(darkSurfaceHover, 0.34),
+      '--surface-overlay': toRgba(darkSurfaceStrong, 0.58),
+      '--overlay-backdrop': 'rgba(2, 9, 23, 0.72)',
+      '--btn-soft-bg': toRgba(darkSurfaceAlt, 0.5),
+      '--btn-soft-text': mixHex('#d6e5ff', selectedTheme.accent, 0.28),
+      '--btn-soft-border': toRgba(mixHex(darkLine, selectedTheme.accent, 0.18), 0.76),
+      '--btn-soft-hover-bg': toRgba(darkSurfaceAlt, 0.58),
+      '--btn-danger-bg': darkDangerBg,
+      '--btn-danger-border': darkDangerBorder,
+      '--btn-danger-text': darkDangerText,
+      '--badge-device-bg': toRgba(mixHex('#4c9dff', selectedTheme.primary, 0.32), 0.22),
+      '--badge-device-text': mixHex('#e9f0ff', selectedTheme.accent, 0.08),
+      '--badge-device-border': toRgba(mixHex('#68adff', selectedTheme.accent, 0.24), 0.72),
+      '--loading-spinner-track': toRgba(mixHex('#a3bef0', selectedTheme.accent, 0.18), 0.35),
+      '--feedback-success-bg': toRgba(mixHex('#38a46e', selectedTheme.accent, 0.16), 0.22),
+      '--feedback-success-text': mixHex('#d9f8e8', selectedTheme.accent, 0.08),
+      '--feedback-success-border': toRgba(mixHex('#38a46e', selectedTheme.primary, 0.18), 0.36),
+      '--panel-border': toRgba(darkLine, 0.34),
+      '--panel-shadow': '0 20px 45px rgba(2, 8, 24, 0.45)',
+      '--overlay-panel-shadow': toRgba(mixHex('#020818', selectedTheme.primaryStrong, 0.56), 0.55),
+      '--modal-bg': toRgba(mixHex(darkSurfaceStrong, darkBase, 0.28), 0.94),
+      '--modal-border': toRgba(mixHex(darkLine, selectedTheme.primary, 0.24), 0.82),
+      '--modal-text-sub': mixHex('#b7caec', selectedTheme.accent, 0.22),
+      '--theme-swatch-border': toRgba(mixHex('#dceaff', selectedTheme.accent, 0.12), 0.35),
+      '--notice-bg': darkNoticeBg,
+      '--notice-text': darkNoticeText,
+      '--error-bg': darkErrorBg,
+      '--error-text': darkErrorText,
+      '--table-head-bg': toRgba(darkTableHead, 0.96),
+      '--group-sticky-bg': toRgba(darkTableHead, 0.95),
+      '--group-job-bg': toRgba(darkGroupJob, 0.96),
+      '--group-normal-bg': toRgba(darkGroupNormal, 0.96),
+      '--group-hover-bg': toRgba(darkGroupHover, 0.96),
+      '--state-ok-bg': 'rgba(16, 80, 56, 0.78)',
+      '--state-ok-text': '#9ef5ca',
+      '--state-ng-bg': 'rgba(88, 32, 32, 0.78)',
+      '--state-ng-text': '#ffc1b2',
+      '--state-unknown-bg': 'rgba(56, 70, 95, 0.78)',
+      '--state-unknown-text': '#c3d1f2',
+      '--state-running-bg': 'rgba(103, 74, 18, 0.78)',
+      '--state-running-text': '#ffe08f',
+      '--state-unreachable-bg': 'rgba(92, 38, 55, 0.78)',
+      '--state-unreachable-text': '#ffc0d4',
+      '--state-total-bg': 'rgba(36, 62, 101, 0.78)',
+      '--state-total-text': '#d1e3ff',
+      '--chart-axis-line': toRgba(mixHex('#4f72aa', selectedTheme.primary, 0.2), 0.45),
+      '--chart-axis-text': mixHex('#8fa6cf', selectedTheme.accent, 0.2),
+      '--chart-grid-line': toRgba(mixHex('#7e9fd3', selectedTheme.primary, 0.2), 0.2),
+      '--chart-plot-bg': toRgba(darkSurfaceStrong, 0.76),
+      '--chart-avg-line': 'rgba(72, 197, 133, 0.9)',
+      '--chart-avg-bg': toRgba(darkSurfaceMuted, 0.92),
+      '--chart-avg-border': 'rgba(72, 197, 133, 0.5)',
+      '--chart-avg-text': '#82e2b2',
+      '--chart-bar-bg': mixHex('#4f93ff', selectedTheme.primary, 0.6),
+      '--chart-bar-shadow': toRgba(mixHex('#2563eb', selectedTheme.primaryStrong, 0.5), 0.32),
+      '--timeline-axis-line': toRgba(mixHex('#4f72aa', selectedTheme.primary, 0.2), 0.35),
+      '--timeline-axis-text': mixHex('#8fa6cf', selectedTheme.accent, 0.2),
+      '--timeline-axis-hourly': mixHex('#9bb3dd', selectedTheme.accent, 0.22),
+      '--timeline-day-border': toRgba(mixHex('#5575ab', selectedTheme.primary, 0.2), 0.4),
+      '--timeline-day-title': '#d8e5ff',
+      '--timeline-day-date': mixHex('#9ad5ff', selectedTheme.accent, 0.3),
+      '--timeline-column-bg': toRgba(darkTimelineColumn, 0.88),
+      '--timeline-hour-line': toRgba(mixHex('#4f72aa', selectedTheme.primary, 0.2), 0.32),
+      '--timeline-event-bg': darkTimelineEvent,
+      '--timeline-event-text': '#f5f9ff',
+      '--timeline-event-shadow': toRgba(mixHex('#0f2a56', selectedTheme.primaryStrong, 0.5), 0.42),
+      '--mobile-nav-bg-start': toRgba(darkBase, 0.86),
+      '--mobile-nav-bg-end': toRgba(darkSoft, 0.72),
+      '--mobile-nav-border': toRgba(darkLine, 0.34),
+      '--mobile-nav-text': mixHex('#b5c8eb', selectedTheme.accent, 0.24),
+      '--mobile-nav-text-active': mixHex('#ffffff', selectedTheme.accent, 0.08),
+      '--mobile-nav-icon-filter': 'brightness(0) saturate(100%) invert(74%) sepia(20%) saturate(376%) hue-rotate(185deg) brightness(94%) contrast(92%)',
+      '--mobile-nav-icon-active-filter': 'brightness(0) saturate(100%) invert(100%)',
+      '--header-settings-icon-filter': 'brightness(0) saturate(100%) invert(100%)',
+      '--floating-switch-icon-filter': 'brightness(0) saturate(100%) invert(100%)',
+      '--mobile-register-bg-start': toRgba(darkSurfaceMuted, 0.9),
+      '--mobile-register-bg-end': toRgba(darkSurfaceStrong, 0.84),
+      '--mobile-register-border': toRgba(darkLine, 0.52),
+      '--mobile-register-active-start': selectedTheme.primary,
+      '--mobile-register-active-end': mixHex(selectedTheme.accent, selectedTheme.primaryStrong, 0.6),
+      '--mobile-register-active-shadow': toRgba(selectedTheme.primary, 0.32),
+      '--scrollbar-track': toRgba(darkSurfaceMuted, 0.56),
+      '--scrollbar-thumb': toRgba(mixHex('#7faef8', selectedTheme.primary, 0.45), 0.84),
+      '--scrollbar-thumb-hover': toRgba(mixHex('#9ec3ff', selectedTheme.accent, 0.32), 0.94),
+    }
+
+    applyThemeVars(root, { ...sharedVars, ...darkVars })
     return
   }
 
-  root.style.setProperty('--bg-base', lightBase)
-  root.style.setProperty('--bg-soft', lightSoft)
-  root.style.setProperty('--bg-card', toRgba(lightCard, 0.88))
-  root.style.setProperty('--line', lightLine)
-  root.style.setProperty('--text-main', mixHex('#1a2f55', selectedTheme.primaryStrong, 0.12))
-  root.style.setProperty('--text-sub', mixHex('#4f6691', selectedTheme.primaryStrong, 0.2))
-  root.style.setProperty('--surface-elevated', toRgba(lightSoft, 0.68))
-  root.style.setProperty('--surface-elevated-soft', toRgba(lightSoft, 0.42))
-  root.style.setProperty('--surface-strong', toRgba(lightSurfaceStrong, 0.95))
-  root.style.setProperty('--surface-muted', toRgba(lightSurfaceMuted, 0.96))
-  root.style.setProperty('--surface-alt', toRgba(lightSurfaceAlt, 0.45))
-  root.style.setProperty('--surface-hover', toRgba(lightSurfaceHover, 0.52))
-  root.style.setProperty('--surface-overlay', toRgba(lightSurfaceMuted, 0.64))
-  root.style.setProperty('--overlay-backdrop', 'rgba(15, 36, 69, 0.42)')
-  root.style.setProperty('--btn-soft-bg', '#e8f0ff')
-  root.style.setProperty('--btn-soft-text', '#274471')
-  root.style.setProperty('--btn-soft-border', '#b7ccea')
-  root.style.setProperty('--btn-soft-hover-bg', toRgba(lightSurfaceAlt, 0.7))
-  root.style.setProperty('--btn-danger-bg', lightDangerBg)
-  root.style.setProperty('--btn-danger-border', lightDangerBorder)
-  root.style.setProperty('--btn-danger-text', lightDangerText)
-  root.style.setProperty('--panel-border', toRgba(lightLine, 0.85))
-  root.style.setProperty('--panel-shadow', '0 14px 28px rgba(30, 62, 109, 0.12)')
-  root.style.setProperty('--modal-bg', '#f8fbff')
-  root.style.setProperty('--modal-border', '#bfd2ef')
-  root.style.setProperty('--modal-text-sub', '#5f78a8')
-  root.style.setProperty('--notice-bg', lightNoticeBg)
-  root.style.setProperty('--notice-text', lightNoticeText)
-  root.style.setProperty('--error-bg', lightErrorBg)
-  root.style.setProperty('--error-text', lightErrorText)
-  root.style.setProperty('--table-head-bg', toRgba(lightTableHead, 0.98))
-  root.style.setProperty('--group-sticky-bg', toRgba(lightTableHead, 0.98))
-  root.style.setProperty('--group-job-bg', toRgba(lightGroupJob, 0.98))
-  root.style.setProperty('--group-normal-bg', toRgba(lightGroupNormal, 0.98))
-  root.style.setProperty('--group-hover-bg', toRgba(lightGroupHover, 0.98))
-  root.style.setProperty('--state-ok-bg', 'rgba(32, 136, 86, 0.2)')
-  root.style.setProperty('--state-ok-text', '#1c8152')
-  root.style.setProperty('--state-ng-bg', 'rgba(191, 71, 71, 0.18)')
-  root.style.setProperty('--state-ng-text', '#aa3737')
-  root.style.setProperty('--state-unknown-bg', 'rgba(92, 111, 150, 0.2)')
-  root.style.setProperty('--state-unknown-text', '#44608f')
-  root.style.setProperty('--state-running-bg', 'rgba(176, 133, 39, 0.2)')
-  root.style.setProperty('--state-running-text', '#8b6708')
-  root.style.setProperty('--state-unreachable-bg', 'rgba(155, 73, 101, 0.18)')
-  root.style.setProperty('--state-unreachable-text', '#8f3556')
-  root.style.setProperty('--state-total-bg', 'rgba(102, 132, 183, 0.2)')
-  root.style.setProperty('--state-total-text', '#426394')
-  root.style.setProperty('--chart-axis-line', toRgba(mixHex('#95b2de', selectedTheme.primary, 0.3), 0.62))
-  root.style.setProperty('--chart-axis-text', mixHex('#5f78a8', selectedTheme.primaryStrong, 0.22))
-  root.style.setProperty('--chart-grid-line', toRgba(mixHex('#a8c0e5', selectedTheme.primary, 0.25), 0.36))
-  root.style.setProperty('--chart-plot-bg', toRgba(lightSurfaceStrong, 0.92))
-  root.style.setProperty('--chart-avg-line', 'rgba(39, 153, 99, 0.82)')
-  root.style.setProperty('--chart-avg-bg', toRgba(lightSurfaceMuted, 0.96))
-  root.style.setProperty('--chart-avg-border', 'rgba(39, 153, 99, 0.4)')
-  root.style.setProperty('--chart-avg-text', '#1f8a5b')
-  root.style.setProperty('--chart-bar-bg', mixHex('#3f82e8', selectedTheme.primary, 0.75))
-  root.style.setProperty('--chart-bar-shadow', toRgba(mixHex('#2f65b8', selectedTheme.primaryStrong, 0.38), 0.28))
-  root.style.setProperty('--timeline-axis-line', toRgba(mixHex('#95b2de', selectedTheme.primary, 0.3), 0.56))
-  root.style.setProperty('--timeline-axis-text', mixHex('#5f78a8', selectedTheme.primaryStrong, 0.22))
-  root.style.setProperty('--timeline-day-border', toRgba(mixHex('#95b2de', selectedTheme.primary, 0.3), 0.62))
-  root.style.setProperty('--timeline-day-title', '#2a4573')
-  root.style.setProperty('--timeline-day-date', mixHex('#3d679f', selectedTheme.primary, 0.32))
-  root.style.setProperty('--timeline-column-bg', toRgba(lightTimelineColumn, 0.95))
-  root.style.setProperty('--timeline-hour-line', toRgba(mixHex('#95b2de', selectedTheme.primary, 0.3), 0.42))
-  root.style.setProperty('--timeline-event-bg', lightTimelineEvent)
-  root.style.setProperty('--timeline-event-text', '#f5f9ff')
-  root.style.setProperty('--timeline-event-shadow', toRgba(mixHex('#2a5799', selectedTheme.primaryStrong, 0.3), 0.28))
-  root.style.setProperty('--mobile-nav-bg-start', toRgba(lightBase, 0.9))
-  root.style.setProperty('--mobile-nav-bg-end', toRgba(lightSoft, 0.72))
-  root.style.setProperty('--mobile-nav-border', toRgba(lightLine, 0.52))
-  root.style.setProperty('--mobile-nav-text', mixHex('#4f6691', selectedTheme.primaryStrong, 0.2))
-  root.style.setProperty('--mobile-nav-text-active', mixHex('#1a2f55', selectedTheme.primaryStrong, 0.18))
-  root.style.setProperty('--mobile-nav-icon-filter', 'brightness(0) saturate(100%) invert(31%) sepia(18%) saturate(780%) hue-rotate(182deg) brightness(93%) contrast(88%)')
-  root.style.setProperty('--mobile-nav-icon-active-filter', 'brightness(0) saturate(100%) invert(19%) sepia(27%) saturate(909%) hue-rotate(183deg) brightness(92%) contrast(90%)')
-  root.style.setProperty('--header-settings-icon-filter', 'brightness(0) saturate(100%) invert(19%) sepia(27%) saturate(909%) hue-rotate(183deg) brightness(92%) contrast(90%)')
-  root.style.setProperty('--mobile-register-bg-start', toRgba(lightSurfaceStrong, 0.94))
-  root.style.setProperty('--mobile-register-bg-end', toRgba(lightSurfaceMuted, 0.8))
-  root.style.setProperty('--mobile-register-border', toRgba(lightLine, 0.72))
-  root.style.setProperty('--mobile-register-active-start', mixHex(selectedTheme.primary, '#4d8fff', 0.25))
-  root.style.setProperty('--mobile-register-active-end', mixHex(selectedTheme.primaryStrong, selectedTheme.accent, 0.2))
-  root.style.setProperty('--mobile-register-active-shadow', toRgba(selectedTheme.primary, 0.26))
+  const lightVars: ThemeVarMap = {
+    '--bg-base': lightBase,
+    '--hero-eyebrow-color': mixHex('#2f4f80', selectedTheme.primaryStrong, 0.32),
+    '--bg-soft': lightSoft,
+    '--bg-card': toRgba(lightCard, 0.88),
+    '--line': lightLine,
+    '--text-main': mixHex('#1a2f55', selectedTheme.primaryStrong, 0.12),
+    '--text-sub': mixHex('#4f6691', selectedTheme.primaryStrong, 0.2),
+    '--surface-elevated': toRgba(lightSoft, 0.68),
+    '--surface-elevated-soft': toRgba(lightSoft, 0.42),
+    '--surface-strong': toRgba(lightSurfaceStrong, 0.95),
+    '--surface-muted': toRgba(lightSurfaceMuted, 0.96),
+    '--surface-alt': toRgba(lightSurfaceAlt, 0.45),
+    '--surface-hover': toRgba(lightSurfaceHover, 0.52),
+    '--surface-overlay': toRgba(lightSurfaceMuted, 0.64),
+    '--overlay-backdrop': 'rgba(15, 36, 69, 0.42)',
+    '--btn-soft-bg': toRgba(lightSurfaceAlt, 0.66),
+    '--btn-soft-text': mixHex('#274471', selectedTheme.primaryStrong, 0.32),
+    '--btn-soft-border': toRgba(mixHex(lightLine, selectedTheme.primaryStrong, 0.2), 0.84),
+    '--btn-soft-hover-bg': toRgba(lightSurfaceAlt, 0.7),
+    '--btn-danger-bg': lightDangerBg,
+    '--btn-danger-border': lightDangerBorder,
+    '--btn-danger-text': lightDangerText,
+    '--badge-device-bg': toRgba(mixHex('#4c9dff', selectedTheme.primary, 0.3), 0.16),
+    '--badge-device-text': mixHex('#1f3d6a', selectedTheme.primaryStrong, 0.24),
+    '--badge-device-border': toRgba(mixHex('#68adff', selectedTheme.primary, 0.3), 0.56),
+    '--loading-spinner-track': toRgba(mixHex('#8ca9d8', selectedTheme.primary, 0.24), 0.32),
+    '--feedback-success-bg': toRgba(mixHex('#208856', selectedTheme.primary, 0.24), 0.18),
+    '--feedback-success-text': mixHex('#1c8152', selectedTheme.primaryStrong, 0.16),
+    '--feedback-success-border': toRgba(mixHex('#208856', selectedTheme.primaryStrong, 0.22), 0.34),
+    '--panel-border': toRgba(lightLine, 0.85),
+    '--panel-shadow': '0 14px 28px rgba(30, 62, 109, 0.12)',
+    '--overlay-panel-shadow': toRgba(mixHex('#2f568f', selectedTheme.primaryStrong, 0.36), 0.2),
+    '--modal-bg': toRgba(lightSurfaceStrong, 0.98),
+    '--modal-border': toRgba(mixHex(lightLine, selectedTheme.primary, 0.24), 0.86),
+    '--modal-text-sub': mixHex('#5f78a8', selectedTheme.primaryStrong, 0.28),
+    '--theme-swatch-border': toRgba(mixHex('#8bb2e5', selectedTheme.primary, 0.24), 0.42),
+    '--notice-bg': lightNoticeBg,
+    '--notice-text': lightNoticeText,
+    '--error-bg': lightErrorBg,
+    '--error-text': lightErrorText,
+    '--table-head-bg': toRgba(lightTableHead, 0.98),
+    '--group-sticky-bg': toRgba(lightTableHead, 0.98),
+    '--group-job-bg': toRgba(lightGroupJob, 0.98),
+    '--group-normal-bg': toRgba(lightGroupNormal, 0.98),
+    '--group-hover-bg': toRgba(lightGroupHover, 0.98),
+    '--state-ok-bg': 'rgba(32, 136, 86, 0.2)',
+    '--state-ok-text': '#1c8152',
+    '--state-ng-bg': 'rgba(191, 71, 71, 0.18)',
+    '--state-ng-text': '#aa3737',
+    '--state-unknown-bg': 'rgba(92, 111, 150, 0.2)',
+    '--state-unknown-text': '#44608f',
+    '--state-running-bg': 'rgba(176, 133, 39, 0.2)',
+    '--state-running-text': '#8b6708',
+    '--state-unreachable-bg': 'rgba(155, 73, 101, 0.18)',
+    '--state-unreachable-text': '#8f3556',
+    '--state-total-bg': 'rgba(102, 132, 183, 0.2)',
+    '--state-total-text': '#426394',
+    '--chart-axis-line': toRgba(mixHex('#95b2de', selectedTheme.primary, 0.3), 0.62),
+    '--chart-axis-text': mixHex('#5f78a8', selectedTheme.primaryStrong, 0.22),
+    '--chart-grid-line': toRgba(mixHex('#a8c0e5', selectedTheme.primary, 0.25), 0.36),
+    '--chart-plot-bg': toRgba(lightSurfaceStrong, 0.92),
+    '--chart-avg-line': 'rgba(39, 153, 99, 0.82)',
+    '--chart-avg-bg': toRgba(lightSurfaceMuted, 0.96),
+    '--chart-avg-border': 'rgba(39, 153, 99, 0.4)',
+    '--chart-avg-text': '#1f8a5b',
+    '--chart-bar-bg': mixHex('#3f82e8', selectedTheme.primary, 0.75),
+    '--chart-bar-shadow': toRgba(mixHex('#2f65b8', selectedTheme.primaryStrong, 0.38), 0.28),
+    '--timeline-axis-line': toRgba(mixHex('#95b2de', selectedTheme.primary, 0.3), 0.56),
+    '--timeline-axis-text': mixHex('#5f78a8', selectedTheme.primaryStrong, 0.22),
+    '--timeline-axis-hourly': mixHex('#5f78a8', selectedTheme.primaryStrong, 0.18),
+    '--timeline-day-border': toRgba(mixHex('#95b2de', selectedTheme.primary, 0.3), 0.62),
+    '--timeline-day-title': '#2a4573',
+    '--timeline-day-date': mixHex('#3d679f', selectedTheme.primary, 0.32),
+    '--timeline-column-bg': toRgba(lightTimelineColumn, 0.95),
+    '--timeline-hour-line': toRgba(mixHex('#95b2de', selectedTheme.primary, 0.3), 0.42),
+    '--timeline-event-bg': lightTimelineEvent,
+    '--timeline-event-text': '#f5f9ff',
+    '--timeline-event-shadow': toRgba(mixHex('#2a5799', selectedTheme.primaryStrong, 0.3), 0.28),
+    '--mobile-nav-bg-start': toRgba(lightBase, 0.9),
+    '--mobile-nav-bg-end': toRgba(lightSoft, 0.72),
+    '--mobile-nav-border': toRgba(lightLine, 0.52),
+    '--mobile-nav-text': mixHex('#4f6691', selectedTheme.primaryStrong, 0.2),
+    '--mobile-nav-text-active': mixHex('#1a2f55', selectedTheme.primaryStrong, 0.18),
+    '--mobile-nav-icon-filter': 'brightness(0) saturate(100%) invert(31%) sepia(18%) saturate(780%) hue-rotate(182deg) brightness(93%) contrast(88%)',
+    '--mobile-nav-icon-active-filter': 'brightness(0) saturate(100%) invert(19%) sepia(27%) saturate(909%) hue-rotate(183deg) brightness(92%) contrast(90%)',
+    '--header-settings-icon-filter': 'brightness(0) saturate(100%) invert(19%) sepia(27%) saturate(909%) hue-rotate(183deg) brightness(92%) contrast(90%)',
+    '--floating-switch-icon-filter': 'brightness(0) saturate(100%) invert(12%) sepia(27%) saturate(603%) hue-rotate(183deg) brightness(92%) contrast(88%)',
+    '--mobile-register-bg-start': toRgba(lightSurfaceStrong, 0.94),
+    '--mobile-register-bg-end': toRgba(lightSurfaceMuted, 0.8),
+    '--mobile-register-border': toRgba(lightLine, 0.72),
+    '--mobile-register-active-start': mixHex(selectedTheme.primary, '#4d8fff', 0.25),
+    '--mobile-register-active-end': mixHex(selectedTheme.primaryStrong, selectedTheme.accent, 0.2),
+    '--mobile-register-active-shadow': toRgba(selectedTheme.primary, 0.26),
+    '--scrollbar-track': toRgba(lightSurfaceMuted, 0.94),
+    '--scrollbar-thumb': toRgba(mixHex('#7b9fd4', selectedTheme.primary, 0.32), 0.8),
+    '--scrollbar-thumb-hover': toRgba(mixHex('#5d86c2', selectedTheme.primaryStrong, 0.24), 0.9),
+  }
+
+  applyThemeVars(root, { ...sharedVars, ...lightVars })
 }

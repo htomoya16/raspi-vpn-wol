@@ -148,7 +148,7 @@ export function getIntervalDisplayMode(durationSeconds: number): IntervalDisplay
   return 'full'
 }
 
-export function getSummaryQuery(anchor: Date, bucket: SummaryBucket): {
+export function getSummaryQuery(anchor: Date, bucket: SummaryBucket, monthWindow = 12): {
   from: string
   to: string
   apiBucket: UptimeBucket
@@ -165,7 +165,8 @@ export function getSummaryQuery(anchor: Date, bucket: SummaryBucket): {
 
   if (bucket === 'month') {
     const endMonth = startOfMonth(anchor)
-    const startMonth = addMonths(endMonth, -11)
+    const safeMonthWindow = Math.max(1, monthWindow)
+    const startMonth = addMonths(endMonth, -(safeMonthWindow - 1))
     return {
       from: toIsoDateLocal(startOfMonth(startMonth)),
       to: toIsoDateLocal(endOfMonth(endMonth)),
@@ -205,9 +206,36 @@ export function canMoveSummaryNext(anchor: Date, bucket: SummaryBucket): boolean
 }
 
 export function formatSummaryLabel(item: UptimeSummaryItem, bucket: SummaryBucket): string {
+  if (bucket === 'month') {
+    const date = parseIsoDateLocal(item.period_start)
+    if (date) {
+      const yy = String(date.getFullYear()).slice(-2)
+      const mm = String(date.getMonth() + 1).padStart(2, '0')
+      return `${yy}/${mm}`
+    }
+    const monthMatch = item.label.match(/^(\d{4})-(\d{2})/)
+    if (monthMatch) {
+      return `${monthMatch[1].slice(-2)}/${monthMatch[2]}`
+    }
+    return item.label
+  }
+
+  if (bucket === 'year') {
+    const date = parseIsoDateLocal(item.period_start)
+    if (date) {
+      return String(date.getFullYear())
+    }
+    const yearMatch = item.label.match(/^(\d{4})/)
+    if (yearMatch) {
+      return yearMatch[1]
+    }
+    return item.label
+  }
+
   if (bucket !== 'day') {
     return item.label
   }
+
   const date = parseIsoDateLocal(item.period_start)
   if (!date) {
     return item.label

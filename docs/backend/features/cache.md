@@ -15,6 +15,8 @@
 - レイヤ2: API応答メモリキャッシュ（実装済み）
   - 対象: `GET /api/pcs`, `GET /api/pcs/{pc_id}/uptime/summary`, `GET /api/pcs/{pc_id}/uptime/weekly`。
   - 非対象: `status/logs/jobs`（鮮度優先）。
+  - メモリ上限: `1000` エントリ（超過時は最古エントリから削除）。
+  - 期限切れ掃除: `60s` 間隔で実施。
 - レイヤ3: HTTPキャッシュ制御（実装済み）
   - ブラウザ側が誤って長期保持しないよう `Cache-Control` をAPI単位で設定する。
 
@@ -55,6 +57,7 @@
 4. 変異系（PC CRUD/WOL/status更新）で `pcs` / `uptime` キャッシュ無効化を実装。
 5. APIレスポンスへ `Cache-Control` を設定。
 6. `backend/tests/services/test_cache_memory.py` と既存API/Serviceテストにキャッシュ検証を追加。
+7. `GET /api/logs` / `GET /api/jobs/{job_id}` に `Cache-Control: no-store` を明示し、仕様と実装を一致させた。
 
 ## 運用時の注意点
 

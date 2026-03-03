@@ -121,16 +121,9 @@
   max-height: 520px;
   max-width: 100%;
   overflow: auto;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
   border-radius: 12px;
   border: 1px solid var(--line);
   background: var(--surface-elevated);
-}
-
-.logs-sheet::-webkit-scrollbar {
-  width: 0;
-  height: 0;
 }
 
 .logs-table {
@@ -259,26 +252,27 @@
 .logs-table__group-count {
   display: inline-flex;
   align-items: center;
-  border-radius: 999px;
-  padding: 2px 8px;
-  font-size: 0.7rem;
-  letter-spacing: 0.01em;
+  justify-content: center;
+  min-height: 22px;
   line-height: 1;
 }
 
 .logs-table__group-count--ok {
   background: var(--state-ok-bg);
   color: var(--state-ok-text);
+  border-color: var(--state-ok-text);
 }
 
 .logs-table__group-count--ng {
   background: var(--state-ng-bg);
   color: var(--state-ng-text);
+  border-color: var(--state-ng-text);
 }
 
 .logs-table__group-count--total {
   background: var(--state-total-bg);
   color: var(--state-total-text);
+  border-color: var(--state-total-text);
 }
 
 .logs-table__group-caret {
@@ -341,10 +335,6 @@
 .logs-result-badge {
   display: none;
   flex-shrink: 0;
-  border-radius: 999px;
-  padding: 3px 10px;
-  font-size: 0.72rem;
-  font-weight: 700;
   line-height: 1;
 }
 
@@ -355,11 +345,13 @@
 .logs-result-badge--ok {
   background: var(--state-ok-bg);
   color: var(--state-ok-text);
+  border-color: var(--state-ok-text);
 }
 
 .logs-result-badge--ng {
   background: var(--state-ng-bg);
   color: var(--state-ng-text);
+  border-color: var(--state-ng-text);
 }
 
 .logs-message-cell__hint {
@@ -453,13 +445,11 @@
   align-items: center;
   justify-content: center;
   min-width: 0;
-  border-radius: 999px;
-  padding: 3px 10px;
-  font-size: 0.74rem;
-  font-weight: 700;
+  min-height: 22px;
   line-height: 1;
   background: var(--state-ok-bg);
   color: var(--state-ok-text);
+  border-color: var(--state-ok-text);
 }
 
 .result-ng {
@@ -467,12 +457,9 @@
   align-items: center;
   justify-content: center;
   min-width: 0;
-  border-radius: 999px;
-  padding: 3px 10px;
-  font-size: 0.74rem;
-  font-weight: 700;
+  min-height: 22px;
   line-height: 1;
   background: var(--state-ng-bg);
   color: var(--state-ng-text);
+  border-color: var(--state-ng-text);
 }
-

@@ -78,12 +78,29 @@ python scripts/seed_dev_data.py
 - 稼働時間やログの確認に使う開発用シードデータを再投入する
 - `pcs` / `status_history` / `uptime_daily_summary` / `jobs` / `logs` を開発確認向けに投入する
 
+## DBバックアップ（運用）
+
+```bash
+cd backend
+source .venv/bin/activate
+python scripts/backup_db.py --dry-run
+python scripts/backup_db.py --keep 30
+```
+
+- `--dry-run`: 作成/削除予定だけ表示して、ファイルは変更しない
+- `--keep 30`: 最新30世代を残して古いバックアップを削除する
+- 詳細仕様（自動化/systemd timer/復元手順）は `docs/deploy/db/README.md` を参照
+
 ## ドキュメント
 
 - プロジェクト全体: `docs/README.md`
 - フロントエンド: `docs/frontend/README.md`
 - バックエンド: `docs/backend/README.md`
 - デプロイ/運用: `docs/deploy/README.md`
+- nginx運用: `docs/deploy/nginx.md`
+- systemd運用: `docs/deploy/systemd.md`
+- 運用ランブック: `docs/deploy/runbook.md`
+- DB運用（バックアップ/復元）: `docs/deploy/db/README.md`
 
 ## 仕様の正
 
@@ -94,3 +111,4 @@ python scripts/seed_dev_data.py
 
 - 管理画面は VPN 内アクセス前提（インターネットへ直接公開しない）
 - 本番はデプロイ工程で `alembic upgrade head` を実行し、アプリ起動時マイグレーションは `RUN_MIGRATIONS_ON_STARTUP=0` を推奨
+- API認証は端末別 Bearer トークン方式（`Authorization: Bearer <token>`）

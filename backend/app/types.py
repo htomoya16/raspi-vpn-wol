@@ -29,6 +29,8 @@ class LogRow(TypedDict):
     id: int
     pc_id: str | None
     job_id: str | None
+    api_token_id: str | None
+    actor_label: str | None
     action: str
     event_kind: str
     ok: int
@@ -48,6 +50,18 @@ class JobRow(TypedDict):
     started_at: str | None
     finished_at: str | None
     updated_at: str
+
+
+class ApiTokenRow(TypedDict):
+    id: str
+    name: str
+    role: str
+    token_hash: str
+    token_prefix: str
+    created_at: str
+    expires_at: str | None
+    last_used_at: str | None
+    revoked_at: str | None
 
 
 class PcStatusHistoryRow(TypedDict):

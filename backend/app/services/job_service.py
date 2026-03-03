@@ -3,9 +3,13 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Callable
+from datetime import datetime, timedelta, timezone
 
 from app.repositories import job_repository
 from app.services import event_service, job_context
+
+ACTIVE_JOB_STALE_AFTER_SECONDS = 15 * 60
+ACTIVE_JOB_STALE_ERROR = "stale active job recovered: worker was restarted or stopped"
 
 
 def create_job(job_type: str, payload: dict[str, object] | None) -> dict[str, object]:
@@ -28,10 +32,15 @@ def get_active_job_by_type(job_type: str) -> dict[str, object] | None:
     normalized_type = job_type.strip()
     if not normalized_type:
         raise ValueError("job_type is required")
-    row = job_repository.get_active_job_by_type(normalized_type)
-    if row is None:
-        return None
-    return _to_job(row)
+    while True:
+        row = job_repository.get_active_job_by_type(normalized_type)
+        if row is None:
+            return None
+        job = _to_job(row)
+        if _is_stale_active_job(job):
+            job_repository.mark_failed_if_active(str(job["id"]), ACTIVE_JOB_STALE_ERROR)
+            continue
+        return job
 
 
 def create_or_get_active_job(
@@ -42,11 +51,15 @@ def create_or_get_active_job(
     if not normalized_type:
         raise ValueError("job_type is required")
     payload_json = json.dumps(payload) if payload is not None else None
-    row, created = job_repository.create_or_get_active_job(
-        job_type=normalized_type,
-        payload_json=payload_json,
-    )
-    return _to_job(row), created
+    while True:
+        row, created = job_repository.create_or_get_active_job(
+            job_type=normalized_type,
+            payload_json=payload_json,
+        )
+        job = _to_job(row)
+        if created or not _is_stale_active_job(job):
+            return job, created
+        job_repository.mark_failed_if_active(str(job["id"]), ACTIVE_JOB_STALE_ERROR)
 
 
 async def run_job(
@@ -127,3 +140,35 @@ def _decode_json(value: object) -> dict[str, object] | None:
     if isinstance(decoded, dict):
         return decoded
     return {"value": decoded}
+
+
+def _parse_iso_datetime(value: object) -> datetime | None:
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if not text:
+        return None
+    try:
+        parsed = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _is_stale_active_job(job: dict[str, object]) -> bool:
+    state = str(job.get("state") or "").strip()
+    if state not in {"queued", "running"}:
+        return False
+
+    candidate_timestamp = (
+        _parse_iso_datetime(job.get("updated_at"))
+        or _parse_iso_datetime(job.get("started_at"))
+        or _parse_iso_datetime(job.get("created_at"))
+    )
+    if candidate_timestamp is None:
+        return False
+
+    stale_before = datetime.now(timezone.utc) - timedelta(seconds=ACTIVE_JOB_STALE_AFTER_SECONDS)
+    return candidate_timestamp < stale_before
