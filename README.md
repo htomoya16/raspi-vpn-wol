@@ -97,6 +97,9 @@ python scripts/backup_db.py --keep 30
 - フロントエンド: `docs/frontend/README.md`
 - バックエンド: `docs/backend/README.md`
 - デプロイ/運用: `docs/deploy/README.md`
+- nginx運用: `docs/deploy/nginx.md`
+- systemd運用: `docs/deploy/systemd.md`
+- 運用ランブック: `docs/deploy/runbook.md`
 - DB運用（バックアップ/復元）: `docs/deploy/db/README.md`
 
 ## 仕様の正

@@ -14,6 +14,12 @@
 
 ## 目次
 
+- nginx運用:
+  - `docs/deploy/nginx.md`（`wol.conf` 反映、`/` 配信、`/api` リバプロ）
+- systemd運用:
+  - `docs/deploy/systemd.md`（バックアップ service/timer の有効化と確認）
+- 運用ランブック:
+  - `docs/deploy/runbook.md`（運用開始前チェック、障害時初動、復旧確認）
 - DB運用:
   - `docs/deploy/db/README.md`（バックアップ/復元仕様、systemd timer、Alembic連携）
   - 運用決定値: 毎日 `07:00` 実行、`keep=30`（約1か月分）

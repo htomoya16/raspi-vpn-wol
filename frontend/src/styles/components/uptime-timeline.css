@@ -91,10 +91,12 @@
 
 .uptime-week-calendar__axis-label--start {
   transform: translateY(0);
+  color: var(--timeline-axis-hourly);
 }
 
 .uptime-week-calendar__axis-label--end {
   transform: translateY(-100%);
+  color: var(--timeline-axis-hourly);
 }
 
 .uptime-week-calendar__columns {
@@ -217,6 +219,11 @@
 
   .uptime-week-calendar__axis-label--hourly {
     font-size: 0.56rem;
+    color: var(--timeline-axis-hourly);
+  }
+
+  .uptime-week-calendar__axis-label--start,
+  .uptime-week-calendar__axis-label--end {
     color: var(--timeline-axis-hourly);
   }
 
