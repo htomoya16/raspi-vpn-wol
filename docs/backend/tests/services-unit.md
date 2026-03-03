@@ -60,6 +60,12 @@
 - `test_event_broker_stream_receives_published_event`
   - publishしたSSEイベントをstream購読で受信できる。
 
+- `test_create_or_get_active_job_recovers_stale_active_job`
+  - `queued/running` の active job がしきい値より古い場合、`failed` へ回収してから新規jobを作成できること。
+
+- `test_get_active_job_by_type_skips_stale_row`
+  - 取得した active job が stale の場合、`failed` へ回収して次の有効jobを返せること。
+
 ## `status_monitor_service`（60秒監視）
 
 - `test_status_monitor_enqueue_reuses_active_job`

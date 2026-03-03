@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.models.api_tokens import (
     ApiTokenCreateRequest,
@@ -9,6 +9,7 @@ from app.models.api_tokens import (
     ApiTokenListResponse,
     ApiTokenRevokeResponse,
 )
+from app.security.rate_limit import enforce_admin_write_rate_limit
 from app.services import api_token_service
 
 router = APIRouter()
@@ -29,10 +30,12 @@ def list_api_tokens() -> ApiTokenListResponse:
     response_model=ApiTokenCreateResponse,
     status_code=status.HTTP_201_CREATED,
     summary="APIトークン発行",
+    dependencies=[Depends(enforce_admin_write_rate_limit)],
     responses={
         400: {"description": "入力値不正"},
         401: {"description": "認証エラー"},
         403: {"description": "認可エラー"},
+        429: {"description": "レート制限超過"},
         422: {"description": "リクエスト形式エラー"},
     },
 )
@@ -48,11 +51,13 @@ def create_api_token(payload: ApiTokenCreateRequest) -> ApiTokenCreateResponse:
     "/admin/tokens/{token_id}/revoke",
     response_model=ApiTokenRevokeResponse,
     summary="APIトークン失効",
+    dependencies=[Depends(enforce_admin_write_rate_limit)],
     responses={
         400: {"description": "入力値不正"},
         401: {"description": "認証エラー"},
         403: {"description": "認可エラー"},
         404: {"description": "対象が存在しない"},
+        429: {"description": "レート制限超過"},
     },
 )
 def revoke_api_token(token_id: str) -> ApiTokenRevokeResponse:
@@ -69,11 +74,13 @@ def revoke_api_token(token_id: str) -> ApiTokenRevokeResponse:
     "/admin/tokens/{token_id}",
     response_model=ApiTokenDeleteResponse,
     summary="APIトークン削除",
+    dependencies=[Depends(enforce_admin_write_rate_limit)],
     responses={
         400: {"description": "入力値不正（未失効トークン含む）"},
         401: {"description": "認証エラー"},
         403: {"description": "認可エラー"},
         404: {"description": "対象が存在しない"},
+        429: {"description": "レート制限超過"},
     },
 )
 def delete_api_token(token_id: str) -> ApiTokenDeleteResponse:

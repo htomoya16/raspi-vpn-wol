@@ -13,6 +13,7 @@ if str(BACKEND_DIR) not in sys.path:
 
 from app.db import database as db_module
 from app.main import app
+from app.security.rate_limit import reset_rate_limiter_for_test
 from app.services import api_token_service
 
 
@@ -20,6 +21,7 @@ from app.services import api_token_service
 def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     test_db_path = tmp_path / "app-test.db"
     monkeypatch.setattr(db_module, "DB_PATH", test_db_path)
+    reset_rate_limiter_for_test()
 
     with TestClient(app) as test_client:
         created = api_token_service.create_token(name="pytest-default-client", expires_at=None)
@@ -31,6 +33,7 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
 def client_without_auth_header(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     test_db_path = tmp_path / "app-test.db"
     monkeypatch.setattr(db_module, "DB_PATH", test_db_path)
+    reset_rate_limiter_for_test()
 
     with TestClient(app) as test_client:
         api_token_service.create_token(name="pytest-auth-enforced", expires_at=None)

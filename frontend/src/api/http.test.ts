@@ -131,7 +131,29 @@ describe('http api helpers', () => {
       'このMACアドレスは既に登録されています',
     )
     expect(formatApiError(new ApiError(422, 'invalid body', null))).toBe('形式エラー: invalid body')
+    expect(formatApiError(new ApiError(429, 'too many requests', null, 27))).toBe(
+      'リクエストが多すぎます。27秒後に再試行してください',
+    )
+    expect(formatApiError(new ApiError(429, 'too many requests', null))).toBe(
+      'リクエストが多すぎます。しばらく待って再試行してください',
+    )
     expect(formatApiError(new Error('offline'))).toBe('offline')
+  })
+
+  it('stores retry-after seconds on 429 errors', async () => {
+    setStoredBearerToken('wol_token_for_test')
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ detail: 'too many requests' }), {
+        status: 429,
+        headers: { 'content-type': 'application/json', 'Retry-After': '12' },
+      }),
+    )
+
+    await expect(request('/api/pcs')).rejects.toMatchObject({
+      status: 429,
+      detail: 'too many requests',
+      retryAfterSeconds: 12,
+    })
   })
 
   it('returns cached response within ttl and avoids duplicate fetch', async () => {

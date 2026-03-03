@@ -4,13 +4,16 @@
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x;
-  padding-bottom: 2px;
+  padding-bottom: 0;
+  border-radius: 0;
 }
 
 .uptime-week-calendar__head {
   display: grid;
   grid-template-columns: 54px repeat(7, minmax(96px, 1fr));
   min-width: 780px;
+  border-radius: 0;
+  overflow: hidden;
 }
 
 .uptime-week-calendar__axis-spacer {
@@ -48,6 +51,8 @@
   display: grid;
   grid-template-columns: 54px minmax(0, 1fr);
   min-width: 780px;
+  border-radius: 0;
+  overflow: hidden;
 }
 
 .uptime-week-calendar__axis {
@@ -55,7 +60,9 @@
   min-height: 700px;
   border-right: 1px solid var(--timeline-axis-line);
   border-bottom: 1px solid var(--timeline-hour-line);
+  border-bottom-left-radius: 0;
   background: var(--timeline-column-bg);
+  overflow: hidden;
 }
 
 .uptime-week-calendar__axis-hour-line {
@@ -70,8 +77,7 @@
 .uptime-week-calendar__axis-label {
   position: absolute;
   left: 1px;
-  padding: 0 2px;
-  background: var(--timeline-column-bg);
+  padding: 0;
   transform: translateY(-50%);
   color: var(--timeline-axis-text);
   font-size: 0.66rem;
@@ -102,6 +108,10 @@
   overflow: hidden;
   background: var(--timeline-column-bg);
   border-bottom: 1px solid var(--timeline-hour-line);
+}
+
+.uptime-week-calendar__column:last-child {
+  border-bottom-right-radius: 0;
 }
 
 .uptime-week-calendar__column + .uptime-week-calendar__column {
@@ -242,5 +252,9 @@
 
   .uptime-week-calendar--single-day .uptime-week-calendar__columns {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .uptime-week-calendar--single-day .uptime-week-calendar__column {
+    border-bottom-right-radius: 0;
   }
 }

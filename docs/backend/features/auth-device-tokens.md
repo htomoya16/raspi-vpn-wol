@@ -38,6 +38,7 @@
 - エラーレスポンス:
   - 認証失敗: `401 {"detail":"invalid bearer token"}`
   - 認可失敗: `403 {"detail":"insufficient scope"}`
+  - レート制限超過: `429 {"detail":"too many requests"}` + `Retry-After`
 - 補足:
   - 初回ブートストラップ（有効トークン 0 件）で作成される最初のトークンは、ロックアウト防止のため `admin` とする。
   - admin ロールの有効トークンが 1 件だけのとき、そのトークンの失効は API で拒否する。
@@ -98,6 +99,19 @@
 - `DELETE /api/admin/tokens/{token_id}`
   - 用途: 物理削除。
   - 制約: 失効済みトークン（`revoked_at != null`）のみ削除可能（未失効は `400`）。
+
+## レート制限（v1）
+
+- 目的:
+  - 誤連打や自動化暴発による副作用APIの過剰実行を防ぐ。
+- ルール（トークン単位）:
+  - `POST /api/pcs/{pc_id}/wol`: `3回/60秒`
+  - `POST /api/pcs/{pc_id}/status/refresh`: `6回/60秒`
+  - `POST /api/pcs/status/refresh`: `1回/30秒`
+  - `POST|DELETE /api/admin/*`: `10回/600秒`
+- 超過時:
+  - `429 {"detail":"too many requests"}`
+  - `Retry-After: <seconds>`
 
 ## CRUD 方針（v1.1）
 

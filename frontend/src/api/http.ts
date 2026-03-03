@@ -14,13 +14,15 @@ export class ApiError extends Error {
   status: number
   detail: string
   rawDetail: unknown
+  retryAfterSeconds: number | null
 
-  constructor(status: number, detail: string, rawDetail: unknown) {
+  constructor(status: number, detail: string, rawDetail: unknown, retryAfterSeconds: number | null = null) {
     super(detail || `HTTP ${status}`)
     this.name = 'ApiError'
     this.status = status
     this.detail = detail || ''
     this.rawDetail = rawDetail
+    this.retryAfterSeconds = retryAfterSeconds
   }
 }
 
@@ -82,6 +84,12 @@ export function formatApiError(error: unknown): string {
   if (error.status === 422) {
     return `形式エラー: ${error.detail}`
   }
+  if (error.status === 429) {
+    if (typeof error.retryAfterSeconds === 'number' && Number.isFinite(error.retryAfterSeconds)) {
+      return `リクエストが多すぎます。${error.retryAfterSeconds}秒後に再試行してください`
+    }
+    return 'リクエストが多すぎます。しばらく待って再試行してください'
+  }
 
   return `HTTP ${error.status}: ${error.detail}`
 }
@@ -132,6 +140,26 @@ function dispatchStoredTokenInvalid(path: string, detail: string): void {
   )
 }
 
+function parseRetryAfterSeconds(value: string | null): number | null {
+  if (!value) {
+    return null
+  }
+  const normalized = value.trim()
+  if (!normalized) {
+    return null
+  }
+  const asSeconds = Number(normalized)
+  if (Number.isFinite(asSeconds) && asSeconds >= 0) {
+    return Math.ceil(asSeconds)
+  }
+  const dateMillis = Date.parse(normalized)
+  if (Number.isNaN(dateMillis)) {
+    return null
+  }
+  const diffSeconds = Math.ceil((dateMillis - Date.now()) / 1000)
+  return Math.max(0, diffSeconds)
+}
+
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const cacheMode = options.cache ?? 'no-store'
   const { headers: normalizedHeaders, usedStoredBearerToken } = withDefaultHeaders(options.headers)
@@ -167,7 +195,8 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
     if (response.status === 401 && usedStoredBearerToken && requiresBearerToken(path)) {
       dispatchStoredTokenInvalid(path, detail)
     }
-    throw new ApiError(response.status, detail, rawDetail)
+    const retryAfterSeconds = parseRetryAfterSeconds(response.headers.get('Retry-After'))
+    throw new ApiError(response.status, detail, rawDetail, retryAfterSeconds)
   }
 
   return data as T

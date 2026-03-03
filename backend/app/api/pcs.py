@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import asyncio
 
-from fastapi import APIRouter, Body, HTTPException, Query, Response, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response, status
 
 from app.models.jobs import JobAccepted
 from app.models.pcs import PcCreate, PcListResponse, PcResponse, PcStatus, PcUpdate
 from app.models.uptime import PcUptimeSummaryResponse, PcWeeklyTimelineResponse, UptimeBucket
 from app.models.wol import WolRequest
+from app.security.rate_limit import (
+    enforce_refresh_all_rate_limit,
+    enforce_refresh_pc_rate_limit,
+    enforce_wol_send_rate_limit,
+)
 from app.services import event_service, job_service, pc_service
 from app.services.pc_service import PcConflictError
 
@@ -124,9 +129,11 @@ def delete_pc(pc_id: str) -> None:
     response_model=JobAccepted,
     status_code=status.HTTP_202_ACCEPTED,
     summary="WOL送信（非同期）",
+    dependencies=[Depends(enforce_wol_send_rate_limit)],
     responses={
         400: {"description": "入力値不正"},
         404: {"description": "対象が存在しない"},
+        429: {"description": "レート制限超過"},
         422: {"description": "リクエスト形式エラー"},
     },
 )
@@ -165,7 +172,8 @@ async def send_wol(
     "/pcs/{pc_id}/status/refresh",
     response_model=PcResponse,
     summary="単体ステータス更新",
-    responses={404: {"description": "対象が存在しない"}},
+    dependencies=[Depends(enforce_refresh_pc_rate_limit)],
+    responses={404: {"description": "対象が存在しない"}, 429: {"description": "レート制限超過"}},
 )
 async def refresh_pc_status(pc_id: str) -> PcResponse:
     try:
@@ -192,6 +200,8 @@ async def refresh_pc_status(pc_id: str) -> PcResponse:
     response_model=JobAccepted,
     status_code=status.HTTP_202_ACCEPTED,
     summary="全PCステータス更新（非同期）",
+    dependencies=[Depends(enforce_refresh_all_rate_limit)],
+    responses={429: {"description": "レート制限超過"}},
 )
 async def refresh_all_statuses() -> JobAccepted:
     job, created = job_service.create_or_get_active_job("status_refresh_all", payload=None)

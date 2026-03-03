@@ -13,6 +13,18 @@
   - `/api/pcs` などの業務APIは `admin` / `device` の両方許可。
   - `/api/admin/*` は `admin` role のみ許可し、`device` role には `403` を返す。
 
+## レート制限（v1）
+
+- 方式: バックエンド in-memory（トークン単位）
+- 超過時:
+  - `429 {"detail":"too many requests"}`
+  - `Retry-After: <seconds>`
+- ルール:
+  - `POST /api/pcs/{pc_id}/wol`: `3回/60秒`
+  - `POST /api/pcs/{pc_id}/status/refresh`: `6回/60秒`
+  - `POST /api/pcs/status/refresh`: `1回/30秒`
+  - `POST|DELETE /api/admin/*`: `10回/600秒`
+
 ## エンドポイント
 
 ### `GET /api/health`
@@ -40,14 +52,14 @@
 - operationId: `createApiToken`
 - summary: APIトークン発行
 - requestBody: `ApiTokenCreateRequest`
-- responses: `201`, `400`, `401`, `403`, `422`
+- responses: `201`, `400`, `401`, `403`, `429`, `422`
 - note: 平文トークンは作成時レスポンスで1回のみ返す。
 
 ### `POST /api/admin/tokens/{token_id}/revoke`
 
 - operationId: `revokeApiToken`
 - summary: APIトークン失効
-- responses: `200`, `400`, `401`, `403`, `404`
+- responses: `200`, `400`, `401`, `403`, `404`, `429`
 - note: 物理削除ではなく `revoked_at` を設定する。
 - note: 最後の有効 `admin` トークンは失効できない（`400`）。
 
@@ -55,7 +67,7 @@
 
 - operationId: `deleteApiToken`
 - summary: APIトークン削除
-- responses: `200`, `400`, `401`, `403`, `404`
+- responses: `200`, `400`, `401`, `403`, `404`, `429`
 - note: `revoked_at` が設定された失効済みトークンのみ削除可能。
 - note: 未失効トークンを削除しようとした場合は `400`。
 
@@ -103,7 +115,7 @@
 - operationId: `sendWol`
 - summary: WOL送信（非同期）
 - requestBody: `WolRequest`（任意）
-- responses: `202`, `400`, `404`, `422`
+- responses: `202`, `400`, `404`, `429`, `422`
 - note: 送信後は `booting` へ更新し、バックエンドで3秒間隔の起動確認（最大20回 / 最大60秒）を行う
 - note: WOL送信自体が失敗した場合、PC状態は `unreachable` に更新され、ジョブ状態は `failed` で終了する
 - note: 起動確認で `unknown` / `unreachable` が返った場合は再試行せず、その状態でジョブを `failed` 終了する
@@ -113,14 +125,14 @@
 
 - operationId: `refreshPcStatus`
 - summary: 単体ステータス更新
-- responses: `200`, `400`, `404`
+- responses: `200`, `400`, `404`, `429`
 - note: 既に `unreachable` のPCは、判定結果が `offline` でも `unreachable` を維持する
 
 ### `POST /api/pcs/status/refresh`
 
 - operationId: `refreshAllStatuses`
 - summary: 全PCステータス更新（非同期）
-- responses: `202`
+- responses: `202`, `429`
 - note: `status_refresh_all` が `queued/running` の場合は新規作成せず既存ジョブIDを返す
 - note: バックエンドでは同等の全体更新ジョブを60秒ごとに自動投入する
 
@@ -135,7 +147,7 @@
 - note: 集計では `online` のみをオンライン時間として扱い、`offline/unknown/booting/unreachable` はオフライン扱い
 - note: 週/月/年の集計は日次集計テーブルを再集約して返す
 - note: API契約上、`day` バケットは `from/to` 指定日をそのまま日次で返す（週開始曜日の制約はない）
-- note: 現行フロントのグラフ表示は `day`(1週間) / `month`(12か月) / `year`(5年) を利用
+- note: 現行フロントのグラフ表示は `day`(1週間) / `month`(PC:12か月, スマホ:6か月) / `year`(5年) を利用
 
 ### `GET /api/pcs/{pc_id}/uptime/weekly`
 
