@@ -1,0 +1,7 @@
+[Unit]
+Description=Backup raspi-vpn-wol SQLite DB
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/raspi-vpn-wol/backend
+ExecStart=/opt/raspi-vpn-wol/backend/.venv/bin/python scripts/backup_db.py --keep 30

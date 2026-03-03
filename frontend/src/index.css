@@ -1,0 +1,177 @@
+:root {
+  font-family: 'Avenir Next', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', sans-serif;
+  line-height: 1.5;
+  font-weight: 450;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --bg-base: #050d1d;
+  --bg-soft: #0b1b37;
+  --bg-card: rgba(11, 26, 52, 0.82);
+  --text-main: #e9f0ff;
+  --text-sub: #9fb2d9;
+  --primary: #3b82f6;
+  --primary-strong: #1e3a8a;
+  --accent: #38bdf8;
+  --danger: #f87171;
+  --line: #27456f;
+  --ok: #34d399;
+  --warn: #f59e0b;
+  --bg-glow-primary: rgba(77, 132, 255, 0.3);
+  --bg-glow-primary-soft: rgba(77, 132, 255, 0.12);
+  --bg-glow-accent: rgba(48, 193, 255, 0.24);
+  --bg-glow-accent-soft: rgba(48, 193, 255, 0.1);
+  --btn-primary-end: #1d4ed8;
+  --btn-primary-shadow: rgba(22, 84, 194, 0.4);
+  --floating-switch-shadow: 0 14px 32px rgba(11, 29, 62, 0.45);
+  --floating-switch-shadow-hover: 0 18px 36px rgba(11, 29, 62, 0.54);
+  --btn-primary-text: #ffffff;
+  --btn-soft-bg: #12284a;
+  --btn-soft-text: #d6e5ff;
+  --btn-soft-border: #2f4f80;
+  --btn-soft-hover-bg: rgba(32, 73, 126, 0.6);
+  --btn-danger-bg: #6a2236;
+  --btn-danger-text: #ffd7de;
+  --btn-danger-border: #8a3350;
+  --badge-device-bg: rgba(76, 157, 255, 0.2);
+  --badge-device-text: #e9f0ff;
+  --badge-device-border: rgba(104, 173, 255, 0.72);
+  --loading-spinner-track: rgba(163, 190, 240, 0.35);
+  --feedback-success-bg: rgba(56, 164, 110, 0.18);
+  --feedback-success-text: #d9f8e8;
+  --feedback-success-border: rgba(56, 164, 110, 0.34);
+  --focus-ring: #5b9bff;
+  --focus-ring-shadow: rgba(91, 155, 255, 0.3);
+  --surface-elevated: rgba(10, 24, 47, 0.72);
+  --surface-elevated-soft: rgba(10, 24, 47, 0.48);
+  --surface-strong: rgba(8, 22, 44, 0.85);
+  --surface-muted: rgba(13, 28, 52, 0.82);
+  --surface-alt: rgba(15, 42, 75, 0.42);
+  --surface-hover: rgba(32, 73, 126, 0.32);
+  --surface-overlay: rgba(7, 19, 38, 0.58);
+  --overlay-backdrop: rgba(2, 9, 23, 0.72);
+  --panel-border: rgba(150, 178, 227, 0.2);
+  --panel-shadow: 0 20px 45px rgba(2, 8, 24, 0.45);
+  --overlay-panel-shadow: 0 18px 42px rgba(2, 8, 24, 0.55);
+  --modal-bg: #0a1f3c;
+  --modal-border: #2e4f80;
+  --modal-text-sub: #b7caec;
+  --theme-swatch-border: rgba(220, 234, 255, 0.35);
+  --notice-bg: #112845;
+  --notice-text: #b7d5ff;
+  --error-bg: #3a1822;
+  --error-text: #ffc3cf;
+  --table-head-bg: rgba(15, 42, 75, 0.95);
+  --group-sticky-bg: rgba(13, 36, 68, 0.95);
+  --group-job-bg: rgba(22, 54, 95, 0.96);
+  --group-normal-bg: rgba(42, 40, 79, 0.96);
+  --group-hover-bg: rgba(33, 74, 122, 0.96);
+  --state-ok-bg: rgba(16, 80, 56, 0.78);
+  --state-ok-text: #9ef5ca;
+  --state-ng-bg: rgba(88, 32, 32, 0.78);
+  --state-ng-text: #ffc1b2;
+  --state-unknown-bg: rgba(56, 70, 95, 0.78);
+  --state-unknown-text: #c3d1f2;
+  --state-running-bg: rgba(103, 74, 18, 0.78);
+  --state-running-text: #ffe08f;
+  --state-unreachable-bg: rgba(92, 38, 55, 0.78);
+  --state-unreachable-text: #ffc0d4;
+  --state-total-bg: rgba(36, 62, 101, 0.78);
+  --state-total-text: #d1e3ff;
+  --chart-axis-line: rgba(79, 114, 170, 0.45);
+  --chart-axis-text: #8fa6cf;
+  --chart-grid-line: rgba(126, 159, 211, 0.2);
+  --chart-plot-bg: rgba(7, 19, 38, 0.76);
+  --chart-avg-line: rgba(72, 197, 133, 0.9);
+  --chart-avg-bg: rgba(9, 26, 44, 0.92);
+  --chart-avg-border: rgba(72, 197, 133, 0.5);
+  --chart-avg-text: #82e2b2;
+  --chart-bar-bg: #4f93ff;
+  --chart-bar-shadow: rgba(37, 99, 235, 0.28);
+  --timeline-axis-line: rgba(79, 114, 170, 0.35);
+  --timeline-axis-text: #8fa6cf;
+  --timeline-axis-hourly: rgba(155, 179, 221, 0.95);
+  --timeline-day-border: rgba(85, 117, 171, 0.4);
+  --timeline-day-title: #d8e5ff;
+  --timeline-day-date: #9ad5ff;
+  --timeline-column-bg: rgba(9, 22, 42, 0.88);
+  --timeline-hour-line: rgba(79, 114, 170, 0.32);
+  --timeline-event-bg: #3b82f6;
+  --timeline-event-text: #f5f9ff;
+  --timeline-event-shadow: rgba(15, 42, 86, 0.42);
+  --mobile-nav-bg-start: rgba(5, 13, 29, 0.84);
+  --mobile-nav-bg-end: rgba(11, 27, 55, 0.74);
+  --mobile-nav-border: rgba(96, 130, 186, 0.26);
+  --mobile-nav-text: #b5c8eb;
+  --mobile-nav-text-active: #ffffff;
+  --mobile-nav-icon-filter: brightness(0) saturate(100%) invert(74%) sepia(20%) saturate(376%) hue-rotate(185deg) brightness(94%)
+    contrast(92%);
+  --mobile-nav-icon-active-filter: brightness(0) saturate(100%) invert(100%);
+  --header-settings-icon-filter: brightness(0) saturate(100%) invert(100%);
+  --floating-switch-icon-filter: brightness(0) saturate(100%) invert(100%);
+  --mobile-register-bg-start: rgba(14, 35, 66, 0.86);
+  --mobile-register-bg-end: rgba(20, 48, 87, 0.78);
+  --mobile-register-border: rgba(97, 132, 188, 0.42);
+  --mobile-register-active-start: #3b82f6;
+  --mobile-register-active-end: #1e3a8a;
+  --mobile-register-active-shadow: rgba(22, 84, 194, 0.32);
+  --scrollbar-track: rgba(20, 41, 76, 0.48);
+  --scrollbar-thumb: rgba(114, 157, 224, 0.8);
+  --scrollbar-thumb-hover: rgba(139, 181, 244, 0.92);
+}
+
+* {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--scrollbar-thumb) 0%, var(--scrollbar-thumb-hover) 100%);
+  border: 2px solid var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--scrollbar-thumb-hover) 0%, var(--scrollbar-thumb) 100%);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--text-main);
+  background-color: var(--bg-base);
+  background-image:
+    radial-gradient(1400px 760px at 8% -16%, var(--bg-glow-primary) 0%, var(--bg-glow-primary-soft) 34%, transparent 72%),
+    radial-gradient(1200px 700px at 108% -8%, var(--bg-glow-accent) 0%, var(--bg-glow-accent-soft) 30%, transparent 70%),
+    linear-gradient(180deg, var(--bg-base) 0%, var(--bg-soft) 100%);
+  background-repeat: no-repeat;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+#root {
+  width: 100%;
+}

@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily SQLite backup for raspi-vpn-wol
+
+[Timer]
+OnCalendar=*-*-* 07:00:00
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target
