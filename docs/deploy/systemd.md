@@ -9,11 +9,25 @@
 
 - 2026-03-03: systemd 運用ドキュメントを追加。
 - 2026-03-03: バックアップ service/timer の導入手順を追加。
+- 2026-03-03: `wol-api.service` の導入手順を追加。
 
 ## 対象ユニット
 
+- `deploy/systemd/wol-api.service`
 - `deploy/systemd/wol-db-backup.service`
 - `deploy/systemd/wol-db-backup.timer`
+
+## 反映手順（APIサービス）
+
+```bash
+sudo cp deploy/systemd/wol-api.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now wol-api.service
+sudo systemctl status wol-api.service --no-pager
+```
+
+- 期待結果:
+  - `wol-api.service` が `active (running)` になる
 
 ## 反映手順（DBバックアップ）
 

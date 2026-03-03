@@ -11,11 +11,16 @@
 - 2026-02-11: デプロイ/運用向けドキュメントの初期ページを作成。
 - 2026-03-02: DB運用ドキュメントを `docs/deploy/db/` へ分離し、当ページを入口化。
 - 2026-03-02: DBバックアップの運用決定値（毎日07:00、30世代保持）を追記。
+- 2026-03-03: UFW（OS側ネットワーク制限）手順への導線を追加。
 
 ## 目次
 
+- Raspberry Pi運用フロー:
+  - `docs/deploy/raspi-ops-flow.md`（初回セットアップ〜更新までの一連手順）
 - nginx運用:
   - `docs/deploy/nginx.md`（`wol.conf` 反映、`/` 配信、`/api` リバプロ）
+- OSネットワーク制限:
+  - `docs/deploy/ufw.md`（22/80 を VPN セグメントに限定）
 - systemd運用:
   - `docs/deploy/systemd.md`（バックアップ service/timer の有効化と確認）
 - 運用ランブック:
@@ -33,6 +38,5 @@
 ## 今後の追記候補
 
 - 配布コマンド手順（dist 同期、サービス再起動）
-- `wol-api.service` のユニット設定例
 - 障害時チェックリスト（nginx/FastAPI/SQLite）
 - バックアップ結果の通知（journal確認/外部通知）

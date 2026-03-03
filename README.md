@@ -97,7 +97,9 @@ python scripts/backup_db.py --keep 30
 - フロントエンド: `docs/frontend/README.md`
 - バックエンド: `docs/backend/README.md`
 - デプロイ/運用: `docs/deploy/README.md`
+- Raspberry Pi運用フロー: `docs/deploy/raspi-ops-flow.md`
 - nginx運用: `docs/deploy/nginx.md`
+- OSネットワーク制限（UFW）: `docs/deploy/ufw.md`
 - systemd運用: `docs/deploy/systemd.md`
 - 運用ランブック: `docs/deploy/runbook.md`
 - DB運用（バックアップ/復元）: `docs/deploy/db/README.md`

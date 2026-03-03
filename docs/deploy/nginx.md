@@ -9,6 +9,21 @@
 
 - 2026-03-03: nginx 運用手順を追加。
 - 2026-03-03: `deploy/nginx/wol.conf` を参照する手順を追加。
+- 2026-03-03: nginx 未導入時のインストール手順を追加。
+- 2026-03-03: `wol.conf` に proxy ヘッダーと timeout を追加。
+
+## インストール手順（未導入時）
+
+```bash
+sudo apt update
+sudo apt install -y nginx
+sudo systemctl enable --now nginx
+sudo systemctl status nginx --no-pager
+```
+
+- 期待結果:
+  - nginx がインストールされる
+  - サービスが `active (running)` になる
 
 ## 設定ファイル
 
@@ -16,6 +31,13 @@
 - 配置先: `/etc/nginx/sites-available/wol.conf`
 
 `/` は `frontend/dist` 配置先（例: `/var/www/wol`）を配信し、`/api/` は `127.0.0.1:8000` の FastAPI へ転送する。
+あわせて以下を有効化している。
+
+- `Authorization` / `X-Forwarded-*` ヘッダー転送
+- SSE 運用向け `proxy_buffering off`
+- API の no-store (`Cache-Control: no-store`)
+- API 向け read/send timeout (`300s`)
+- `/api` へ直接来た場合は `308 /api/` へ統一
 
 ## 反映手順
 
