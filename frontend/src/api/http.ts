@@ -9,6 +9,7 @@ import {
 import { API_BEARER_INVALID_EVENT, getStoredBearerToken } from './auth'
 
 const PUBLIC_API_PATH_PREFIXES = ['/api/health']
+const BOOTSTRAP_NO_TOKEN_ROUTE = '/api/admin/tokens'
 
 export class ApiError extends Error {
   status: number
@@ -103,9 +104,21 @@ function resolvePathname(path: string): string {
   }
 }
 
-function requiresBearerToken(path: string): boolean {
-  const pathname = resolvePathname(path)
+function normalizePathname(pathname: string): string {
+  const normalized = pathname.replace(/\/+$/, '')
+  return normalized || '/'
+}
+
+function requiresBearerToken(path: string, method: string): boolean {
+  const pathname = normalizePathname(resolvePathname(path))
+  const normalizedMethod = method.trim().toUpperCase() || 'GET'
   if (!pathname.startsWith('/api/')) {
+    return false
+  }
+  if (
+    pathname === BOOTSTRAP_NO_TOKEN_ROUTE &&
+    (normalizedMethod === 'GET' || normalizedMethod === 'POST')
+  ) {
     return false
   }
   return !PUBLIC_API_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix))
@@ -161,9 +174,11 @@ function parseRetryAfterSeconds(value: string | null): number | null {
 }
 
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const method = options.method ?? 'GET'
+  const bearerRequired = requiresBearerToken(path, method)
   const cacheMode = options.cache ?? 'no-store'
   const { headers: normalizedHeaders, usedStoredBearerToken } = withDefaultHeaders(options.headers)
-  if (requiresBearerToken(path) && !normalizedHeaders.get('Authorization')?.trim()) {
+  if (bearerRequired && !normalizedHeaders.get('Authorization')?.trim()) {
     throw new ApiError(401, 'api token is not configured', 'api token is not configured')
   }
   const response = await fetch(path, {
@@ -192,7 +207,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
         ? (data as { detail?: unknown }).detail
         : null
     const detail = normalizeDetail(rawDetail) || `HTTP ${response.status}`
-    if (response.status === 401 && usedStoredBearerToken && requiresBearerToken(path)) {
+    if (response.status === 401 && usedStoredBearerToken && bearerRequired) {
       dispatchStoredTokenInvalid(path, detail)
     }
     const retryAfterSeconds = parseRetryAfterSeconds(response.headers.get('Retry-After'))

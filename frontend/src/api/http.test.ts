@@ -60,6 +60,53 @@ describe('http api helpers', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it('allows bootstrap admin token creation request without bearer token', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ token: { id: 'token-1' }, plain_token: 'wol_plain' }), {
+        status: 201,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+
+    await expect(
+      request('/api/admin/tokens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'bootstrap-admin', role: 'admin' }),
+      }),
+    ).resolves.toMatchObject({
+      plain_token: 'wol_plain',
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [, options] = fetchMock.mock.calls[0]
+    const headers = new Headers(options?.headers)
+    expect(headers.get('Authorization')).toBeNull()
+  })
+
+  it('allows admin token list request without bearer token for bootstrap detection', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ items: [] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+
+    await expect(request('/api/admin/tokens')).resolves.toEqual({ items: [] })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [, options] = fetchMock.mock.calls[0]
+    const headers = new Headers(options?.headers)
+    expect(headers.get('Authorization')).toBeNull()
+  })
+
+  it('still blocks admin token revoke without bearer token', async () => {
+    await expect(request('/api/admin/tokens/token-1/revoke', { method: 'POST' })).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 401,
+      detail: 'api token is not configured',
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('dispatches invalid-token event when stored bearer token receives 401', async () => {
     const invalidListener = vi.fn()
     window.addEventListener(API_BEARER_INVALID_EVENT, invalidListener as EventListener)
