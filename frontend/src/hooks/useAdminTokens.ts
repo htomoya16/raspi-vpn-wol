@@ -299,19 +299,31 @@ export function useAdminTokens(active: boolean): UseAdminTokensResult {
     })
 
     try {
+      const shouldAutoConfigureCreatedToken = activeTokenCount === 0 && !currentBearerToken.trim()
       const response = await createApiToken({
         name: normalizedName,
         role: createRole,
         expires_at: expiresAt,
       })
+      if (shouldAutoConfigureCreatedToken) {
+        setStoredBearerToken(response.plain_token)
+      }
       dispatch({
         type: 'patch',
         payload: {
+          tokenAccessDenied: false,
+          tokensError: '',
           createdPlainToken: response.plain_token,
           createFeedback: {
             kind: 'success',
-            message: 'トークンを発行しました。利用する場合は入力欄に貼り付けて保存してください。',
+            message: shouldAutoConfigureCreatedToken
+              ? '初回トークンを発行し、この端末へ自動設定しました。'
+              : 'トークンを発行しました。利用する場合は入力欄に貼り付けて保存してください。',
           },
+          currentBearerToken: shouldAutoConfigureCreatedToken ? response.plain_token : currentBearerToken,
+          bearerFeedback: shouldAutoConfigureCreatedToken
+            ? { kind: 'success', message: '初回トークンを自動設定しました。' }
+            : null,
           createName: '',
           createRole: 'device',
           createExpiresAt: '',
@@ -323,7 +335,7 @@ export function useAdminTokens(active: boolean): UseAdminTokensResult {
     } finally {
       dispatch({ type: 'patch', payload: { createLoading: false } })
     }
-  }, [createExpiresAt, createName, createRole, loadTokens])
+  }, [activeTokenCount, createExpiresAt, createName, createRole, currentBearerToken, loadTokens])
 
   const handleCopyCreatedToken = useCallback(async () => {
     if (!createdPlainToken) {
