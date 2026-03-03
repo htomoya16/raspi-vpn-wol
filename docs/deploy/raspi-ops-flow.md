@@ -200,3 +200,4 @@ sudo systemctl status wol-db-backup.timer --no-pager
 - `frontend` build は Raspberry Pi ではなく PC で行う。
 - 運用DBは初期化せず、基本は `alembic upgrade head` で追従する。
 - 外部公開は行わず、VPN/LAN 内アクセスに限定する。
+- adminトークン喪失時の復旧は `docs/deploy/token-ops.md`（`create_api_token.py`）を参照する。

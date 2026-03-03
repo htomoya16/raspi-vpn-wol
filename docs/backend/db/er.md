@@ -7,6 +7,7 @@
 
 ## 変更内容
 
+- 2026-03-03: 運用保持ポリシーを更新（`logs`: 30日 + 200,000件、`jobs`: 30日 + 50,000件）。
 - 2026-03-02: `api_tokens.role` と `logs.api_token_id` / `logs.actor_label` を追加（admin認可・監査主体記録）。
 - 2026-03-02: `api_tokens` を追加（端末別 Bearer トークン認証）。
 - 2026-03-01: Alembic/SQLiteの実DDLに合わせてインデックス記述を更新（`DESC` 明記を削除）。
@@ -138,6 +139,8 @@ erDiagram
 - `pcs.ip_address` は必須（`NOT NULL`）。`NULL/空文字` 行がある状態では `3f2a6df9d4a1` マイグレーションが失敗するため、事前に補正または削除が必要。
 - 既存データに同一MACの重複があると、一意制約作成時に起動エラーになる。重複解消後に再起動する。
 - 保持期間方針:
+  - `logs`: 30日保持 + 200,000件上限（挿入時に自動削除）。
+  - `jobs`: 30日保持 + 50,000件上限（新規ジョブ作成時に自動削除、`queued/running` は保護）。
   - `status_history`: 1年保持（定期削除）。
   - `uptime_daily_summary`: 無期限保持。
 - スキーマ変更時は、このページと `docs/backend/api/openapi.md` を同時更新する。

@@ -104,6 +104,7 @@ python scripts/backup_db.py --keep 30
 - systemd運用: `docs/deploy/systemd.md`
 - 運用ランブック: `docs/deploy/runbook.md`
 - DB運用（バックアップ/復元）: `docs/deploy/db-backup-restore.md`
+- APIトークン運用（break-glass）: `docs/deploy/token-ops.md`
 
 ## 仕様の正
 

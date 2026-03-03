@@ -7,7 +7,7 @@ from app.db.database import connection
 from app.types import LogRow
 
 LOG_RETENTION_DAYS = 30
-LOG_MAX_ROWS = 7000
+LOG_MAX_ROWS = 200000
 SUCCESS_STATUSES = {"ok", "online", "sent", "succeeded"}
 
 
