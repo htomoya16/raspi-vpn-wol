@@ -11,6 +11,7 @@
 
 .uptime-toolbar label {
   display: grid;
+  min-width: 0;
   gap: 5px;
   color: var(--text-sub);
   font-weight: 600;
@@ -22,6 +23,10 @@
 }
 
 .uptime-toolbar__date-input {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -199,10 +204,35 @@
 
   .uptime-toolbar {
     grid-template-columns: 1fr;
+    min-width: 0;
+  }
+
+  .uptime-toolbar label {
+    width: 100%;
+    min-width: 0;
   }
 
   .uptime-toolbar__mock-toggle {
     width: 100%;
+  }
+
+  .uptime-toolbar__date-input {
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: none;
+    padding-right: 10px;
+  }
+
+  .uptime-toolbar__date-input::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
+    appearance: none;
+    opacity: 0;
+    width: 0;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
   }
 
   .uptime-section__header {

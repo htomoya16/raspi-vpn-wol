@@ -45,6 +45,7 @@ function UptimePanel({
       ) : (
         <>
           <UptimeToolbar
+            isMobile={state.isMobile}
             pcs={pcs}
             activePcId={state.activePcId}
             referenceDate={state.referenceDate}
