@@ -7,6 +7,7 @@
 
 ## 変更内容
 
+- 2026-03-09: WireGuard 受信用UDPポート（`63088/udp`）の任意許可手順を追記。
 - 2026-03-03: UFW 導入・適用手順を追加。
 - 2026-03-03: `<LAN_CIDR>` 定義と LAN / VPN 併用手順を追記。
 - 2026-03-03: 具体値（`192.168.10.0/24` / `wg0` / `10.6.0.0/24`）で実行手順を固定化。
@@ -83,6 +84,20 @@ sudo ufw status numbered
 - 期待結果:
   - `Status: active`
   - 22/80 許可ルールに `192.168.10.0/24` と `wg0` / `10.6.0.0/24` が表示される
+
+## 6. （任意）WireGuard をこの端末で受ける場合
+
+- Raspberry Pi を WireGuard サーバとして運用し、VPN クライアント接続を受ける場合のみ実施する。
+- VPN接続のために、すでに `sudo ufw allow 63088/udp comment 'WireGuard'` を実行済みなら再実行は不要（`sudo ufw status numbered` でルールが存在することだけ確認する）。
+
+```bash
+sudo ufw allow 63088/udp comment 'WireGuard'
+sudo ufw status numbered
+```
+
+- 期待結果:
+  - `63088/udp` の許可ルールが表示される
+  - WireGuard のハンドシェイク受信が可能になる
 
 ## 運用時の注意点
 
