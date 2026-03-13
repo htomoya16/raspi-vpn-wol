@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useDelayedVisibility } from '../hooks/useDelayedVisibility'
+import { useMediaQuery } from '../hooks/useMediaQuery'
 import LoadingDots from './LoadingDots'
 import LogsPanelContent from './log-panel/LogsPanelContent'
 import { buildLogGroups } from './log-panel/logGrouping'
@@ -12,8 +13,11 @@ import type { LogEntry } from '../types/models'
 export interface LogsPanelProps {
   items: LogEntry[]
   loading: boolean
+  loadingMore?: boolean
+  hasMore?: boolean
   error: string
   onReload: () => Promise<void> | void
+  onLoadMore?: () => Promise<void> | void
   onClear: () => Promise<void>
   embedded?: boolean
 }
@@ -21,15 +25,24 @@ export interface LogsPanelProps {
 function LogsPanel({
   items,
   loading,
+  loadingMore = false,
+  hasMore = false,
   error,
   onReload,
+  onLoadMore,
   onClear,
   embedded = false,
 }: LogsPanelProps) {
+  const isMobile = useMediaQuery('(max-width: 760px)')
   const panelId = useMemo(() => `logs-panel-${Math.random().toString(36).slice(2, 10)}`, [])
   const focusPanelId = `${panelId}-focus`
   const mainSheetRef = useRef<HTMLDivElement | null>(null)
   const focusSheetRef = useRef<HTMLDivElement | null>(null)
+  const mainLoadMoreSentinelRef = useRef<HTMLDivElement | null>(null)
+  const loadMoreInFlightRef = useRef(false)
+  const touchLastYRef = useRef<number | null>(null)
+  const touchPullDistanceRef = useRef(0)
+  const touchGestureConsumedRef = useRef(false)
 
   const {
     confirmOpen,
@@ -51,6 +64,7 @@ function LogsPanel({
   const logGroups = useMemo(() => buildLogGroups(items), [items])
   const showInitialLoading = loading && !hasItems
   const showRefreshingSpinner = useDelayedVisibility(loading && hasItems, 200)
+  const autoLoadOnScroll = isMobile && Boolean(onLoadMore)
   const stickySyncToken = useMemo(() => {
     const groupKeys = logGroups.map((group) => group.key).join(',')
     const collapsedKeys = Array.from(collapsedGroupKeys).sort().join(',')
@@ -96,6 +110,104 @@ function LogsPanel({
       document.body.style.overflow = prevOverflow
     }
   }, [confirmOpen])
+
+  const handleLoadMore = useCallback(async () => {
+    if (!onLoadMore || loadMoreInFlightRef.current || loading || loadingMore || clearLoading || !hasMore) {
+      return
+    }
+    loadMoreInFlightRef.current = true
+    try {
+      await Promise.resolve(onLoadMore())
+    } finally {
+      loadMoreInFlightRef.current = false
+    }
+  }, [clearLoading, hasMore, loading, loadingMore, onLoadMore])
+
+  useEffect(() => {
+    if (!autoLoadOnScroll || !hasMore || !onLoadMore) {
+      return undefined
+    }
+
+    const getDistanceFromBottom = () => {
+      if (typeof document === 'undefined') {
+        return Number.POSITIVE_INFINITY
+      }
+      const doc = document.documentElement
+      const viewportBottom = window.scrollY + window.innerHeight
+      return doc.scrollHeight - viewportBottom
+    }
+
+    const isNearBottom = () => getDistanceFromBottom() <= 4
+
+    const resetTouchTracking = () => {
+      touchLastYRef.current = null
+      touchPullDistanceRef.current = 0
+      touchGestureConsumedRef.current = false
+    }
+
+    const handleTouchStart = (event: TouchEvent) => {
+      const touch = event.touches[0]
+      if (!touch) {
+        return
+      }
+      touchLastYRef.current = touch.clientY
+      touchPullDistanceRef.current = 0
+      touchGestureConsumedRef.current = false
+    }
+
+    const handleTouchMove = (event: TouchEvent) => {
+      if (
+        loadMoreInFlightRef.current ||
+        loading ||
+        loadingMore ||
+        clearLoading ||
+        touchGestureConsumedRef.current
+      ) {
+        return
+      }
+
+      const touch = event.touches[0]
+      if (!touch) {
+        return
+      }
+
+      const lastY = touchLastYRef.current
+      touchLastYRef.current = touch.clientY
+      if (lastY === null) {
+        return
+      }
+
+      const delta = touch.clientY - lastY
+      if (delta < 0) {
+        touchPullDistanceRef.current += -delta
+      } else {
+        touchPullDistanceRef.current = 0
+      }
+
+      if (!isNearBottom() || touchPullDistanceRef.current < 28) {
+        return
+      }
+
+      touchGestureConsumedRef.current = true
+      touchPullDistanceRef.current = 0
+      void handleLoadMore()
+    }
+
+    const handleTouchEnd = () => {
+      resetTouchTracking()
+    }
+
+    window.addEventListener('touchstart', handleTouchStart, { passive: true })
+    window.addEventListener('touchmove', handleTouchMove, { passive: true })
+    window.addEventListener('touchend', handleTouchEnd, { passive: true })
+    window.addEventListener('touchcancel', handleTouchEnd, { passive: true })
+    return () => {
+      window.removeEventListener('touchstart', handleTouchStart)
+      window.removeEventListener('touchmove', handleTouchMove)
+      window.removeEventListener('touchend', handleTouchEnd)
+      window.removeEventListener('touchcancel', handleTouchEnd)
+    }
+  }, [autoLoadOnScroll, clearLoading, handleLoadMore, hasMore, loading, loadingMore, onLoadMore])
 
   useEffect(() => {
     if (!focusOpen) {
@@ -163,6 +275,11 @@ function LogsPanel({
       onOpenConfirm={openConfirm}
       onToggleGroup={toggleGroup}
       onToggleDetail={toggleDetail}
+      hasMore={hasMore}
+      loadingMore={loadingMore}
+      onLoadMore={handleLoadMore}
+      autoLoadOnScroll={autoLoadOnScroll}
+      loadMoreSentinelRef={mainLoadMoreSentinelRef}
     />
   )
 
@@ -210,6 +327,10 @@ function LogsPanel({
                   onOpenConfirm={openConfirm}
                   onToggleGroup={toggleGroup}
                   onToggleDetail={toggleDetail}
+                  hasMore={hasMore}
+                  loadingMore={loadingMore}
+                  onLoadMore={handleLoadMore}
+                  autoLoadOnScroll={false}
                 />
               </section>
             </div>,

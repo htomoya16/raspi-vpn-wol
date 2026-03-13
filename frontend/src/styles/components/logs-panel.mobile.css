@@ -34,6 +34,16 @@
     max-height: none;
   }
 
+  .logs-load-more {
+    margin-top: 4px;
+    justify-content: center;
+  }
+
+  .logs-load-more__sentinel {
+    font-size: 0.74rem;
+    padding: 6px 0;
+  }
+
   .logs-table {
     min-width: 0;
     background: transparent;

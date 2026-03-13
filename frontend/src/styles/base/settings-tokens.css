@@ -77,6 +77,29 @@
   justify-content: flex-end;
 }
 
+.settings-tokens__actions .btn {
+  white-space: nowrap;
+}
+
+.settings-tokens__date-input {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-tokens__date-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.settings-tokens__date-clear-btn {
+  white-space: nowrap;
+}
+
 .settings-tokens__created {
   border: 1px dashed var(--line);
   border-radius: 10px;
@@ -225,4 +248,37 @@
   display: flex;
   justify-content: flex-end;
   gap: 6px;
+}
+
+.settings-token-list__actions .btn {
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .settings-tokens__date-row {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-tokens__date-clear-btn {
+    width: 100%;
+  }
+
+  .settings-tokens__date-input {
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: none;
+    padding-right: 10px;
+  }
+
+  .settings-tokens__date-input::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
+    appearance: none;
+    opacity: 0;
+    width: 0;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    pointer-events: none;
+  }
 }

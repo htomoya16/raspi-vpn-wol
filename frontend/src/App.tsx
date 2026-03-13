@@ -58,6 +58,8 @@ function App() {
     rowErrorById,
     logs,
     logsLoading,
+    logsLoadingMore,
+    logsHasMore,
     logsError,
     jobs,
     refreshAllLoading,
@@ -65,6 +67,7 @@ function App() {
     onlineCount,
     loadPcs,
     loadLogs,
+    loadMoreLogs,
     createPcEntry,
     deletePcEntry,
     updatePcEntry,
@@ -143,8 +146,11 @@ function App() {
   const logsPanelProps: LogsPanelProps = {
     items: logs,
     loading: logsLoading,
+    loadingMore: logsLoadingMore,
+    hasMore: logsHasMore,
     error: logsError,
     onReload: loadLogs,
+    onLoadMore: loadMoreLogs,
     onClear: clearLogsEntry,
   }
 

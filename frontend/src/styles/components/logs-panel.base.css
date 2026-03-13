@@ -126,6 +126,24 @@
   background: var(--surface-elevated);
 }
 
+.logs-load-more {
+  margin-top: 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.logs-load-more__btn {
+  min-width: 180px;
+}
+
+.logs-load-more__sentinel {
+  width: 100%;
+  text-align: center;
+  color: var(--text-sub);
+  font-size: 0.78rem;
+  padding: 8px 0 2px;
+}
+
 .logs-table {
   --logs-table-head-height: 38px;
   width: 100%;

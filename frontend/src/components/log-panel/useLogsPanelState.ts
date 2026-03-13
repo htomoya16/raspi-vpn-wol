@@ -1,6 +1,6 @@
 import { useCallback, useReducer } from 'react'
 
-import { PERIODIC_STATUS_GROUP_KEY } from './logGrouping'
+import { isPeriodicStatusGroupKey } from './logGrouping'
 
 interface LogsPanelState {
   confirmOpen: boolean
@@ -8,6 +8,7 @@ interface LogsPanelState {
   clearLoading: boolean
   expandedDetailIds: Set<number>
   collapsedGroupKeys: Set<string>
+  seenGroupKeys: Set<string>
 }
 
 type LogsPanelAction =
@@ -25,7 +26,8 @@ const initialState: LogsPanelState = {
   focusOpen: false,
   clearLoading: false,
   expandedDetailIds: new Set<number>(),
-  collapsedGroupKeys: new Set<string>([PERIODIC_STATUS_GROUP_KEY]),
+  collapsedGroupKeys: new Set<string>(),
+  seenGroupKeys: new Set<string>(),
 }
 
 function areSetsEqual<T>(left: Set<T>, right: Set<T>): boolean {
@@ -71,19 +73,33 @@ function reducer(state: LogsPanelState, action: LogsPanelAction): LogsPanelState
       return { ...state, collapsedGroupKeys }
     }
     case 'SYNC_GROUP_KEYS': {
+      if (action.payload.size === 0) {
+        if (state.collapsedGroupKeys.size === 0 && state.seenGroupKeys.size === 0) {
+          return state
+        }
+        return { ...state, collapsedGroupKeys: new Set<string>(), seenGroupKeys: new Set<string>() }
+      }
+
       const next = new Set<string>()
       for (const key of state.collapsedGroupKeys) {
         if (action.payload.has(key)) {
           next.add(key)
         }
       }
-      if (action.payload.has(PERIODIC_STATUS_GROUP_KEY)) {
-        next.add(PERIODIC_STATUS_GROUP_KEY)
+
+      const seenGroupKeys = new Set(state.seenGroupKeys)
+      for (const key of action.payload) {
+        const isNew = !seenGroupKeys.has(key)
+        if (isNew && isPeriodicStatusGroupKey(key)) {
+          next.add(key)
+        }
+        seenGroupKeys.add(key)
       }
-      if (areSetsEqual(next, state.collapsedGroupKeys)) {
+
+      if (areSetsEqual(next, state.collapsedGroupKeys) && areSetsEqual(seenGroupKeys, state.seenGroupKeys)) {
         return state
       }
-      return { ...state, collapsedGroupKeys: next }
+      return { ...state, collapsedGroupKeys: next, seenGroupKeys }
     }
     default:
       return state
