@@ -89,6 +89,84 @@ describe('useLogsData', () => {
     expect(result.current.logsHasMore).toBe(false)
   })
 
+  it('keeps loadingMore true while newer loadMore is still in flight', async () => {
+    const firstLoad = createDeferred<LogListResponse>()
+    const staleLoadMore = createDeferred<LogListResponse>()
+    const reload = createDeferred<LogListResponse>()
+    const activeLoadMore = createDeferred<LogListResponse>()
+    const listLogsMock = vi.mocked(listLogs)
+    listLogsMock
+      .mockReturnValueOnce(firstLoad.promise)
+      .mockReturnValueOnce(staleLoadMore.promise)
+      .mockReturnValueOnce(reload.promise)
+      .mockReturnValueOnce(activeLoadMore.promise)
+
+    const setNotice = vi.fn()
+    const { result } = renderHook(() => useLogsData({ setNotice }))
+
+    let initialLoadPromise!: Promise<void>
+    act(() => {
+      initialLoadPromise = result.current.loadLogs()
+    })
+
+    firstLoad.resolve({
+      items: [createLogEntryFactory({ id: 410 })],
+      next_cursor: 409,
+    })
+    await act(async () => {
+      await initialLoadPromise
+    })
+
+    let staleLoadMorePromise!: Promise<void>
+    act(() => {
+      staleLoadMorePromise = result.current.loadMoreLogs()
+    })
+    await waitFor(() => {
+      expect(result.current.logsLoadingMore).toBe(true)
+    })
+
+    let reloadPromise!: Promise<void>
+    act(() => {
+      reloadPromise = result.current.loadLogs()
+    })
+    reload.resolve({
+      items: [createLogEntryFactory({ id: 420 })],
+      next_cursor: 419,
+    })
+    await act(async () => {
+      await reloadPromise
+    })
+
+    let activeLoadMorePromise!: Promise<void>
+    act(() => {
+      activeLoadMorePromise = result.current.loadMoreLogs()
+    })
+    await waitFor(() => {
+      expect(result.current.logsLoadingMore).toBe(true)
+    })
+
+    staleLoadMore.resolve({
+      items: [createLogEntryFactory({ id: 409 })],
+      next_cursor: 408,
+    })
+    await act(async () => {
+      await staleLoadMorePromise
+    })
+
+    expect(result.current.logsLoadingMore).toBe(true)
+
+    activeLoadMore.resolve({
+      items: [createLogEntryFactory({ id: 419 })],
+      next_cursor: null,
+    })
+    await act(async () => {
+      await activeLoadMorePromise
+    })
+
+    expect(result.current.logsLoadingMore).toBe(false)
+    expect(result.current.logs.map((item) => item.id)).toEqual([420, 419])
+  })
+
   it('resets loadingMore when clear action supersedes in-flight loadMore', async () => {
     const firstLoad = createDeferred<LogListResponse>()
     const pendingLoadMore = createDeferred<LogListResponse>()

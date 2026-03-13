@@ -72,9 +72,15 @@
   background: transparent;
   color: var(--text-sub);
   text-align: left;
+  display: inline-flex;
+  align-items: center;
   border-radius: 10px;
   padding: 10px 12px;
   font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+  word-break: keep-all;
+  overflow-wrap: normal;
   cursor: pointer;
 }
 

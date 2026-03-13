@@ -124,6 +124,29 @@ function LogsPanel({
   }, [clearLoading, hasMore, loading, loadingMore, onLoadMore])
 
   useEffect(() => {
+    if (!isMobile || typeof document === 'undefined') {
+      return undefined
+    }
+    const rafId = window.requestAnimationFrame(() => {
+      const doc = document.documentElement
+      const maxScrollY = Math.max(0, doc.scrollHeight - window.innerHeight)
+      if (window.scrollY > maxScrollY) {
+        window.scrollTo({ top: maxScrollY, behavior: 'auto' })
+      }
+    })
+    return () => {
+      window.cancelAnimationFrame(rafId)
+    }
+  }, [collapsedGroupKeys, isMobile, logGroups])
+
+  const handleToggleGroup = useCallback(
+    (key: string) => {
+      toggleGroup(key)
+    },
+    [toggleGroup],
+  )
+
+  useEffect(() => {
     if (!autoLoadOnScroll || !hasMore || !onLoadMore) {
       return undefined
     }
@@ -273,7 +296,7 @@ function LogsPanel({
       onReload={onReload}
       onOpenFocus={openFocus}
       onOpenConfirm={openConfirm}
-      onToggleGroup={toggleGroup}
+      onToggleGroup={handleToggleGroup}
       onToggleDetail={toggleDetail}
       hasMore={hasMore}
       loadingMore={loadingMore}
@@ -325,7 +348,7 @@ function LogsPanel({
                   onReload={onReload}
                   onOpenFocus={openFocus}
                   onOpenConfirm={openConfirm}
-                  onToggleGroup={toggleGroup}
+                  onToggleGroup={handleToggleGroup}
                   onToggleDetail={toggleDetail}
                   hasMore={hasMore}
                   loadingMore={loadingMore}

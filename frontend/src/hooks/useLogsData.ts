@@ -83,7 +83,9 @@ export function useLogsData({ setNotice }: UseLogsDataParams): UseLogsDataReturn
       }
       setLogsError(formatApiError(error))
     } finally {
-      setLogsLoadingMore(false)
+      if (requestSeq === loadLogsRequestSeqRef.current) {
+        setLogsLoadingMore(false)
+      }
     }
   }, [logsLoading, logsLoadingMore, nextCursor])
 
