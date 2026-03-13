@@ -138,6 +138,9 @@ export function buildLogGroups(items: LogEntry[]): LogGroup[] {
       }
 
       currentPeriodicStatusGroup.items.push(item)
+      // Use the tail-side id in this contiguous block to keep the key stable
+      // when newer periodic logs are prepended at the top.
+      currentPeriodicStatusGroup.key = `${PERIODIC_STATUS_GROUP_KEY_PREFIX}:${item.id}`
       currentPeriodicStatusGroup.okCount += okCount
       currentPeriodicStatusGroup.ngCount += ngCount
       currentPeriodicStatusGroup.latestLogId = Math.max(currentPeriodicStatusGroup.latestLogId, item.id)

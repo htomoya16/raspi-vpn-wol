@@ -8,7 +8,7 @@ interface LogsPanelState {
   clearLoading: boolean
   expandedDetailIds: Set<number>
   collapsedGroupKeys: Set<string>
-  seenGroupKeys: Set<string>
+  currentGroupKeys: Set<string>
 }
 
 type LogsPanelAction =
@@ -27,7 +27,25 @@ const initialState: LogsPanelState = {
   clearLoading: false,
   expandedDetailIds: new Set<number>(),
   collapsedGroupKeys: new Set<string>(),
-  seenGroupKeys: new Set<string>(),
+  currentGroupKeys: new Set<string>(),
+}
+
+function parsePeriodicGroupId(key: string): number | null {
+  const [, suffix] = key.split(':').slice(-2)
+  if (!suffix) {
+    return null
+  }
+  const id = Number(suffix)
+  return Number.isFinite(id) ? id : null
+}
+
+function comparePeriodicGroupKey(left: string, right: string): number {
+  const leftId = parsePeriodicGroupId(left)
+  const rightId = parsePeriodicGroupId(right)
+  if (leftId !== null && rightId !== null && leftId !== rightId) {
+    return rightId - leftId
+  }
+  return left.localeCompare(right)
 }
 
 function areSetsEqual<T>(left: Set<T>, right: Set<T>): boolean {
@@ -74,10 +92,10 @@ function reducer(state: LogsPanelState, action: LogsPanelAction): LogsPanelState
     }
     case 'SYNC_GROUP_KEYS': {
       if (action.payload.size === 0) {
-        if (state.collapsedGroupKeys.size === 0 && state.seenGroupKeys.size === 0) {
+        if (state.collapsedGroupKeys.size === 0 && state.currentGroupKeys.size === 0) {
           return state
         }
-        return { ...state, collapsedGroupKeys: new Set<string>(), seenGroupKeys: new Set<string>() }
+        return { ...state, collapsedGroupKeys: new Set<string>(), currentGroupKeys: new Set<string>() }
       }
 
       const next = new Set<string>()
@@ -87,19 +105,36 @@ function reducer(state: LogsPanelState, action: LogsPanelAction): LogsPanelState
         }
       }
 
-      const seenGroupKeys = new Set(state.seenGroupKeys)
-      for (const key of action.payload) {
-        const isNew = !seenGroupKeys.has(key)
-        if (isNew && isPeriodicStatusGroupKey(key)) {
-          next.add(key)
+      const removedPeriodicKeys = Array.from(state.currentGroupKeys)
+        .filter((key) => isPeriodicStatusGroupKey(key) && !action.payload.has(key))
+        .sort(comparePeriodicGroupKey)
+      const addedPeriodicKeys = Array.from(action.payload)
+        .filter((key) => isPeriodicStatusGroupKey(key) && !state.currentGroupKeys.has(key))
+        .sort(comparePeriodicGroupKey)
+
+      const transferredAddedKeys = new Set<string>()
+      const transferCount = Math.min(removedPeriodicKeys.length, addedPeriodicKeys.length)
+      for (let index = 0; index < transferCount; index += 1) {
+        const removedKey = removedPeriodicKeys[index]
+        const addedKey = addedPeriodicKeys[index]
+        transferredAddedKeys.add(addedKey)
+        if (state.collapsedGroupKeys.has(removedKey)) {
+          next.add(addedKey)
         }
-        seenGroupKeys.add(key)
       }
 
-      if (areSetsEqual(next, state.collapsedGroupKeys) && areSetsEqual(seenGroupKeys, state.seenGroupKeys)) {
+      for (const key of addedPeriodicKeys) {
+        if (transferredAddedKeys.has(key)) {
+          continue
+        }
+        next.add(key)
+      }
+
+      const currentGroupKeys = new Set(action.payload)
+      if (areSetsEqual(next, state.collapsedGroupKeys) && areSetsEqual(currentGroupKeys, state.currentGroupKeys)) {
         return state
       }
-      return { ...state, collapsedGroupKeys: next, seenGroupKeys }
+      return { ...state, collapsedGroupKeys: next, currentGroupKeys }
     }
     default:
       return state

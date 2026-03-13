@@ -78,21 +78,17 @@ jobs:
           name: ${{ env.FRONTEND_ARTIFACT_NAME }}
           path: /tmp/frontend-dist
 
-      - name: Sync frontend files
-        # nginx 配信ディレクトリへ同期する（不要ファイルは削除）。
-        run: |
-          set -euo pipefail
-          mkdir -p "${RASPI_WWW_DIR}"
-          rsync -av --delete /tmp/frontend-dist/ "${RASPI_WWW_DIR}/"
-
       - name: Update backend and apply migration
-        # backend 更新、DB バックアップ、マイグレーションを実行する。
+        # workflow 実行を起動した commit SHA に backend を固定して反映する。
         run: |
           set -euo pipefail
           cd "${RASPI_APP_DIR}"
-          git fetch origin
-          git switch main
-          git pull --ff-only origin main
+          # origin/main の先端を取得する。
+          git fetch --prune origin main
+          # この run を起動した commit が main 系譜上か確認する（誤反映ガード）。
+          git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
+          # backend は "実行時最新 main" ではなく "run を起動した SHA" に固定。
+          git checkout -B main "${GITHUB_SHA}"
           # sqlite DB/backup の権限不整合で失敗しないよう、runner 所有へ合わせる。
           sudo -n mkdir -p "${RASPI_APP_DIR}/backend/app/db" "${RASPI_APP_DIR}/backend/backups"
           sudo -n chown -R "$(id -un):$(id -gn)" "${RASPI_APP_DIR}/backend/app/db" "${RASPI_APP_DIR}/backend/backups"
@@ -132,6 +128,14 @@ jobs:
 
           echo "nginx 経由の /api/health が応答しません" >&2
           exit 1
+
+      - name: Sync frontend files
+        # backend 側が正常化した後に frontend を同期し、部分反映を避ける。
+        run: |
+          set -euo pipefail
+          # backend/migration/restart/health が通った後に公開ディレクトリへ反映する。
+          mkdir -p "${RASPI_WWW_DIR}"
+          rsync -av --delete /tmp/frontend-dist/ "${RASPI_WWW_DIR}/"
 
       - name: Collect wol-api logs on failure
         # 失敗時に原因調査しやすいよう直近ログを出力する。

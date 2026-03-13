@@ -384,18 +384,62 @@ describe('LogsPanel', () => {
     expect(onLoadMore).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps periodic status group expanded after appending older logs', async () => {
+  it('keeps periodic status group expanded after prepending newer periodic logs', async () => {
     const user = userEvent.setup()
-    const initialItem = createLogEntry({
+    const existingItem = createLogEntry({
       id: 70,
       job_id: 'job-status-70',
+      action: 'status',
+      event_kind: 'periodic_status',
+      message: 'existing periodic',
+    })
+    const newerItem = createLogEntry({
+      id: 71,
+      job_id: 'job-status-71',
+      action: 'status',
+      event_kind: 'periodic_status',
+      message: 'newer periodic',
+    })
+
+    const { rerender } = render(
+      <LogsPanel
+        items={[existingItem]}
+        loading={false}
+        error=""
+        onReload={vi.fn()}
+        onClear={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /定期ステータス確認/ }))
+    expect(screen.getByText('existing periodic')).toBeInTheDocument()
+
+    rerender(
+      <LogsPanel
+        items={[newerItem, existingItem]}
+        loading={false}
+        error=""
+        onReload={vi.fn()}
+        onClear={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    expect(screen.getByText('newer periodic')).toBeInTheDocument()
+    expect(screen.getByText('existing periodic')).toBeInTheDocument()
+  })
+
+  it('keeps periodic status group expanded after appending older periodic logs', async () => {
+    const user = userEvent.setup()
+    const latestItem = createLogEntry({
+      id: 90,
+      job_id: 'job-status-90',
       action: 'status',
       event_kind: 'periodic_status',
       message: 'latest periodic',
     })
     const olderItem = createLogEntry({
-      id: 69,
-      job_id: 'job-status-69',
+      id: 89,
+      job_id: 'job-status-89',
       action: 'status',
       event_kind: 'periodic_status',
       message: 'older periodic',
@@ -403,7 +447,7 @@ describe('LogsPanel', () => {
 
     const { rerender } = render(
       <LogsPanel
-        items={[initialItem]}
+        items={[latestItem]}
         loading={false}
         error=""
         onReload={vi.fn()}
@@ -416,7 +460,7 @@ describe('LogsPanel', () => {
 
     rerender(
       <LogsPanel
-        items={[initialItem, olderItem]}
+        items={[latestItem, olderItem]}
         loading={false}
         error=""
         onReload={vi.fn()}
