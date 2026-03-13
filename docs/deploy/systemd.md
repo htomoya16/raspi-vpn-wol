@@ -56,3 +56,5 @@ sudo systemctl list-timers --all | grep wol-db-backup
 - ユニットの `WorkingDirectory` と実際の配置先（例: `/opt/raspi-vpn-wol/backend`）を一致させる。
 - `.venv` の Python パス変更時は `ExecStart` も更新する。
 - timer 時刻を変更したら `daemon-reload` と再起動（`restart`）まで行う。
+- `backend/.env` に `APP_VERSION` / `APP_BUILD` を設定すると、`/api/health` とヘッダー表示の版情報を任意値で上書きできる（未設定時は `APP_VERSION=dev`、`APP_BUILD=git短縮SHA`）。
+- `deploy.yml` を使うCD運用では、`APP_VERSION=YYYY.MM.DD.<run_number>`（CalVer）と `APP_BUILD=<短縮SHA>` を毎回自動更新する。

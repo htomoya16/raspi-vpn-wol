@@ -93,6 +93,8 @@ export interface LogClearResponse {
 
 export interface HealthResponse {
   status: string
+  version: string
+  build: string
 }
 
 export interface PcFilterState {
