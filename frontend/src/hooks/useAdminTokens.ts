@@ -99,6 +99,33 @@ function createInitialState(): AdminTokensState {
   }
 }
 
+function normalizeExpiresAtToIso(value: string): string | null {
+  const normalized = value.trim()
+  if (!normalized) {
+    return null
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    const [year, month, day] = normalized.split('-').map((segment) => Number(segment))
+    const localDate = new Date(year, month - 1, day, 23, 59, 59, 999)
+    if (Number.isNaN(localDate.getTime())) {
+      throw new Error('invalid-date')
+    }
+    return localDate.toISOString()
+  }
+
+  const parsed = new Date(normalized)
+  if (Number.isNaN(parsed.getTime())) {
+    throw new Error('invalid-date')
+  }
+  return parsed.toISOString()
+}
+
+function getTodayDateString(): string {
+  const localNow = new Date(Date.now() - new Date().getTimezoneOffset() * 60_000)
+  return localNow.toISOString().slice(0, 10)
+}
+
 function adminTokensReducer(state: AdminTokensState, action: AdminTokensAction): AdminTokensState {
   if (action.type === 'patch') {
     return { ...state, ...action.payload }
@@ -277,16 +304,24 @@ export function useAdminTokens(active: boolean): UseAdminTokensResult {
     }
 
     let expiresAt: string | null = null
-    if (createExpiresAt.trim()) {
-      const parsed = new Date(createExpiresAt)
-      if (Number.isNaN(parsed.getTime())) {
-        dispatch({
-          type: 'patch',
-          payload: { createError: '有効期限は日時として解釈できる値を入力してください' },
-        })
-        return
+    try {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(createExpiresAt.trim())) {
+        const today = getTodayDateString()
+        if (createExpiresAt.trim() < today) {
+          dispatch({
+            type: 'patch',
+            payload: { createError: '有効期限に過去の日付は指定できません' },
+          })
+          return
+        }
       }
-      expiresAt = parsed.toISOString()
+      expiresAt = normalizeExpiresAtToIso(createExpiresAt)
+    } catch {
+      dispatch({
+        type: 'patch',
+        payload: { createError: '有効期限は日付として解釈できる値を入力してください' },
+      })
+      return
     }
 
     dispatch({

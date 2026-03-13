@@ -22,6 +22,8 @@ export interface UseDashboardDataResult {
   rowErrorById: ReturnType<typeof usePcData>['rowErrorById']
   logs: ReturnType<typeof useLogsData>['logs']
   logsLoading: boolean
+  logsLoadingMore: boolean
+  logsHasMore: boolean
   logsError: string
   jobs: ReturnType<typeof useJobTracker>['jobs']
   refreshAllLoading: boolean
@@ -29,6 +31,7 @@ export interface UseDashboardDataResult {
   onlineCount: number
   loadPcs: () => Promise<void>
   loadLogs: () => Promise<void>
+  loadMoreLogs: () => Promise<void>
   createPcEntry: (payload: PcCreatePayload) => Promise<boolean>
   deletePcEntry: (pcId: string) => Promise<void>
   updatePcEntry: (pcId: string, payload: PcUpdatePayload) => Promise<ReturnType<typeof usePcData>['pcs'][number]>
@@ -52,13 +55,15 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
   const refreshAllInFlightRef = useRef(false)
   const trackedJobIdsRef = useRef<Set<string>>(new Set())
 
-  const {
-    logs,
-    logsLoading,
-    logsError,
-    loadLogs,
-    clearLogsEntry,
-  } = useLogsData({ setNotice })
+  const logsData = useLogsData({ setNotice })
+  const logs = logsData.logs
+  const logsLoading = logsData.logsLoading
+  const logsLoadingMore = logsData.logsLoadingMore ?? false
+  const logsHasMore = logsData.logsHasMore ?? false
+  const logsError = logsData.logsError
+  const loadLogs = logsData.loadLogs
+  const loadMoreLogs = logsData.loadMoreLogs ?? (async () => undefined)
+  const clearLogsEntry = logsData.clearLogsEntry
 
   const {
     pcs,
@@ -180,6 +185,8 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
     rowErrorById,
     logs,
     logsLoading,
+    logsLoadingMore,
+    logsHasMore,
     logsError,
     jobs,
     refreshAllLoading,
@@ -187,6 +194,7 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
     onlineCount,
     loadPcs,
     loadLogs,
+    loadMoreLogs,
     createPcEntry,
     deletePcEntry,
     updatePcEntry,

@@ -265,6 +265,71 @@ describe('SettingsPanel', () => {
     expect(screen.getByText('wol_plain_secret')).toBeInTheDocument()
   })
 
+  it('allows resetting token expiration back to unlimited before issuing', async () => {
+    const user = userEvent.setup()
+    createApiTokenMock.mockResolvedValue({
+      token: {
+        id: 'token-3',
+        name: 'iphone-expire-reset',
+        role: 'device',
+        token_prefix: 'wol_expreset',
+        created_at: '2026-03-02T00:00:00+00:00',
+        expires_at: null,
+        last_used_at: null,
+        revoked_at: null,
+      },
+      plain_token: 'wol_plain_expreset',
+    })
+
+    render(
+      <SettingsPanel
+        selectedThemeId="default"
+        appearanceMode="system"
+        effectiveAppearanceMode="light"
+        themeOptions={THEME_OPTIONS}
+        onThemeChange={vi.fn()}
+        onAppearanceChange={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole('tab', { name: 'APIトークン' }))
+    await user.type(screen.getByLabelText('端末名'), 'iphone-expire-reset')
+    await user.type(screen.getByLabelText('有効期限（任意）'), '2026-03-31')
+    await user.click(screen.getByRole('button', { name: '無期限に戻す' }))
+    await user.click(screen.getByRole('button', { name: 'トークンを発行' }))
+
+    await waitFor(() => {
+      expect(createApiTokenMock).toHaveBeenCalledWith({
+        name: 'iphone-expire-reset',
+        role: 'device',
+        expires_at: null,
+      })
+    })
+  })
+
+  it('rejects past date for token expiration', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <SettingsPanel
+        selectedThemeId="default"
+        appearanceMode="system"
+        effectiveAppearanceMode="light"
+        themeOptions={THEME_OPTIONS}
+        onThemeChange={vi.fn()}
+        onAppearanceChange={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole('tab', { name: 'APIトークン' }))
+    await user.type(screen.getByLabelText('端末名'), 'iphone-past-date')
+    await user.type(screen.getByLabelText('有効期限（任意）'), '2000-01-01')
+    await user.click(screen.getByRole('button', { name: 'トークンを発行' }))
+
+    expect(createApiTokenMock).not.toHaveBeenCalled()
+    expect(screen.getByText('有効期限に過去の日付は指定できません')).toBeInTheDocument()
+  })
+
   it('shows success message when bearer token is saved', async () => {
     const user = userEvent.setup()
 
@@ -350,12 +415,65 @@ describe('SettingsPanel', () => {
     })
 
     await user.click(screen.getByRole('button', { name: 'クリア' }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByText('Bearerトークンをクリアしますか？')).toBeInTheDocument()
+    expect(setStoredBearerTokenMock).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: 'クリアする' }))
 
     expect(setStoredBearerTokenMock).toHaveBeenCalledWith('')
     const clearedMessage = screen.getByText('Bearerトークンをクリアしました。')
     expect(clearedMessage).toBeInTheDocument()
     expect(clearedMessage).toHaveClass('feedback--cleared')
     expect(screen.queryByRole('button', { name: 'トークンを発行' })).not.toBeInTheDocument()
+  })
+
+  it('opens revoke confirm dialog and revokes token', async () => {
+    const user = userEvent.setup()
+    listApiTokensMock.mockResolvedValue({
+      items: [
+        {
+          id: 'token-active-1',
+          name: 'iphone-main',
+          role: 'device',
+          token_prefix: 'wol_active12',
+          created_at: '2026-03-01T00:00:00+00:00',
+          expires_at: null,
+          last_used_at: null,
+          revoked_at: null,
+        },
+      ],
+    })
+    revokeApiTokenMock.mockResolvedValue({
+      token_id: 'token-active-1',
+      revoked_at: '2026-03-04T00:00:00+00:00',
+    })
+
+    render(
+      <SettingsPanel
+        selectedThemeId="default"
+        appearanceMode="system"
+        effectiveAppearanceMode="light"
+        themeOptions={THEME_OPTIONS}
+        onThemeChange={vi.fn()}
+        onAppearanceChange={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole('tab', { name: 'APIトークン' }))
+    await waitFor(() => {
+      expect(screen.getByText('iphone-main')).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByRole('button', { name: '失効' }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByText('トークンを失効しますか？')).toBeInTheDocument()
+    expect(revokeApiTokenMock).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: '失効する' }))
+    await waitFor(() => {
+      expect(revokeApiTokenMock).toHaveBeenCalledWith('token-active-1')
+    })
   })
 
   it('hides admin-only panels when device token cannot access admin APIs', async () => {

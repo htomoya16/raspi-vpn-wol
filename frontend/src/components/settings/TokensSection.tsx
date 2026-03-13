@@ -1,7 +1,10 @@
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { isExpired, type UseAdminTokensResult } from '../../hooks/useAdminTokens'
+import type { ApiToken } from '../../types/models'
+import TokenConfirmDialog from './TokenConfirmDialog'
 import TokenDeleteDialog from './TokenDeleteDialog'
 
 interface TokensSectionProps {
@@ -9,6 +12,10 @@ interface TokensSectionProps {
 }
 
 function TokensSection({ tokens }: TokensSectionProps) {
+  const isMobile = useMediaQuery('(max-width: 760px)')
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
+  const [revokeTargetToken, setRevokeTargetToken] = useState<ApiToken | null>(null)
+
   const {
     apiTokens,
     tokensLoading,
@@ -46,12 +53,76 @@ function TokensSection({ tokens }: TokensSectionProps) {
     handleDeleteToken,
   } = tokens
 
-  useBodyScrollLock(deleteTargetToken != null, { strategy: 'overflow' })
+  useBodyScrollLock(deleteTargetToken != null || clearConfirmOpen || revokeTargetToken != null, { strategy: 'overflow' })
 
   const onCopyCreatedToken = useCallback(async () => {
     const result = await handleCopyCreatedToken()
     setCreateFeedback({ kind: result.ok ? 'success' : 'error', message: result.message })
   }, [handleCopyCreatedToken, setCreateFeedback])
+
+  const handleExpireDateInteraction = useCallback(
+    (input: HTMLInputElement): void => {
+      if (!isMobile || input.type !== 'date') {
+        return
+      }
+      const dateInput = input as HTMLInputElement & { showPicker?: () => void }
+      if (typeof dateInput.showPicker !== 'function') {
+        return
+      }
+      try {
+        dateInput.showPicker()
+      } catch {
+        // Fallback to native browser behavior when showPicker is unavailable or blocked.
+      }
+    },
+    [isMobile],
+  )
+
+  const openClearConfirm = useCallback(() => {
+    setClearConfirmOpen(true)
+  }, [])
+
+  const closeClearConfirm = useCallback(() => {
+    if (bearerSaving) {
+      return
+    }
+    setClearConfirmOpen(false)
+  }, [bearerSaving])
+
+  const confirmClearBearerToken = useCallback(() => {
+    if (bearerSaving) {
+      return
+    }
+    handleClearBearerToken()
+    setClearConfirmOpen(false)
+  }, [bearerSaving, handleClearBearerToken])
+
+  const openRevokeConfirm = useCallback((token: ApiToken) => {
+    setRevokeTargetToken(token)
+  }, [])
+
+  const closeRevokeConfirm = useCallback(() => {
+    if (revokingTokenId != null) {
+      return
+    }
+    setRevokeTargetToken(null)
+  }, [revokingTokenId])
+
+  const confirmRevokeToken = useCallback(async () => {
+    if (revokeTargetToken == null || revokingTokenId != null) {
+      return
+    }
+    try {
+      await handleRevokeToken(revokeTargetToken.id)
+    } finally {
+      setRevokeTargetToken(null)
+    }
+  }, [handleRevokeToken, revokeTargetToken, revokingTokenId])
+
+  const revokingTarget = revokeTargetToken != null && revokingTokenId === revokeTargetToken.id
+  const todayDateValue = new Date(Date.now() - new Date().getTimezoneOffset() * 60_000)
+    .toISOString()
+    .slice(0, 10)
 
   return (
     <div className="settings-dialog__section settings-tokens">
@@ -80,7 +151,7 @@ function TokensSection({ tokens }: TokensSectionProps) {
           <button type="button" className="btn btn--soft" onClick={() => void handleSaveBearerToken()} disabled={bearerSaving}>
             {bearerSaving ? '確認中...' : '保存'}
           </button>
-          <button type="button" className="btn btn--soft" onClick={handleClearBearerToken}>
+          <button type="button" className="btn btn--soft" onClick={openClearConfirm}>
             クリア
           </button>
         </div>
@@ -141,16 +212,32 @@ function TokensSection({ tokens }: TokensSectionProps) {
               <label className="settings-tokens__label" htmlFor="token-expire-input">
                 有効期限（任意）
               </label>
-              <input
-                id="token-expire-input"
-                className="settings-tokens__input"
-                type="datetime-local"
-                value={createExpiresAt}
-                onChange={(event) => {
-                  setCreateExpiresAt(event.target.value)
-                  clearCreateFeedback()
-                }}
-              />
+              <div className="settings-tokens__date-row">
+                <input
+                  id="token-expire-input"
+                  className="settings-tokens__input settings-tokens__date-input"
+                  type="date"
+                  value={createExpiresAt}
+                  min={todayDateValue}
+                  onChange={(event) => {
+                    setCreateExpiresAt(event.target.value)
+                    clearCreateFeedback()
+                  }}
+                  onClick={(event) => handleExpireDateInteraction(event.currentTarget)}
+                  onFocus={(event) => handleExpireDateInteraction(event.currentTarget)}
+                />
+                <button
+                  type="button"
+                  className="btn btn--soft settings-tokens__date-clear-btn"
+                  onClick={() => {
+                    setCreateExpiresAt('')
+                    clearCreateFeedback()
+                  }}
+                  disabled={!createExpiresAt || createLoading}
+                >
+                  無期限に戻す
+                </button>
+              </div>
               <p className="settings-tokens__meta">有効期限を未設定にすると、失効するまで無期限で利用できます。</p>
             </div>
             <div className="settings-tokens__actions">
@@ -225,7 +312,7 @@ function TokensSection({ tokens }: TokensSectionProps) {
                       <button
                         type="button"
                         className="btn btn--danger"
-                        onClick={() => void handleRevokeToken(token.id)}
+                        onClick={() => openRevokeConfirm(token)}
                         disabled={revokingTokenId === token.id || revoked}
                       >
                         {revokingTokenId === token.id ? '失効中...' : revoked ? '失効済み' : '失効'}
@@ -252,6 +339,34 @@ function TokensSection({ tokens }: TokensSectionProps) {
         deleting={deletingTokenId != null}
         onClose={handleCloseDeleteDialog}
         onConfirm={() => void handleDeleteToken()}
+      />
+
+      <TokenConfirmDialog
+        open={clearConfirmOpen}
+        title="Bearerトークンをクリアしますか？"
+        description="この端末のBearerトークンを削除します。再度利用するには正しいトークンを保存し直してください。"
+        confirmLabel={bearerSaving ? 'クリア中...' : 'クリアする'}
+        loading={bearerSaving}
+        onClose={closeClearConfirm}
+        onConfirm={confirmClearBearerToken}
+      />
+
+      <TokenConfirmDialog
+        open={revokeTargetToken != null}
+        title="トークンを失効しますか？"
+        description={
+          revokeTargetToken != null ? (
+            <>
+              <strong>{revokeTargetToken.name}</strong>（{revokeTargetToken.token_prefix}）を失効します。この操作は取り消せません。
+            </>
+          ) : (
+            ''
+          )
+        }
+        confirmLabel={revokingTarget ? '失効中...' : '失効する'}
+        loading={revokingTarget}
+        onClose={closeRevokeConfirm}
+        onConfirm={() => void confirmRevokeToken()}
       />
     </div>
   )

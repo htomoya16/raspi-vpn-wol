@@ -22,7 +22,12 @@ const ACTION_LABELS: Record<string, string> = {
   seed_wol: 'WOL送信',
 }
 
-export const PERIODIC_STATUS_GROUP_KEY = 'job:periodic-status'
+export const PERIODIC_STATUS_GROUP_KEY_PREFIX = 'job:periodic-status'
+export const PERIODIC_STATUS_GROUP_KEY = PERIODIC_STATUS_GROUP_KEY_PREFIX
+
+export function isPeriodicStatusGroupKey(key: string): boolean {
+  return key === PERIODIC_STATUS_GROUP_KEY_PREFIX || key.startsWith(`${PERIODIC_STATUS_GROUP_KEY_PREFIX}:`)
+}
 
 export function formatDetails(details: LogEntry['details']): string {
   if (details === null || details === undefined || details === '') {
@@ -105,18 +110,47 @@ export function buildLogGroups(items: LogEntry[]): LogGroup[] {
   const sortedItems = [...items].sort((a, b) => b.id - a.id)
   const groups: LogGroup[] = []
   const jobGroupMap = new Map<string, LogGroup>()
-  const periodicStatusGroupJobIds = new Set<string>()
   let currentNormalGroup: LogGroup | null = null
+  let currentPeriodicStatusGroup: LogGroup | null = null
+  let currentPeriodicStatusJobIds = new Set<string>()
 
   for (const item of sortedItems) {
     const jobId = extractJobId(item)
     const okCount = item.ok ? 1 : 0
     const ngCount = item.ok ? 0 : 1
 
+    if (jobId && isPeriodicStatusJobLog(item)) {
+      currentNormalGroup = null
+      if (!currentPeriodicStatusGroup) {
+        currentPeriodicStatusJobIds = new Set<string>()
+        currentPeriodicStatusGroup = {
+          key: `${PERIODIC_STATUS_GROUP_KEY_PREFIX}:${item.id}`,
+          kind: 'job',
+          title: '定期ステータス確認',
+          subtitle: '定期ジョブ 0件',
+          jobName: '定期ステータス確認',
+          okCount: 0,
+          ngCount: 0,
+          latestLogId: item.id,
+          items: [],
+        }
+        groups.push(currentPeriodicStatusGroup)
+      }
+
+      currentPeriodicStatusGroup.items.push(item)
+      currentPeriodicStatusGroup.okCount += okCount
+      currentPeriodicStatusGroup.ngCount += ngCount
+      currentPeriodicStatusGroup.latestLogId = Math.max(currentPeriodicStatusGroup.latestLogId, item.id)
+      currentPeriodicStatusJobIds.add(jobId)
+      currentPeriodicStatusGroup.subtitle = `定期ジョブ ${currentPeriodicStatusJobIds.size}件`
+      continue
+    }
+
+    currentPeriodicStatusGroup = null
+
     if (jobId) {
       currentNormalGroup = null
-      const isPeriodicStatus = isPeriodicStatusJobLog(item)
-      const key = isPeriodicStatus ? PERIODIC_STATUS_GROUP_KEY : `job:${jobId}`
+      const key = `job:${jobId}`
       const existing = jobGroupMap.get(key)
       if (existing) {
         existing.items.push(item)
@@ -125,22 +159,14 @@ export function buildLogGroups(items: LogEntry[]): LogGroup[] {
         existing.latestLogId = Math.max(existing.latestLogId, item.id)
         existing.jobName = inferJobName(existing.items)
         existing.title = existing.jobName || 'ジョブログ'
-        if (isPeriodicStatus) {
-          periodicStatusGroupJobIds.add(jobId)
-          existing.subtitle = `定期ジョブ ${periodicStatusGroupJobIds.size}件`
-        }
         continue
-      }
-
-      if (isPeriodicStatus) {
-        periodicStatusGroupJobIds.add(jobId)
       }
 
       const nextGroup: LogGroup = {
         key,
         kind: 'job',
-        title: isPeriodicStatus ? '定期ステータス確認' : inferJobName([item]) || 'ジョブログ',
-        subtitle: isPeriodicStatus ? `定期ジョブ ${periodicStatusGroupJobIds.size}件` : `ID: ${jobId}`,
+        title: inferJobName([item]) || 'ジョブログ',
+        subtitle: `ID: ${jobId}`,
         jobName: inferJobName([item]),
         okCount,
         ngCount,

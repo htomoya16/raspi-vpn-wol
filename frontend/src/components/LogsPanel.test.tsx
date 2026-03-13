@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -8,6 +8,63 @@ import LogsPanel from './LogsPanel'
 
 function createLogEntry(overrides: Partial<LogEntry> = {}): LogEntry {
   return createLogEntryFactory(overrides)
+}
+
+function mockMobileViewport() {
+  const originalMatchMedia = window.matchMedia
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: (query: string) => ({
+      matches: query === '(max-width: 760px)',
+      media: query,
+      onchange: null,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      dispatchEvent: () => false,
+    }),
+  })
+  return () => {
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: originalMatchMedia,
+    })
+  }
+}
+
+function mockBottomReachedScrollPosition() {
+  const originalInnerHeight = window.innerHeight
+  const originalScrollY = window.scrollY
+  const originalScrollHeight = document.documentElement.scrollHeight
+
+  Object.defineProperty(window, 'innerHeight', {
+    configurable: true,
+    value: 800,
+  })
+  Object.defineProperty(window, 'scrollY', {
+    configurable: true,
+    value: 420,
+  })
+  Object.defineProperty(document.documentElement, 'scrollHeight', {
+    configurable: true,
+    value: 1220,
+  })
+
+  return () => {
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      value: originalInnerHeight,
+    })
+    Object.defineProperty(window, 'scrollY', {
+      configurable: true,
+      value: originalScrollY,
+    })
+    Object.defineProperty(document.documentElement, 'scrollHeight', {
+      configurable: true,
+      value: originalScrollHeight,
+    })
+  }
 }
 
 describe('LogsPanel', () => {
@@ -232,7 +289,7 @@ describe('LogsPanel', () => {
     expect(screen.getByText('status by scheduler')).toBeInTheDocument()
   })
 
-  it('merges periodic status logs across different job ids into one group', () => {
+  it('splits periodic status logs into separate groups when interrupted by other logs', () => {
     render(
       <LogsPanel
         items={[
@@ -242,15 +299,20 @@ describe('LogsPanel', () => {
             action: 'status',
             event_kind: 'periodic_status',
             ok: true,
-            message: 'scheduled status 1',
+            message: 'scheduled status latest',
           }),
           createLogEntry({
             id: 39,
+            action: 'pc_upsert',
+            message: 'manual update between periodic logs',
+          }),
+          createLogEntry({
+            id: 38,
             job_id: 'job-status-2',
             action: 'status',
             event_kind: 'periodic_status',
             ok: false,
-            message: 'scheduled status 2',
+            message: 'scheduled status older',
           }),
         ]}
         loading={false}
@@ -263,12 +325,18 @@ describe('LogsPanel', () => {
     const groupButtons = screen.getAllByRole('button', {
       name: /OK \d.*NG \d.*件/,
     })
-    expect(groupButtons).toHaveLength(1)
+    expect(groupButtons).toHaveLength(3)
     expect(groupButtons[0]).toHaveTextContent('定期ステータス確認')
-    expect(groupButtons[0]).toHaveTextContent('定期ジョブ 2件')
+    expect(groupButtons[0]).toHaveTextContent('定期ジョブ 1件')
+    expect(groupButtons[1]).toHaveTextContent('通常ログ')
+    expect(groupButtons[2]).toHaveTextContent('定期ステータス確認')
+    expect(groupButtons[2]).toHaveTextContent('定期ジョブ 1件')
     expect(groupButtons[0]).toHaveTextContent('OK 1')
-    expect(groupButtons[0]).toHaveTextContent('NG 1')
-    expect(groupButtons[0]).toHaveTextContent('2件')
+    expect(groupButtons[0]).toHaveTextContent('NG 0')
+    expect(groupButtons[0]).toHaveTextContent('1件')
+    expect(groupButtons[2]).toHaveTextContent('OK 0')
+    expect(groupButtons[2]).toHaveTextContent('NG 1')
+    expect(groupButtons[2]).toHaveTextContent('1件')
   })
 
   it('shows manual status-refresh job as 全体ステータス更新 instead of periodic group', () => {
@@ -294,5 +362,112 @@ describe('LogsPanel', () => {
     const groupButton = screen.getByRole('button', { name: /ID: job-status-manual/ })
     expect(groupButton).toHaveTextContent('全体ステータス更新')
     expect(screen.getByText('manual refresh all')).toBeInTheDocument()
+  })
+
+  it('shows load more button on desktop and calls onLoadMore', async () => {
+    const user = userEvent.setup()
+    const onLoadMore = vi.fn().mockResolvedValue(undefined)
+    render(
+      <LogsPanel
+        items={[createLogEntry()]}
+        loading={false}
+        loadingMore={false}
+        hasMore
+        error=""
+        onReload={vi.fn()}
+        onLoadMore={onLoadMore}
+        onClear={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: 'さらに表示（200件）' }))
+    expect(onLoadMore).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps periodic status group expanded after appending older logs', async () => {
+    const user = userEvent.setup()
+    const initialItem = createLogEntry({
+      id: 70,
+      job_id: 'job-status-70',
+      action: 'status',
+      event_kind: 'periodic_status',
+      message: 'latest periodic',
+    })
+    const olderItem = createLogEntry({
+      id: 69,
+      job_id: 'job-status-69',
+      action: 'status',
+      event_kind: 'periodic_status',
+      message: 'older periodic',
+    })
+
+    const { rerender } = render(
+      <LogsPanel
+        items={[initialItem]}
+        loading={false}
+        error=""
+        onReload={vi.fn()}
+        onClear={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /定期ステータス確認/ }))
+    expect(screen.getByText('latest periodic')).toBeInTheDocument()
+
+    rerender(
+      <LogsPanel
+        items={[initialItem, olderItem]}
+        loading={false}
+        error=""
+        onReload={vi.fn()}
+        onClear={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    expect(screen.getByText('latest periodic')).toBeInTheDocument()
+    expect(screen.getByText('older periodic')).toBeInTheDocument()
+  })
+
+  it('loads more on mobile when swiping down at bottom (bounce gesture)', async () => {
+    const restoreViewport = mockMobileViewport()
+    const restoreBottom = mockBottomReachedScrollPosition()
+    const onLoadMore = vi.fn().mockResolvedValue(undefined)
+
+    try {
+      render(
+        <LogsPanel
+          items={[
+            createLogEntry({
+              id: 80,
+              job_id: 'job-status-80',
+              action: 'status',
+              event_kind: 'periodic_status',
+              message: 'periodic collapsed',
+            }),
+          ]}
+          loading={false}
+          loadingMore={false}
+          hasMore
+          error=""
+          onReload={vi.fn()}
+          onLoadMore={onLoadMore}
+          onClear={vi.fn().mockResolvedValue(undefined)}
+        />,
+      )
+
+      expect(screen.getByText('下に引っ張ると、さらに200件読み込みます')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'さらに表示（200件）' })).not.toBeInTheDocument()
+
+      fireEvent.touchStart(window, { touches: [{ clientY: 240 }] })
+      fireEvent.touchMove(window, { touches: [{ clientY: 190 }] })
+      fireEvent.touchEnd(window)
+
+      await waitFor(() => {
+        expect(onLoadMore).toHaveBeenCalledTimes(1)
+      })
+    } finally {
+      restoreBottom()
+      restoreViewport()
+    }
   })
 })
