@@ -1,0 +1,119 @@
+name: Deploy
+
+on:
+  # main への反映をトリガーにデプロイする。
+  push:
+    branches:
+      - main
+
+permissions:
+  # GITHUB_TOKEN はリポジトリ読み取りの最小権限に制限する。
+  contents: read
+
+concurrency:
+  # 本番デプロイを直列化して同時反映を防ぐ。
+  group: deploy-production
+  # 実行中のデプロイは中断せず、次の実行を待機させる。
+  cancel-in-progress: false
+
+env:
+  # artifact 名と Raspberry Pi 側の配置先を共通化する。
+  FRONTEND_ARTIFACT_NAME: frontend-dist
+  RASPI_APP_DIR: /opt/raspi-vpn-wol
+  RASPI_WWW_DIR: /var/www/wol
+
+jobs:
+  build-frontend:
+    # GitHub-hosted でフロントをビルドし、成果物だけを渡す。
+    name: Build frontend artifact
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload dist artifact
+        # dist を deploy ジョブへ受け渡す。
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.FRONTEND_ARTIFACT_NAME }}
+          path: frontend/dist
+          if-no-files-found: error
+
+  deploy:
+    # Raspberry Pi の self-hosted runner で本番反映する。
+    name: Deploy to Raspberry Pi
+    needs: build-frontend
+    runs-on:
+      - self-hosted
+      - linux
+      - ARM64
+      - raspi-wol
+    environment: production
+    # production Environment 承認後にのみ実行される。
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Download dist artifact
+        # build ジョブで作成したフロント成果物を取得する。
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ env.FRONTEND_ARTIFACT_NAME }}
+          path: /tmp/frontend-dist
+
+      - name: Sync frontend files
+        # nginx 配信ディレクトリへ同期する（不要ファイルは削除）。
+        run: |
+          set -euo pipefail
+          mkdir -p "${RASPI_WWW_DIR}"
+          rsync -av --delete /tmp/frontend-dist/ "${RASPI_WWW_DIR}/"
+
+      - name: Update backend and apply migration
+        # backend 更新、DB バックアップ、マイグレーションを実行する。
+        run: |
+          set -euo pipefail
+          cd "${RASPI_APP_DIR}"
+          git fetch origin
+          git switch main
+          git pull --ff-only origin main
+          cd backend
+          source .venv/bin/activate
+          python -m pip install -r requirements.txt
+          python scripts/backup_db.py --keep 30
+          alembic upgrade head
+
+      - name: Restart API and reload nginx
+        # API 再起動と nginx 設定反映を行う。
+        run: |
+          set -euo pipefail
+          sudo -n systemctl restart wol-api.service
+          sudo -n nginx -t
+          sudo -n systemctl reload nginx
+
+      - name: Health check
+        # 最低限の疎通確認。失敗時はジョブを失敗させる。
+        run: |
+          set -euo pipefail
+          curl -fsS http://127.0.0.1/api/health
+
+      - name: Collect wol-api logs on failure
+        # 失敗時に原因調査しやすいよう直近ログを出力する。
+        if: failure()
+        run: sudo -n journalctl -u wol-api.service -n 200 --no-pager
