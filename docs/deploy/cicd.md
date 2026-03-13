@@ -7,6 +7,8 @@
 
 ## 変更内容
 
+- 2026-03-13: Node 20 deprecation 対応として GitHub Actions を更新（`checkout@v6` / `setup-node@v6` / `upload-artifact@v7` / `download-artifact@v8`）。
+- 2026-03-13: CD 実行時に SQLite DB/backup ディレクトリの権限を runner ユーザーへ補正する手順を追加。
 - 2026-03-13: CI workflow に `permissions: contents: read` を追加し、required checks の設定名を job 名に修正。
 - 2026-03-13: `deploy.yml` を追加し、`push: main` + `production` 承認でのCD運用に更新。
 - 2026-03-03: CI/CD 運用方針（CI は GitHub Hosted、CD は self-hosted runner）を追加。
@@ -31,6 +33,7 @@
   - `runs-on: [self-hosted, linux, ARM64, raspi-wol]`
   - `permissions: contents: read`（最小権限）
   - `concurrency: deploy-production`（デプロイ直列化）
+  - DB/backup ディレクトリの権限を runner ユーザーへ補正してから backup/migration を実行
   - 構成:
     - GitHub Hosted: frontend `dist` artifact 作成
     - self-hosted (Pi): `dist` 配備 / backend 更新 / backup / migration / 再起動 / health確認
@@ -96,3 +99,4 @@
 
 - self-hosted runner は Raspberry Pi 側のサービス監視対象に含める。
 - runner 停止時は CD が止まるため、手動デプロイ手順を併記しておく。
+- JavaScript Action のランタイム切り替えに備えて、self-hosted runner は定期的に更新する（`./svc.sh stop` -> `./bin/installdependencies.sh` -> 新版 runner 展開/再設定 -> `./svc.sh start`）。

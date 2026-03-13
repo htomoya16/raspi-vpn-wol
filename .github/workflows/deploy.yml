@@ -33,10 +33,10 @@ jobs:
         working-directory: frontend
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: npm
@@ -50,7 +50,7 @@ jobs:
 
       - name: Upload dist artifact
         # dist を deploy ジョブへ受け渡す。
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ env.FRONTEND_ARTIFACT_NAME }}
           path: frontend/dist
@@ -73,7 +73,7 @@ jobs:
     steps:
       - name: Download dist artifact
         # build ジョブで作成したフロント成果物を取得する。
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: ${{ env.FRONTEND_ARTIFACT_NAME }}
           path: /tmp/frontend-dist
@@ -93,6 +93,9 @@ jobs:
           git fetch origin
           git switch main
           git pull --ff-only origin main
+          # sqlite DB/backup の権限不整合で失敗しないよう、runner 所有へ合わせる。
+          sudo -n mkdir -p "${RASPI_APP_DIR}/backend/app/db" "${RASPI_APP_DIR}/backend/backups"
+          sudo -n chown -R "$(id -un):$(id -gn)" "${RASPI_APP_DIR}/backend/app/db" "${RASPI_APP_DIR}/backend/backups"
           cd backend
           source .venv/bin/activate
           python -m pip install -r requirements.txt
