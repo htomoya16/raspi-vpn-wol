@@ -428,6 +428,50 @@ describe('LogsPanel', () => {
     expect(screen.getByText('existing periodic')).toBeInTheDocument()
   })
 
+  it('keeps periodic status group expanded after appending older periodic logs', async () => {
+    const user = userEvent.setup()
+    const latestItem = createLogEntry({
+      id: 90,
+      job_id: 'job-status-90',
+      action: 'status',
+      event_kind: 'periodic_status',
+      message: 'latest periodic',
+    })
+    const olderItem = createLogEntry({
+      id: 89,
+      job_id: 'job-status-89',
+      action: 'status',
+      event_kind: 'periodic_status',
+      message: 'older periodic',
+    })
+
+    const { rerender } = render(
+      <LogsPanel
+        items={[latestItem]}
+        loading={false}
+        error=""
+        onReload={vi.fn()}
+        onClear={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /定期ステータス確認/ }))
+    expect(screen.getByText('latest periodic')).toBeInTheDocument()
+
+    rerender(
+      <LogsPanel
+        items={[latestItem, olderItem]}
+        loading={false}
+        error=""
+        onReload={vi.fn()}
+        onClear={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    expect(screen.getByText('latest periodic')).toBeInTheDocument()
+    expect(screen.getByText('older periodic')).toBeInTheDocument()
+  })
+
   it('loads more on mobile when swiping down at bottom (bounce gesture)', async () => {
     const restoreViewport = mockMobileViewport()
     const restoreBottom = mockBottomReachedScrollPosition()
