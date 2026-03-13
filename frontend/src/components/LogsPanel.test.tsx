@@ -384,26 +384,26 @@ describe('LogsPanel', () => {
     expect(onLoadMore).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps periodic status group expanded after appending older logs', async () => {
+  it('keeps periodic status group expanded after prepending newer periodic logs', async () => {
     const user = userEvent.setup()
-    const initialItem = createLogEntry({
+    const existingItem = createLogEntry({
       id: 70,
       job_id: 'job-status-70',
       action: 'status',
       event_kind: 'periodic_status',
-      message: 'latest periodic',
+      message: 'existing periodic',
     })
-    const olderItem = createLogEntry({
-      id: 69,
-      job_id: 'job-status-69',
+    const newerItem = createLogEntry({
+      id: 71,
+      job_id: 'job-status-71',
       action: 'status',
       event_kind: 'periodic_status',
-      message: 'older periodic',
+      message: 'newer periodic',
     })
 
     const { rerender } = render(
       <LogsPanel
-        items={[initialItem]}
+        items={[existingItem]}
         loading={false}
         error=""
         onReload={vi.fn()}
@@ -412,11 +412,11 @@ describe('LogsPanel', () => {
     )
 
     await user.click(screen.getByRole('button', { name: /定期ステータス確認/ }))
-    expect(screen.getByText('latest periodic')).toBeInTheDocument()
+    expect(screen.getByText('existing periodic')).toBeInTheDocument()
 
     rerender(
       <LogsPanel
-        items={[initialItem, olderItem]}
+        items={[newerItem, existingItem]}
         loading={false}
         error=""
         onReload={vi.fn()}
@@ -424,8 +424,8 @@ describe('LogsPanel', () => {
       />,
     )
 
-    expect(screen.getByText('latest periodic')).toBeInTheDocument()
-    expect(screen.getByText('older periodic')).toBeInTheDocument()
+    expect(screen.getByText('newer periodic')).toBeInTheDocument()
+    expect(screen.getByText('existing periodic')).toBeInTheDocument()
   })
 
   it('loads more on mobile when swiping down at bottom (bounce gesture)', async () => {

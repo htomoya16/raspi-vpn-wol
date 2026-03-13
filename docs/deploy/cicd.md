@@ -7,6 +7,9 @@
 
 ## 変更内容
 
+- 2026-03-14: CI を常時起動 + 差分判定実行へ変更し、`paths` 起因の required check `pending` を解消。
+- 2026-03-14: CD の backend 反映を `github.sha` 固定に変更し、承認待ち中の main 進行による混在デプロイを防止。
+- 2026-03-14: CD の frontend 同期を backend 更新・再起動・health check 成功後へ移動し、部分反映リスクを低減。
 - 2026-03-13: デプロイ後ヘルスチェックを強化（FastAPI起動待ち + nginx経由確認）し、失敗時に nginx ログ採取を追加。
 - 2026-03-13: Node 20 deprecation 対応として GitHub Actions を更新（`checkout@v6` / `setup-node@v6` / `upload-artifact@v7` / `download-artifact@v8`）。
 - 2026-03-13: CD 実行時に SQLite DB/backup ディレクトリの権限を runner ユーザーへ補正する手順を追加。
@@ -18,11 +21,15 @@
 ## 現在の CI
 
 - `backend-ci.yml`
-  - `pull_request` / `push`（`backend/**` 変更時）
+  - `pull_request` / `push` で常時起動
+  - `git diff` で `backend/**` と workflow 自身の変更有無を判定し、関連変更があるときだけ実ジョブ（依存導入/テスト）を実行
+  - 関連変更がない場合は skip メッセージのみで成功終了（required check の `pending` を防止）
   - `permissions: contents: read`（最小権限）
   - `alembic upgrade head` + `pytest -q`
 - `frontend-ci.yml`
-  - `pull_request` / `push`（`frontend/**` 変更時）
+  - `pull_request` / `push` で常時起動
+  - `git diff` で `frontend/**` と workflow 自身の変更有無を判定し、関連変更があるときだけ実ジョブ（lint/typecheck/test/build）を実行
+  - 関連変更がない場合は skip メッセージのみで成功終了（required check の `pending` を防止）
   - `permissions: contents: read`（最小権限）
   - `lint` / `typecheck` / `test` / `build`
 
@@ -34,12 +41,14 @@
   - `runs-on: [self-hosted, linux, ARM64, raspi-wol]`
   - `permissions: contents: read`（最小権限）
   - `concurrency: deploy-production`（デプロイ直列化）
+  - backend は `github.sha` を `main` へ checkout して実行 run と同一コミットへ固定
   - DB/backup ディレクトリの権限を runner ユーザーへ補正してから backup/migration を実行
   - ヘルスチェックは `127.0.0.1:8000/api/health` の起動待ち後、`127.0.0.1/api/health`（nginx経由）を確認
+  - frontend 配備は backend 更新 + health 成功後に実施
   - 失敗時ログは `wol-api.service` に加えて `nginx` も採取
   - 構成:
     - GitHub Hosted: frontend `dist` artifact 作成
-    - self-hosted (Pi): `dist` 配備 / backend 更新 / backup / migration / 再起動 / health確認
+    - self-hosted (Pi): backend 更新 / backup / migration / 再起動 / health確認 / `dist` 配備
 
 ## 推奨アーキテクチャ
 
@@ -54,7 +63,8 @@
 
 - Pi 3 の runner は CD 専用にする。
 - Pi 3 で実施する処理:
-  - `git pull origin main`
+  - `git fetch origin main`
+  - `git checkout -B main $GITHUB_SHA`（workflow 実行SHA固定）
   - `alembic upgrade head`
   - `systemctl restart wol-api.service`
   - `nginx reload`
@@ -86,10 +96,10 @@
    - フロントビルド
    - `dist` を artifact 化
 2. self-hosted (Pi) job
-   - artifact 展開（`/var/www/wol`）
    - backend 更新と migration
    - systemd/nginx 再読込
    - `curl /api/health` で確認
+   - artifact 展開（`/var/www/wol`）
 
 ## セキュリティ / 運用ガード
 

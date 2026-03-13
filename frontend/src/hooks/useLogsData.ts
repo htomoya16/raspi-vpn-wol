@@ -34,6 +34,7 @@ export function useLogsData({ setNotice }: UseLogsDataParams): UseLogsDataReturn
     const requestSeq = loadLogsRequestSeqRef.current + 1
     loadLogsRequestSeqRef.current = requestSeq
     setLogsLoading(true)
+    setLogsLoadingMore(false)
     setLogsError('')
 
     try {
@@ -82,14 +83,13 @@ export function useLogsData({ setNotice }: UseLogsDataParams): UseLogsDataReturn
       }
       setLogsError(formatApiError(error))
     } finally {
-      if (requestSeq === loadLogsRequestSeqRef.current) {
-        setLogsLoadingMore(false)
-      }
+      setLogsLoadingMore(false)
     }
   }, [logsLoading, logsLoadingMore, nextCursor])
 
   const clearLogsEntry = useCallback(async () => {
     setLogsError('')
+    setLogsLoadingMore(false)
     try {
       const data = await clearLogs()
       loadLogsRequestSeqRef.current += 1
