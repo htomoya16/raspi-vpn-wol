@@ -7,6 +7,7 @@
 
 ## 変更内容
 
+- 2026-03-13: デプロイ後ヘルスチェックを強化（FastAPI起動待ち + nginx経由確認）し、失敗時に nginx ログ採取を追加。
 - 2026-03-13: Node 20 deprecation 対応として GitHub Actions を更新（`checkout@v6` / `setup-node@v6` / `upload-artifact@v7` / `download-artifact@v8`）。
 - 2026-03-13: CD 実行時に SQLite DB/backup ディレクトリの権限を runner ユーザーへ補正する手順を追加。
 - 2026-03-13: CI workflow に `permissions: contents: read` を追加し、required checks の設定名を job 名に修正。
@@ -34,6 +35,8 @@
   - `permissions: contents: read`（最小権限）
   - `concurrency: deploy-production`（デプロイ直列化）
   - DB/backup ディレクトリの権限を runner ユーザーへ補正してから backup/migration を実行
+  - ヘルスチェックは `127.0.0.1:8000/api/health` の起動待ち後、`127.0.0.1/api/health`（nginx経由）を確認
+  - 失敗時ログは `wol-api.service` に加えて `nginx` も採取
   - 構成:
     - GitHub Hosted: frontend `dist` artifact 作成
     - self-hosted (Pi): `dist` 配備 / backend 更新 / backup / migration / 再起動 / health確認
