@@ -159,7 +159,7 @@ describe('SettingsPanel', () => {
     expect(screen.getAllByText('管理者専用').length).toBeGreaterThan(0)
   })
 
-  it('creates token without auto-saving plain token', async () => {
+  it('auto-saves first created token when no active token exists', async () => {
     const user = userEvent.setup()
     createApiTokenMock.mockResolvedValue({
       token: {
@@ -197,9 +197,71 @@ describe('SettingsPanel', () => {
         expires_at: null,
       })
     })
+    expect(setStoredBearerTokenMock).toHaveBeenCalledWith('wol_plain_secret')
+    expect(screen.getByText('初回トークンを発行し、この端末へ自動設定しました。')).toBeInTheDocument()
+    expect(screen.getByText('初回トークンを自動設定しました。')).toBeInTheDocument()
+    expect(screen.getByText('作成した平文トークン（1回のみ表示）')).toBeInTheDocument()
+    expect(screen.getByText('wol_plain_secret')).toBeInTheDocument()
+  })
+
+  it('does not auto-save created token when active token already exists', async () => {
+    const user = userEvent.setup()
+    listApiTokensMock.mockResolvedValue({
+      items: [
+        {
+          id: 'token-admin-1',
+          name: 'existing-admin',
+          role: 'admin',
+          token_prefix: 'wol_existing',
+          created_at: '2026-03-01T00:00:00+00:00',
+          expires_at: null,
+          last_used_at: null,
+          revoked_at: null,
+        },
+      ],
+    })
+    createApiTokenMock.mockResolvedValue({
+      token: {
+        id: 'token-2',
+        name: 'iphone-action-button',
+        role: 'device',
+        token_prefix: 'wol_abcd1234',
+        created_at: '2026-03-02T00:00:00+00:00',
+        expires_at: null,
+        last_used_at: null,
+        revoked_at: null,
+      },
+      plain_token: 'wol_plain_secret',
+    })
+
+    render(
+      <SettingsPanel
+        selectedThemeId="default"
+        appearanceMode="system"
+        effectiveAppearanceMode="light"
+        themeOptions={THEME_OPTIONS}
+        onThemeChange={vi.fn()}
+        onAppearanceChange={vi.fn()}
+      />,
+    )
+
+    await user.click(screen.getByRole('tab', { name: 'APIトークン' }))
+    await waitFor(() => {
+      expect(listApiTokensMock).toHaveBeenCalledTimes(1)
+      expect(screen.getByText('existing-admin')).toBeInTheDocument()
+    })
+    await user.type(screen.getByLabelText('端末名'), 'iphone-action-button')
+    await user.click(screen.getByRole('button', { name: 'トークンを発行' }))
+
+    await waitFor(() => {
+      expect(createApiTokenMock).toHaveBeenCalledWith({
+        name: 'iphone-action-button',
+        role: 'device',
+        expires_at: null,
+      })
+    })
     expect(setStoredBearerTokenMock).not.toHaveBeenCalled()
     expect(screen.getByText('トークンを発行しました。利用する場合は入力欄に貼り付けて保存してください。')).toBeInTheDocument()
-    expect(screen.getByText('作成した平文トークン（1回のみ表示）')).toBeInTheDocument()
     expect(screen.getByText('wol_plain_secret')).toBeInTheDocument()
   })
 

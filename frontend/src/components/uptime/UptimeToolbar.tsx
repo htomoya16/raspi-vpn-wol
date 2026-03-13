@@ -2,6 +2,7 @@ import type { Pc } from '../../types/models'
 import type { SummaryBucket } from './types'
 
 interface UptimeToolbarProps {
+  isMobile: boolean
   pcs: Pc[]
   activePcId: string
   referenceDate: string
@@ -16,6 +17,7 @@ interface UptimeToolbarProps {
 }
 
 function UptimeToolbar({
+  isMobile,
   pcs,
   activePcId,
   referenceDate,
@@ -28,6 +30,21 @@ function UptimeToolbar({
   onBucketChange,
   onToggleMock,
 }: UptimeToolbarProps) {
+  const handleDateInputInteraction = (input: HTMLInputElement): void => {
+    if (!isMobile || input.type !== 'date') {
+      return
+    }
+    const dateInput = input as HTMLInputElement & { showPicker?: () => void }
+    if (typeof dateInput.showPicker !== 'function') {
+      return
+    }
+    try {
+      dateInput.showPicker()
+    } catch {
+      // Fallback to native browser behavior when showPicker is unavailable or blocked.
+    }
+  }
+
   return (
     <div className="uptime-toolbar">
       <label>
@@ -49,6 +66,8 @@ function UptimeToolbar({
           value={referenceDate}
           max={maxReferenceDate}
           onChange={(event) => onReferenceDateChange(event.target.value)}
+          onClick={(event) => handleDateInputInteraction(event.currentTarget)}
+          onFocus={(event) => handleDateInputInteraction(event.currentTarget)}
         />
       </label>
 

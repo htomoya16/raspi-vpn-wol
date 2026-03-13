@@ -1,11 +1,19 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+import sqlite3
+from datetime import datetime, timedelta, timezone
 from typing import cast
 from uuid import uuid4
 
 from app.db.database import connection
 from app.types import JobRow
+
+JOB_RETENTION_DAYS = 30
+JOB_MAX_ROWS = 50000
+
+
+def _utc_cutoff_iso(days: int) -> str:
+    return (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
 
 def create_job(job_type: str, payload_json: str | None) -> JobRow:
@@ -21,6 +29,8 @@ def create_job(job_type: str, payload_json: str | None) -> JobRow:
             """,
             (job_id, job_type, payload_json, now_iso, now_iso),
         )
+        _prune_old_jobs(conn)
+        _prune_excess_jobs(conn)
     row = get_job(job_id)
     if row is None:
         raise ValueError(f"failed to create job: {job_id}")
@@ -120,6 +130,8 @@ def create_or_get_active_job(job_type: str, payload_json: str | None) -> tuple[J
                 """,
                 (job_id, job_type, payload_json, now_iso, now_iso),
             )
+            _prune_old_jobs(conn)
+            _prune_excess_jobs(conn)
             row = conn.execute(
                 """
                 SELECT
@@ -208,3 +220,30 @@ def mark_failed_if_active(job_id: str, error_message: str) -> bool:
             (error_message, now_iso, now_iso, job_id),
         )
     return result.rowcount > 0
+
+
+def _prune_old_jobs(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        DELETE FROM jobs
+        WHERE state NOT IN ('queued', 'running')
+          AND created_at < ?
+        """,
+        (_utc_cutoff_iso(JOB_RETENTION_DAYS),),
+    )
+
+
+def _prune_excess_jobs(conn: sqlite3.Connection) -> None:
+    conn.execute(
+        """
+        DELETE FROM jobs
+        WHERE state NOT IN ('queued', 'running')
+          AND id NOT IN (
+              SELECT id
+              FROM jobs
+              ORDER BY created_at DESC
+              LIMIT ?
+          )
+        """,
+        (JOB_MAX_ROWS,),
+    )

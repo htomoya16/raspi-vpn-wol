@@ -89,7 +89,7 @@ python scripts/backup_db.py --keep 30
 
 - `--dry-run`: 作成/削除予定だけ表示して、ファイルは変更しない
 - `--keep 30`: 最新30世代を残して古いバックアップを削除する
-- 詳細仕様（自動化/systemd timer/復元手順）は `docs/deploy/db/README.md` を参照
+- 詳細仕様（自動化/systemd timer/復元手順）は `docs/deploy/db-backup-restore.md` を参照
 
 ## ドキュメント
 
@@ -97,10 +97,14 @@ python scripts/backup_db.py --keep 30
 - フロントエンド: `docs/frontend/README.md`
 - バックエンド: `docs/backend/README.md`
 - デプロイ/運用: `docs/deploy/README.md`
+- Raspberry Pi運用フロー: `docs/deploy/raspi-ops-flow.md`
+- CI/CD運用: `docs/deploy/cicd.md`
 - nginx運用: `docs/deploy/nginx.md`
+- OSネットワーク制限（UFW）: `docs/deploy/ufw.md`
 - systemd運用: `docs/deploy/systemd.md`
 - 運用ランブック: `docs/deploy/runbook.md`
-- DB運用（バックアップ/復元）: `docs/deploy/db/README.md`
+- DB運用（バックアップ/復元）: `docs/deploy/db-backup-restore.md`
+- APIトークン運用（break-glass）: `docs/deploy/token-ops.md`
 
 ## 仕様の正
 

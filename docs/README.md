@@ -10,6 +10,8 @@
 - 2026-02-11: ドキュメント運用開始に伴い、`docs/` を新規作成。
 - 初期構成として frontend/backend/deploy の領域ページを追加。
 - 2026-03-02: デプロイ配下のDB運用ページ（バックアップ/復元）へのリンクを追加。
+- 2026-03-03: CI/CD運用ページへのリンクを追加。
+- 2026-03-03: DB運用ページの移設（`docs/deploy/db-backup-restore.md`）を反映。
 
 ## 運用時の注意点
 
@@ -24,4 +26,5 @@
 - フロントテスト仕様: `docs/frontend/tests/README.md`
 - バックエンド: `docs/backend/README.md`
 - デプロイ/運用: `docs/deploy/README.md`
-- DB運用（バックアップ/復元）: `docs/deploy/db/README.md`
+- CI/CD運用: `docs/deploy/cicd.md`
+- DB運用（バックアップ/復元）: `docs/deploy/db-backup-restore.md`

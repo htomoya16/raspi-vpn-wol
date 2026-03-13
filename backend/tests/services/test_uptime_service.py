@@ -157,3 +157,42 @@ def test_uptime_summary_uses_cached_daily_data_for_out_of_retention_range(monkey
             "online_ratio": 0.0625,
         }
     ]
+
+
+def test_uptime_summary_does_not_assume_full_online_when_history_is_empty(monkeypatch) -> None:
+    monkeypatch.setattr(
+        uptime_service.pc_repository,
+        "get_pc_by_id",
+        lambda _pc_id: {"id": "pc-1", "status": "online"},
+    )
+    monkeypatch.setattr(uptime_service, "_utcnow", lambda: datetime(2026, 3, 3, 12, 0, tzinfo=timezone.utc))
+    monkeypatch.setattr(uptime_service.uptime_repository, "get_latest_status_before", lambda *_: None)
+    monkeypatch.setattr(uptime_service.uptime_repository, "list_status_history_between", lambda *_: [])
+    monkeypatch.setattr(uptime_service.uptime_repository, "list_daily_summary", lambda **_: [])
+
+    upserts: list[dict[str, object]] = []
+    monkeypatch.setattr(
+        uptime_service.uptime_repository,
+        "upsert_daily_summary",
+        lambda **kwargs: upserts.append(kwargs),
+    )
+
+    response = uptime_service.get_pc_uptime_summary(
+        pc_id="pc-1",
+        from_date="2026-03-01",
+        to_date="2026-03-01",
+        bucket="day",
+        tz_name="UTC",
+    )
+
+    assert response["items"] == [
+        {
+            "label": "2026-03-01",
+            "period_start": "2026-03-01",
+            "period_end": "2026-03-01",
+            "online_seconds": 0,
+            "online_ratio": 0.0,
+        }
+    ]
+    assert len(upserts) == 1
+    assert upserts[0]["online_seconds"] == 0

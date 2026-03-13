@@ -145,9 +145,6 @@ def _collect_online_intervals(
             events.append((changed_at, status))
 
     if not events:
-        pc_row = pc_repository.get_pc_by_id(pc_id)
-        if pc_row is not None and pc_row.get("status") == "online":
-            return [(start_utc, end_utc)]
         return []
 
     intervals: list[tuple[datetime, datetime]] = []

@@ -1,0 +1,16 @@
+[Unit]
+Description=raspi-vpn-wol FastAPI API service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/raspi-vpn-wol/backend
+EnvironmentFile=-/opt/raspi-vpn-wol/backend/.env
+ExecStart=/opt/raspi-vpn-wol/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target

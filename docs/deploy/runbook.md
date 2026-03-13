@@ -37,6 +37,7 @@ sudo journalctl -u wol-db-backup.service -n 50 --no-pager
 2. 直近バックアップから `app.db` を復元する。
 3. `alembic upgrade head` でスキーマ整合を取る。
 4. API サービス再起動後に `/api/health` を確認する。
+5. adminトークン喪失時は `docs/deploy/token-ops.md` の break-glass 手順で復旧する。
 
 ## 復旧後確認
 

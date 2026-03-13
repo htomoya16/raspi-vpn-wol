@@ -8,21 +8,36 @@
 
 ## 変更内容
 
+- 2026-03-03: ログ/ジョブ保持ポリシーを更新（`logs`: 30日 + 200,000件、`jobs`: 30日 + 50,000件）。
 - 2026-02-11: デプロイ/運用向けドキュメントの初期ページを作成。
-- 2026-03-02: DB運用ドキュメントを `docs/deploy/db/` へ分離し、当ページを入口化。
+- 2026-03-02: DB運用ドキュメント（バックアップ/復元）を整備し、当ページを入口化。
 - 2026-03-02: DBバックアップの運用決定値（毎日07:00、30世代保持）を追記。
+- 2026-03-03: UFW（OS側ネットワーク制限）手順への導線を追加。
+- 2026-03-03: CI/CD 方針ページを追加。
+- 2026-03-03: DB運用ページを `docs/deploy/db-backup-restore.md` へ移設。
+- 2026-03-03: APIトークン運用ページ（break-glass CLI）を追加。
 
 ## 目次
 
+- Raspberry Pi運用フロー:
+  - `docs/deploy/raspi-ops-flow.md`（初回セットアップ〜更新までの一連手順）
+- CI/CD運用:
+  - `docs/deploy/cicd.md`（CI/CD 自動化方針、self-hosted runner 運用）
 - nginx運用:
   - `docs/deploy/nginx.md`（`wol.conf` 反映、`/` 配信、`/api` リバプロ）
+- OSネットワーク制限:
+  - `docs/deploy/ufw.md`（22/80 を VPN セグメントに限定）
 - systemd運用:
   - `docs/deploy/systemd.md`（バックアップ service/timer の有効化と確認）
 - 運用ランブック:
   - `docs/deploy/runbook.md`（運用開始前チェック、障害時初動、復旧確認）
 - DB運用:
-  - `docs/deploy/db/README.md`（バックアップ/復元仕様、systemd timer、Alembic連携）
+  - `docs/deploy/db-backup-restore.md`（バックアップ/復元仕様、systemd timer、Alembic連携）
   - 運用決定値: 毎日 `07:00` 実行、`keep=30`（約1か月分）
+- ログ/ジョブ保持:
+  - 運用決定値: `logs` は 30日 + 200,000件、`jobs` は 30日 + 50,000件
+- APIトークン運用:
+  - `docs/deploy/token-ops.md`（break-glass復旧、`create_api_token.py` の実行手順）
 
 ## 運用時の注意点
 
@@ -33,6 +48,5 @@
 ## 今後の追記候補
 
 - 配布コマンド手順（dist 同期、サービス再起動）
-- `wol-api.service` のユニット設定例
 - 障害時チェックリスト（nginx/FastAPI/SQLite）
 - バックアップ結果の通知（journal確認/外部通知）
