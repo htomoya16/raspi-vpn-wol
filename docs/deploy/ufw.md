@@ -89,6 +89,7 @@ sudo ufw status numbered
 
 - Raspberry Pi を WireGuard サーバとして運用し、VPN クライアント接続を受ける場合のみ実施する。
 - VPN接続のために、すでに `sudo ufw allow 63088/udp comment 'WireGuard'` を実行済みなら再実行は不要（`sudo ufw status numbered` でルールが存在することだけ確認する）。
+- `63088` は本ドキュメントの運用例。実際は WireGuard 設定（`ListenPort`）のポート番号に置き換える。
 
 ```bash
 sudo ufw allow 63088/udp comment 'WireGuard'

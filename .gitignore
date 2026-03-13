@@ -31,3 +31,6 @@ frontend/.vite/
 .env.*
 !.env.example
 *.log
+
+# Self-hosted runner
+/actions-runner/
