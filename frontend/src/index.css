@@ -122,6 +122,11 @@
   --scrollbar-thumb-hover: rgba(139, 181, 244, 0.92);
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 * {
   box-sizing: border-box;
   scrollbar-width: thin;
