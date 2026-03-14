@@ -122,6 +122,12 @@
     gap: 12px;
   }
 
+  .mobile-logs-panel {
+    display: block;
+    min-height: 0;
+    height: auto;
+  }
+
   .panel-embedded + .panel-embedded {
     padding-top: 12px;
   }

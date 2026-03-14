@@ -33,22 +33,30 @@ function mockMobileViewport() {
   }
 }
 
-function mockBottomReachedScrollPosition() {
+function mockWindowScrollMetrics({
+  innerHeight,
+  scrollY,
+  scrollHeight,
+}: {
+  innerHeight: number
+  scrollY: number
+  scrollHeight: number
+}) {
   const originalInnerHeight = window.innerHeight
   const originalScrollY = window.scrollY
   const originalScrollHeight = document.documentElement.scrollHeight
 
   Object.defineProperty(window, 'innerHeight', {
     configurable: true,
-    value: 800,
+    value: innerHeight,
   })
   Object.defineProperty(window, 'scrollY', {
     configurable: true,
-    value: 420,
+    value: scrollY,
   })
   Object.defineProperty(document.documentElement, 'scrollHeight', {
     configurable: true,
-    value: 1220,
+    value: scrollHeight,
   })
 
   return () => {
@@ -472,9 +480,123 @@ describe('LogsPanel', () => {
     expect(screen.getByText('older periodic')).toBeInTheDocument()
   })
 
-  it('loads more on mobile when swiping down at bottom (bounce gesture)', async () => {
+  it('keeps an expanded periodic group open when periodic keys shift with new logs', async () => {
+    const user = userEvent.setup()
+    const initialTopA = createLogEntry({
+      id: 220,
+      job_id: 'job-status-220',
+      action: 'status',
+      event_kind: 'periodic_status',
+      ok: true,
+      message: 'top periodic A',
+    })
+    const initialTopB = createLogEntry({
+      id: 219,
+      job_id: 'job-status-219',
+      action: 'status',
+      event_kind: 'periodic_status',
+      ok: true,
+      message: 'top periodic B',
+    })
+    const initialMiddleA = createLogEntry({
+      id: 150,
+      job_id: 'job-status-150',
+      action: 'status',
+      event_kind: 'periodic_status',
+      ok: true,
+      message: 'target periodic keep-open',
+    })
+    const initialMiddleB = createLogEntry({
+      id: 149,
+      job_id: 'job-status-149',
+      action: 'status',
+      event_kind: 'periodic_status',
+      ok: false,
+      message: 'target periodic older',
+    })
+    const initialBottom = createLogEntry({
+      id: 42,
+      job_id: 'job-status-42',
+      action: 'status',
+      event_kind: 'periodic_status',
+      ok: false,
+      message: 'bottom periodic',
+    })
+    const separatorTop = createLogEntry({
+      id: 218,
+      action: 'pc_upsert',
+      message: 'separator top',
+    })
+    const separatorBottom = createLogEntry({
+      id: 148,
+      action: 'pc_upsert',
+      message: 'separator bottom',
+    })
+
+    const { rerender } = render(
+      <LogsPanel
+        items={[
+          initialTopA,
+          initialTopB,
+          separatorTop,
+          initialMiddleA,
+          initialMiddleB,
+          separatorBottom,
+          initialBottom,
+        ]}
+        loading={false}
+        error=""
+        onReload={vi.fn()}
+        onClear={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /定期ステータス確認.*OK 1.*NG 1.*2件/ }))
+    expect(screen.getByText('target periodic keep-open')).toBeInTheDocument()
+    expect(screen.getByText('target periodic older')).toBeInTheDocument()
+
+    const newTopPeriodic = createLogEntry({
+      id: 300,
+      job_id: 'job-status-300',
+      action: 'status',
+      event_kind: 'periodic_status',
+      ok: false,
+      message: 'new top periodic',
+    })
+    const newTopSeparator = createLogEntry({
+      id: 299,
+      action: 'pc_upsert',
+      message: 'new top separator',
+    })
+
+    rerender(
+      <LogsPanel
+        items={[
+          newTopPeriodic,
+          newTopSeparator,
+          initialTopA,
+          initialTopB,
+          separatorTop,
+          initialMiddleA,
+          separatorBottom,
+        ]}
+        loading={false}
+        error=""
+        onReload={vi.fn()}
+        onClear={vi.fn().mockResolvedValue(undefined)}
+      />,
+    )
+
+    expect(screen.getByText('target periodic keep-open')).toBeInTheDocument()
+  })
+
+  it('does not load more on mobile when only scrolling near bottom of logs sheet', async () => {
     const restoreViewport = mockMobileViewport()
-    const restoreBottom = mockBottomReachedScrollPosition()
+    const restoreMetrics = mockWindowScrollMetrics({
+      innerHeight: 800,
+      scrollY: 376,
+      scrollHeight: 1200,
+    })
     const onLoadMore = vi.fn().mockResolvedValue(undefined)
 
     try {
@@ -499,18 +621,105 @@ describe('LogsPanel', () => {
         />,
       )
 
-      expect(screen.getByText('下に引っ張ると、さらに200件読み込みます')).toBeInTheDocument()
+      expect(screen.getByText('下端でさらに下へ引っ張ると、さらに200件読み込みます')).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'さらに表示（200件）' })).not.toBeInTheDocument()
 
-      fireEvent.touchStart(window, { touches: [{ clientY: 240 }] })
-      fireEvent.touchMove(window, { touches: [{ clientY: 190 }] })
+      fireEvent.scroll(window)
+      fireEvent.scroll(window)
+      fireEvent.scroll(window)
+      expect(onLoadMore).toHaveBeenCalledTimes(0)
+    } finally {
+      restoreMetrics()
+      restoreViewport()
+    }
+  })
+
+  it('loads more only once per touch gesture at bottom', async () => {
+    const restoreViewport = mockMobileViewport()
+    const restoreMetrics = mockWindowScrollMetrics({
+      innerHeight: 800,
+      scrollY: 376,
+      scrollHeight: 1200,
+    })
+    const onLoadMore = vi.fn().mockResolvedValue(undefined)
+
+    try {
+      render(
+        <LogsPanel
+          items={[
+            createLogEntry({
+              id: 82,
+              job_id: 'job-status-82',
+              action: 'status',
+              event_kind: 'periodic_status',
+              message: 'periodic collapsed',
+            }),
+          ]}
+          loading={false}
+          loadingMore={false}
+          hasMore
+          error=""
+          onReload={vi.fn()}
+          onLoadMore={onLoadMore}
+          onClear={vi.fn().mockResolvedValue(undefined)}
+        />,
+      )
+
+      fireEvent.touchStart(window, { touches: [{ clientY: 220 }] })
+      fireEvent.touchMove(window, { touches: [{ clientY: 180 }] })
+      fireEvent.touchMove(window, { touches: [{ clientY: 140 }] })
+      fireEvent.scroll(window)
       fireEvent.touchEnd(window)
 
       await waitFor(() => {
         expect(onLoadMore).toHaveBeenCalledTimes(1)
       })
     } finally {
-      restoreBottom()
+      restoreMetrics()
+      restoreViewport()
+    }
+  })
+
+  it('loads more on mobile when swiping at bottom even without scrollable range', async () => {
+    const restoreViewport = mockMobileViewport()
+    const restoreMetrics = mockWindowScrollMetrics({
+      innerHeight: 800,
+      scrollY: 0,
+      scrollHeight: 800,
+    })
+    const onLoadMore = vi.fn().mockResolvedValue(undefined)
+
+    try {
+      render(
+        <LogsPanel
+          items={[
+            createLogEntry({
+              id: 81,
+              job_id: 'job-status-81',
+              action: 'status',
+              event_kind: 'periodic_status',
+              message: 'periodic collapsed',
+            }),
+          ]}
+          loading={false}
+          loadingMore={false}
+          hasMore
+          error=""
+          onReload={vi.fn()}
+          onLoadMore={onLoadMore}
+          onClear={vi.fn().mockResolvedValue(undefined)}
+        />,
+      )
+
+      fireEvent.touchStart(window, { touches: [{ clientY: 220 }] })
+      fireEvent.touchMove(window, { touches: [{ clientY: 180 }] })
+      fireEvent.touchEnd(window)
+
+      await waitFor(() => {
+        expect(onLoadMore).toHaveBeenCalledTimes(1)
+      })
+    } finally {
+      restoreMetrics()
       restoreViewport()
     }
   })

@@ -15,6 +15,9 @@ export function useStickyGroupHeaders({
     if (typeof window === 'undefined') {
       return undefined
     }
+    if (window.matchMedia('(max-width: 760px)').matches) {
+      return undefined
+    }
 
     const sheets = [mainSheetRef.current, focusSheetRef.current].filter(
       (sheet): sheet is HTMLDivElement => Boolean(sheet),

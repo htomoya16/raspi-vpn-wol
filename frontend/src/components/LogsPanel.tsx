@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
 import { useDelayedVisibility } from '../hooks/useDelayedVisibility'
@@ -9,6 +9,58 @@ import { buildLogGroups } from './log-panel/logGrouping'
 import { useLogsPanelState } from './log-panel/useLogsPanelState'
 import { useStickyGroupHeaders } from './log-panel/useStickyGroupHeaders'
 import type { LogEntry } from '../types/models'
+
+function clampWindowScrollY(): void {
+  if (typeof document === 'undefined') {
+    return
+  }
+  const doc = document.documentElement
+  const body = document.body
+  const scrollHeight = Math.max(doc.scrollHeight, body ? body.scrollHeight : 0)
+  const maxScrollY = Math.max(0, scrollHeight - window.innerHeight)
+  if (window.scrollY > maxScrollY) {
+    window.scrollTo({ top: maxScrollY, behavior: 'auto' })
+  }
+}
+
+function scheduleWindowClampPasses(): () => void {
+  if (typeof window === 'undefined') {
+    return () => undefined
+  }
+
+  const timeoutIds: number[] = []
+  const rafIds: number[] = []
+  const delays = [0, 80, 180, 320, 520, 760, 1080, 1480, 1920]
+
+  const runClamp = () => {
+    const rafId = window.requestAnimationFrame(() => {
+      clampWindowScrollY()
+      const nestedRafId = window.requestAnimationFrame(() => {
+        clampWindowScrollY()
+      })
+      rafIds.push(nestedRafId)
+    })
+    rafIds.push(rafId)
+  }
+
+  delays.forEach((delay) => {
+    const timeoutId = window.setTimeout(runClamp, delay)
+    timeoutIds.push(timeoutId)
+  })
+
+  const intervalId = window.setInterval(runClamp, 140)
+  timeoutIds.push(
+    window.setTimeout(() => {
+      window.clearInterval(intervalId)
+    }, 2200),
+  )
+
+  return () => {
+    window.clearInterval(intervalId)
+    timeoutIds.forEach((id) => window.clearTimeout(id))
+    rafIds.forEach((id) => window.cancelAnimationFrame(id))
+  }
+}
 
 export interface LogsPanelProps {
   items: LogEntry[]
@@ -40,6 +92,9 @@ function LogsPanel({
   const focusSheetRef = useRef<HTMLDivElement | null>(null)
   const mainLoadMoreSentinelRef = useRef<HTMLDivElement | null>(null)
   const loadMoreInFlightRef = useRef(false)
+  const autoLoadArmedRef = useRef(true)
+  const autoLoadRequiresNewTouchRef = useRef(false)
+  const touchStartedNearBottomRef = useRef(false)
   const touchLastYRef = useRef<number | null>(null)
   const touchPullDistanceRef = useRef(0)
   const touchGestureConsumedRef = useRef(false)
@@ -71,9 +126,17 @@ function LogsPanel({
     return `${focusOpen ? 'focus-open' : 'focus-close'}|${groupKeys}|${collapsedKeys}`
   }, [collapsedGroupKeys, focusOpen, logGroups])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     syncGroupKeys(new Set(logGroups.map((group) => group.key)))
   }, [logGroups, syncGroupKeys])
+
+  useEffect(() => {
+    if (!isMobile || !hasMore) {
+      return
+    }
+    autoLoadArmedRef.current = true
+    autoLoadRequiresNewTouchRef.current = false
+  }, [hasMore, isMobile])
 
   useStickyGroupHeaders({
     mainSheetRef,
@@ -127,17 +190,9 @@ function LogsPanel({
     if (!isMobile || typeof document === 'undefined') {
       return undefined
     }
-    const rafId = window.requestAnimationFrame(() => {
-      const doc = document.documentElement
-      const maxScrollY = Math.max(0, doc.scrollHeight - window.innerHeight)
-      if (window.scrollY > maxScrollY) {
-        window.scrollTo({ top: maxScrollY, behavior: 'auto' })
-      }
-    })
-    return () => {
-      window.cancelAnimationFrame(rafId)
-    }
-  }, [collapsedGroupKeys, isMobile, logGroups])
+    clampWindowScrollY()
+    return scheduleWindowClampPasses()
+  }, [collapsedGroupKeys, expandedDetailIds, isMobile, logGroups])
 
   const handleToggleGroup = useCallback(
     (key: string) => {
@@ -150,45 +205,61 @@ function LogsPanel({
     if (!autoLoadOnScroll || !hasMore || !onLoadMore) {
       return undefined
     }
+    if (typeof document === 'undefined') {
+      return undefined
+    }
 
     const getDistanceFromBottom = () => {
-      if (typeof document === 'undefined') {
-        return Number.POSITIVE_INFINITY
-      }
       const doc = document.documentElement
       const viewportBottom = window.scrollY + window.innerHeight
       return doc.scrollHeight - viewportBottom
     }
-
-    const isNearBottom = () => getDistanceFromBottom() <= 4
+    const triggerThreshold = 24
+    const touchTriggerThreshold = 28
 
     const resetTouchTracking = () => {
       touchLastYRef.current = null
       touchPullDistanceRef.current = 0
       touchGestureConsumedRef.current = false
+      touchStartedNearBottomRef.current = false
     }
+
+    const canTriggerLoadMore = () =>
+      autoLoadArmedRef.current &&
+      !autoLoadRequiresNewTouchRef.current &&
+      !loadMoreInFlightRef.current &&
+      !loading &&
+      !loadingMore &&
+      !clearLoading
+
+    const isNearBottom = () => getDistanceFromBottom() <= triggerThreshold
 
     const handleTouchStart = (event: TouchEvent) => {
       const touch = event.touches[0]
       if (!touch) {
         return
       }
+      if (autoLoadRequiresNewTouchRef.current) {
+        autoLoadRequiresNewTouchRef.current = false
+        autoLoadArmedRef.current = true
+      }
       touchLastYRef.current = touch.clientY
       touchPullDistanceRef.current = 0
       touchGestureConsumedRef.current = false
+      touchStartedNearBottomRef.current = isNearBottom()
+      const hasScrollableRange = document.documentElement.scrollHeight > window.innerHeight + 1
+      if (!hasScrollableRange && !loadingMore && !loading && !clearLoading) {
+        autoLoadArmedRef.current = true
+      }
     }
 
     const handleTouchMove = (event: TouchEvent) => {
-      if (
-        loadMoreInFlightRef.current ||
-        loading ||
-        loadingMore ||
-        clearLoading ||
-        touchGestureConsumedRef.current
-      ) {
+      if (touchGestureConsumedRef.current || !canTriggerLoadMore()) {
         return
       }
-
+      if (!touchStartedNearBottomRef.current) {
+        return
+      }
       const touch = event.touches[0]
       if (!touch) {
         return
@@ -207,12 +278,17 @@ function LogsPanel({
         touchPullDistanceRef.current = 0
       }
 
-      if (!isNearBottom() || touchPullDistanceRef.current < 28) {
+      const hasScrollableRange = document.documentElement.scrollHeight > window.innerHeight + 1
+      if (hasScrollableRange && !isNearBottom()) {
+        return
+      }
+      if (touchPullDistanceRef.current < touchTriggerThreshold) {
         return
       }
 
       touchGestureConsumedRef.current = true
-      touchPullDistanceRef.current = 0
+      autoLoadArmedRef.current = false
+      autoLoadRequiresNewTouchRef.current = true
       void handleLoadMore()
     }
 
@@ -289,6 +365,7 @@ function LogsPanel({
       showRefreshingSpinner={showRefreshingSpinner}
       showFocusButton
       showClearButton
+      isMobile={isMobile}
       logGroups={logGroups}
       collapsedGroupKeys={collapsedGroupKeys}
       expandedDetailIds={expandedDetailIds}
@@ -341,6 +418,7 @@ function LogsPanel({
                   showRefreshingSpinner={showRefreshingSpinner}
                   showFocusButton={false}
                   showClearButton={false}
+                  isMobile={isMobile}
                   logGroups={logGroups}
                   collapsedGroupKeys={collapsedGroupKeys}
                   expandedDetailIds={expandedDetailIds}

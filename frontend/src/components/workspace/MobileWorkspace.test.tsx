@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -122,5 +122,63 @@ describe('MobileWorkspace', () => {
     )
 
     expect(screen.getByText('Mock SettingsPanel')).toBeInTheDocument()
+  })
+
+  it('scrolls to top when logs nav button is tapped', async () => {
+    const user = userEvent.setup()
+    const onChangeMobileView = vi.fn()
+    const originalScrollTo = window.scrollTo
+    const originalRequestAnimationFrame = window.requestAnimationFrame
+    const scrollToMock = vi.fn()
+
+    Object.defineProperty(window, 'scrollTo', {
+      writable: true,
+      value: scrollToMock,
+    })
+    Object.defineProperty(window, 'requestAnimationFrame', {
+      writable: true,
+      value: (callback: FrameRequestCallback) => {
+        callback(0)
+        return 1
+      },
+    })
+
+    try {
+      render(
+        <MobileWorkspace
+          mobileView="pcs"
+          onChangeMobileView={onChangeMobileView}
+          selectedThemeId="default"
+          appearanceMode="system"
+          effectiveAppearanceMode="light"
+          themeOptions={[
+            { id: 'default', label: 'デフォルト', primary: '#111', primaryStrong: '#000', accent: '#fff' },
+          ]}
+          onThemeChange={vi.fn()}
+          onAppearanceChange={vi.fn()}
+          dashboard={createDashboardData()}
+          pcs={[createPcFactory()]}
+          selectedPcId="pc-main"
+          onSelectPc={vi.fn()}
+        />,
+      )
+
+      const nav = screen.getByRole('navigation', { name: '表示切替メニュー' })
+      await user.click(within(nav).getByRole('button', { name: 'ログ' }))
+
+      expect(onChangeMobileView).toHaveBeenCalledWith('logs')
+      await waitFor(() => {
+        expect(scrollToMock).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
+      })
+    } finally {
+      Object.defineProperty(window, 'scrollTo', {
+        writable: true,
+        value: originalScrollTo,
+      })
+      Object.defineProperty(window, 'requestAnimationFrame', {
+        writable: true,
+        value: originalRequestAnimationFrame,
+      })
+    }
   })
 })
