@@ -127,6 +127,7 @@
 - operationId: `refreshPcStatus`
 - summary: 単体ステータス更新
 - responses: `200`, `400`, `404`, `429`
+- note: `offline` は2回連続失敗時に反映する（1回目失敗時は前回状態を維持）
 - note: 既に `unreachable` のPCは、判定結果が `offline` でも `unreachable` を維持する
 
 ### `POST /api/pcs/status/refresh`
@@ -136,6 +137,7 @@
 - responses: `202`, `429`
 - note: `status_refresh_all` が `queued/running` の場合は新規作成せず既存ジョブIDを返す
 - note: バックエンドでは同等の全体更新ジョブを60秒ごとに自動投入する
+- note: 各PCの `offline` 反映は2回連続失敗時（1回目失敗時は前回状態維持）
 
 ### `GET /api/pcs/{pc_id}/uptime/summary`
 
@@ -158,7 +160,7 @@
 - responses: `200`, `400`, `404`, `422`
 - note: `week_start` は日曜始まりの週開始日（`YYYY-MM-DD`）
 - note: `week_start` 省略時は `tz` 基準の当週日曜を使用
-- note: 週タイムライン用の状態履歴は1年保持。保持範囲外の週指定は `400`
+- note: 週タイムライン用の状態履歴は5年保持。保持範囲外の週指定は `400`
 - note: 区間は1日内ローカル時刻で返却し、UI側でカレンダー表示へマッピングする
 
 ### `GET /api/logs`

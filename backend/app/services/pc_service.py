@@ -21,6 +21,8 @@ BOOTING_CONFIRM_TIMEOUT_SECONDS = 60
 PCS_LIST_CACHE_TTL_SECONDS = 30
 UPTIME_SUMMARY_CACHE_TTL_SECONDS = 120
 UPTIME_WEEKLY_CACHE_TTL_SECONDS = 120
+STATUS_OFFLINE_CONFIRMATION_FAILURES = 2
+STATUS_OFFLINE_STREAK_TTL_SECONDS = 24 * 60 * 60
 
 
 class PcConflictError(ValueError):
@@ -39,6 +41,33 @@ def _invalidate_pc_related_cache(pc_id: str | None = None) -> None:
         return
     cache.invalidate_prefix(cache_keys.uptime_summary_pc_prefix(normalized_id))
     cache.invalidate_prefix(cache_keys.uptime_weekly_pc_prefix(normalized_id))
+
+
+def _get_offline_streak(pc_id: str) -> int:
+    cached = cache.get(cache_keys.status_offline_streak_key(pc_id))
+    if isinstance(cached, int) and cached > 0:
+        return cached
+    return 0
+
+
+def _set_offline_streak(pc_id: str, streak: int) -> None:
+    key = cache_keys.status_offline_streak_key(pc_id)
+    if streak <= 0:
+        cache.invalidate(key)
+        return
+    cache.set(key, streak, ttl_seconds=STATUS_OFFLINE_STREAK_TTL_SECONDS)
+
+
+def _update_runtime_status(
+    pc_id: str,
+    *,
+    status: PcStatus,
+    mark_seen: bool = False,
+    preserve_offline_streak: bool = False,
+) -> PcRow | None:
+    if status != "offline" and not preserve_offline_streak:
+        _set_offline_streak(pc_id, 0)
+    return pc_registry_service.update_runtime_status(pc_id, status=status, mark_seen=mark_seen)
 
 
 def _ensure_mac_unique(mac_address: str, exclude_pc_id: str | None = None) -> None:
@@ -180,6 +209,7 @@ def create_pc(payload: PcCreate) -> dict[str, object]:
             normalized_mac = pc_registry_service.normalize_mac_address(payload.mac)
             raise PcConflictError(f"既に存在しています（MAC: {normalized_mac}）") from exc
         raise
+    _set_offline_streak(pc_id, 0)
     _invalidate_pc_related_cache(pc_id)
     return _row_to_pc(pc_row)
 
@@ -217,6 +247,7 @@ def update_pc(pc_id: str, payload: PcUpdate) -> dict[str, object]:
             normalized_mac = pc_registry_service.normalize_mac_address(str(next_mac))
             raise PcConflictError(f"既に存在しています（MAC: {normalized_mac}）") from exc
         raise
+    _set_offline_streak(str(existing["id"]), 0)
     _invalidate_pc_related_cache(str(existing["id"]))
     return _row_to_pc(pc_row)
 
@@ -224,28 +255,48 @@ def update_pc(pc_id: str, payload: PcUpdate) -> dict[str, object]:
 def delete_pc(pc_id: str) -> None:
     normalized_id = pc_id.strip()
     pc_registry_service.delete_pc(normalized_id)
+    _set_offline_streak(normalized_id, 0)
     _invalidate_pc_related_cache(normalized_id)
 
 
 def _refresh_pc_status_internal(pc_id: str, *, invalidate_cache: bool) -> dict[str, object]:
-    existing = pc_repository.get_pc_by_id(pc_id.strip())
+    normalized_id = pc_id.strip()
+    existing = pc_repository.get_pc_by_id(normalized_id)
     if existing is None:
         raise LookupError(f"pc not found: {pc_id}")
     previous_status = str(existing.get("status") or "unknown")
+    probe_status: PcStatus
     try:
         result = status_service.get_pc_status(pc_id)
         status_value = str(result["status"])
     except ValueError:
         status_value = "unreachable"
-    if previous_status == "unreachable" and status_value == "offline":
-        status_value = "unreachable"
+
     if status_value not in STATUS_VALUES:
-        status_value = "unreachable"
-    normalized_status = status_value if status_value in STATUS_VALUES else "unreachable"
-    pc_registry_service.update_runtime_status(
-        pc_id,
+        probe_status = "unreachable"
+    else:
+        probe_status = status_value
+
+    if previous_status == "unreachable" and probe_status == "offline":
+        probe_status = "unreachable"
+
+    normalized_status: PcStatus
+    if probe_status == "offline":
+        next_streak = _get_offline_streak(normalized_id) + 1
+        _set_offline_streak(normalized_id, next_streak)
+        if next_streak < STATUS_OFFLINE_CONFIRMATION_FAILURES:
+            normalized_status = previous_status if previous_status in STATUS_VALUES else "unknown"
+        else:
+            normalized_status = "offline"
+    else:
+        _set_offline_streak(normalized_id, 0)
+        normalized_status = probe_status
+
+    _update_runtime_status(
+        normalized_id,
         status=normalized_status,
-        mark_seen=normalized_status == "online",
+        mark_seen=probe_status == "online" and normalized_status == "online",
+        preserve_offline_streak=probe_status == "offline" and normalized_status != "offline",
     )
     if invalidate_cache:
         _invalidate_pc_related_cache(str(existing["id"]))
@@ -267,7 +318,7 @@ def refresh_all_statuses() -> dict[str, int]:
             _refresh_pc_status_internal(str(pc_id), invalidate_cache=False)
             succeeded += 1
         except ValueError:
-            pc_registry_service.update_runtime_status(pc_id, status="unreachable", mark_seen=False)
+            _update_runtime_status(pc_id, status="unreachable", mark_seen=False)
             failed += 1
     _invalidate_pc_related_cache()
     return {"total": total, "succeeded": succeeded, "failed": failed}
@@ -294,11 +345,11 @@ def send_wol(
             )
             message = result["message"]
     except ValueError as exc:
-        pc_registry_service.update_runtime_status(normalized_id, status="unreachable", mark_seen=False)
+        _update_runtime_status(normalized_id, status="unreachable", mark_seen=False)
         _invalidate_pc_related_cache(normalized_id)
         raise RuntimeError(f"wol packet send failed: {exc} (pc_id={normalized_id})") from exc
 
-    pc_registry_service.update_runtime_status(normalized_id, status="booting", mark_seen=False)
+    _update_runtime_status(normalized_id, status="booting", mark_seen=False)
     _invalidate_pc_related_cache(normalized_id)
     now_iso = datetime.now(timezone.utc).isoformat()
 
@@ -318,14 +369,14 @@ def send_wol(
             probe = status_service.get_pc_status(normalized_id)
             probe_status = str(probe["status"])
         except ValueError as exc:
-            pc_registry_service.update_runtime_status(normalized_id, status="unreachable", mark_seen=False)
+            _update_runtime_status(normalized_id, status="unreachable", mark_seen=False)
             _invalidate_pc_related_cache(normalized_id)
             raise RuntimeError(
                 f"wol status probe failed: {exc} (pc_id={normalized_id}, attempts={attempts})"
             ) from exc
 
         if probe_status == "online":
-            pc_registry_service.update_runtime_status(normalized_id, status="online", mark_seen=True)
+            _update_runtime_status(normalized_id, status="online", mark_seen=True)
             _invalidate_pc_related_cache(normalized_id)
             return {
                 "message": message,
@@ -336,7 +387,7 @@ def send_wol(
             }
 
         if probe_status in {"unknown", "unreachable"}:
-            pc_registry_service.update_runtime_status(normalized_id, status=probe_status, mark_seen=False)
+            _update_runtime_status(normalized_id, status=probe_status, mark_seen=False)
             _invalidate_pc_related_cache(normalized_id)
             raise RuntimeError(
                 "wol status probe returned non-retriable status: "
@@ -347,7 +398,7 @@ def send_wol(
             break
 
     final_status: PcStatus = "offline" if had_seen_before else "unknown"
-    pc_registry_service.update_runtime_status(normalized_id, status=final_status, mark_seen=False)
+    _update_runtime_status(normalized_id, status=final_status, mark_seen=False)
     _invalidate_pc_related_cache(normalized_id)
     raise RuntimeError(
         "wol boot confirmation timed out: "

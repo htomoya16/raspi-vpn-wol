@@ -27,14 +27,17 @@ def _short_build(value: str) -> str:
 @lru_cache(maxsize=1)
 def _resolve_git_short_sha() -> str:
     backend_root = Path(__file__).resolve().parents[1]
-    result = subprocess.run(
-        ["git", "rev-parse", f"--short={GIT_SHA_LENGTH}", "HEAD"],
-        cwd=backend_root,
-        capture_output=True,
-        text=True,
-        check=False,
-        timeout=1.0,
-    )
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", f"--short={GIT_SHA_LENGTH}", "HEAD"],
+            cwd=backend_root,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=1.0,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return DEFAULT_APP_BUILD
     if result.returncode != 0:
         return DEFAULT_APP_BUILD
     return _short_build(result.stdout)

@@ -65,11 +65,11 @@ ON uptime_daily_summary (pc_id, tz, date ASC);
 
 ## 保持期間ポリシー
 
-- `status_history`: 1年保持
+- `status_history`: 5年保持
 - `uptime_daily_summary`: 無期限保持
 
 ```sql
--- status_history の期限切れ削除（1年）
+-- status_history の期限切れ削除（5年）
 DELETE FROM status_history
 WHERE changed_at < ?;
 ```

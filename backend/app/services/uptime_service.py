@@ -9,7 +9,7 @@ from app.repositories import pc_repository, uptime_repository
 
 DEFAULT_UPTIME_TZ = "Asia/Tokyo"
 DEFAULT_SUMMARY_DAYS = 30
-STATUS_HISTORY_RETENTION_DAYS = 365
+STATUS_HISTORY_RETENTION_DAYS = 365 * 5
 
 
 @dataclass
