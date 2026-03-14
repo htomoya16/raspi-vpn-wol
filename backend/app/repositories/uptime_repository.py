@@ -6,7 +6,7 @@ from typing import cast
 from app.db.database import connection
 from app.types import PcStatusHistoryRow, PcUptimeDailySummaryRow
 
-STATUS_HISTORY_RETENTION_DAYS = 365
+STATUS_HISTORY_RETENTION_DAYS = 365 * 5
 
 
 def _utc_cutoff_iso(days: int) -> str:

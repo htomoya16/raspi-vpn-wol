@@ -141,6 +141,6 @@ erDiagram
 - 保持期間方針:
   - `logs`: 30日保持 + 200,000件上限（挿入時に自動削除）。
   - `jobs`: 30日保持 + 50,000件上限（新規ジョブ作成時に自動削除、`queued/running` は保護）。
-  - `status_history`: 1年保持（定期削除）。
+  - `status_history`: 5年保持（定期削除）。
   - `uptime_daily_summary`: 無期限保持。
 - スキーマ変更時は、このページと `docs/backend/api/openapi.md` を同時更新する。

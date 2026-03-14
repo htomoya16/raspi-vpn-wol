@@ -83,7 +83,7 @@ def test_uptime_weekly_timeline_returns_7_days(client: TestClient) -> None:
 def test_uptime_weekly_timeline_rejects_old_week(client: TestClient) -> None:
     _create_pc(client, id="pc-uptime-old", mac="AA:BB:CC:DD:EE:93")
 
-    old_date = datetime.now(timezone.utc).date() - timedelta(days=400)
+    old_date = datetime.now(timezone.utc).date() - timedelta(days=2000)
     old_week_start = (old_date - timedelta(days=(old_date.weekday() + 1) % 7)).isoformat()
     response = client.get(
         "/api/pcs/pc-uptime-old/uptime/weekly",

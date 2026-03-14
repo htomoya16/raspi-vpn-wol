@@ -112,15 +112,15 @@ def test_uptime_summary_uses_cached_daily_data_for_out_of_retention_range(monkey
         lambda **_: [
             {
                 "pc_id": "pc-1",
-                "date": "2024-12-01",
+                "date": "2020-12-01",
                 "tz": "UTC",
                 "online_seconds": 5400,
                 "online_count": 1,
                 "offline_count": 0,
                 "first_online_at": None,
                 "last_online_at": None,
-                "created_at": "2024-12-02T00:00:00+00:00",
-                "updated_at": "2024-12-02T00:00:00+00:00",
+                "created_at": "2020-12-02T00:00:00+00:00",
+                "updated_at": "2020-12-02T00:00:00+00:00",
             }
         ],
     )
@@ -142,17 +142,17 @@ def test_uptime_summary_uses_cached_daily_data_for_out_of_retention_range(monkey
 
     response = uptime_service.get_pc_uptime_summary(
         pc_id="pc-1",
-        from_date="2024-12-01",
-        to_date="2024-12-01",
+        from_date="2020-12-01",
+        to_date="2020-12-01",
         bucket="day",
         tz_name="UTC",
     )
 
     assert response["items"] == [
         {
-            "label": "2024-12-01",
-            "period_start": "2024-12-01",
-            "period_end": "2024-12-01",
+            "label": "2020-12-01",
+            "period_start": "2020-12-01",
+            "period_end": "2020-12-01",
             "online_seconds": 5400,
             "online_ratio": 0.0625,
         }

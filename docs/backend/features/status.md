@@ -39,7 +39,7 @@
   - 履歴が存在しない期間は、現在ステータスから過去を推定せずオフライン（0秒）として扱う。
 - 保持期間:
   - 日次集計データは無期限保持とする。
-  - 週タイムライン表示用の状態履歴は1年保持とする。
+  - 週タイムライン表示用の状態履歴は5年保持とする。
 - 提供API:
   - `GET /api/pcs/{pc_id}/uptime/summary`（`bucket=day|week|month|year`）
   - `GET /api/pcs/{pc_id}/uptime/weekly`（週タイムライン、`week_start` は日曜始まり）
