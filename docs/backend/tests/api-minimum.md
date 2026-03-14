@@ -8,7 +8,8 @@
 ## テストケース一覧
 
 - `test_health_ok`
-  - `GET /api/health` が `200` と `{"status":"ok"}` を返すことを確認。
+  - `GET /api/health` が `200` を返すことを確認。
+  - `status="ok"` に加えて `version` / `build` が非空文字列で返ることを確認。
 
 - `test_pcs_crud_flow`
   - `POST /api/pcs` で作成できること。

@@ -33,7 +33,7 @@
 - summary: API稼働状態を確認
 - responses: `200`
 - note: 認証不要（疎通確認のため開放）
-- response body: `{"status":"ok","version":"<app-version>","build":"<build-id>"}`（`build` は短縮SHAまたは環境変数）
+- response body: `{"status":"ok","version":"<app-version>","build":"<build-id>"}`（`build` は環境変数指定値、または git短縮SHA。git解決不可時は `local`）
 
 ### `GET /api/auth/me`
 
