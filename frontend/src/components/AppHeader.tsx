@@ -8,6 +8,7 @@ interface AppHeaderProps {
   tokenConfigured: boolean
   activeTokenName: string
   activeTokenRole: 'admin' | 'device' | null
+  buildLabel: string | null
   onRefreshAllStatuses: () => Promise<void> | void
   onOpenSettings: () => void
 }
@@ -19,6 +20,7 @@ function AppHeader({
   tokenConfigured,
   activeTokenName,
   activeTokenRole,
+  buildLabel,
   onRefreshAllStatuses,
   onOpenSettings,
 }: AppHeaderProps) {
@@ -26,7 +28,10 @@ function AppHeader({
   return (
     <header className="hero hero--compact">
       <div className="hero__lead">
-        <p className="hero__eyebrow">VPN LAN POWER DASHBOARD</p>
+        <div className="hero__eyebrow-row">
+          <p className="hero__eyebrow">VPN LAN POWER DASHBOARD</p>
+          {buildLabel ? <span className="hero__build">{buildLabel}</span> : null}
+        </div>
         <h1>WOL Control Center</h1>
         <p className="hero__description">
           VPN内からPCを安全に起動し、ステータス確認と操作ログをまとめて管理します。

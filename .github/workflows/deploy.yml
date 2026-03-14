@@ -89,6 +89,22 @@ jobs:
           git merge-base --is-ancestor "${GITHUB_SHA}" origin/main
           # backend は "実行時最新 main" ではなく "run を起動した SHA" に固定。
           git checkout -B main "${GITHUB_SHA}"
+          # CalVer + build を backend/.env へ反映（APP_VERSION=YYYY.MM.DD.<run_number>）。
+          env_file="${RASPI_APP_DIR}/backend/.env"
+          app_version="$(date +%Y.%m.%d).${GITHUB_RUN_NUMBER}"
+          app_build="${GITHUB_SHA:0:12}"
+          touch "${env_file}"
+          if grep -q '^APP_VERSION=' "${env_file}"; then
+            sed -i "s/^APP_VERSION=.*/APP_VERSION=${app_version}/" "${env_file}"
+          else
+            printf '\nAPP_VERSION=%s\n' "${app_version}" >> "${env_file}"
+          fi
+          if grep -q '^APP_BUILD=' "${env_file}"; then
+            sed -i "s/^APP_BUILD=.*/APP_BUILD=${app_build}/" "${env_file}"
+          else
+            printf '\nAPP_BUILD=%s\n' "${app_build}" >> "${env_file}"
+          fi
+          echo "Set APP_VERSION=${app_version} APP_BUILD=${app_build}"
           # sqlite DB/backup の権限不整合で失敗しないよう、runner 所有へ合わせる。
           sudo -n mkdir -p "${RASPI_APP_DIR}/backend/app/db" "${RASPI_APP_DIR}/backend/backups"
           sudo -n chown -R "$(id -un):$(id -gn)" "${RASPI_APP_DIR}/backend/app/db" "${RASPI_APP_DIR}/backend/backups"

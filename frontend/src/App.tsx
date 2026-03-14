@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import './App.css'
+import { fetchHealth } from './api/health'
 import AppHeader from './components/AppHeader'
 import SettingsDialog from './components/SettingsDialog'
 import DashboardShell from './components/app/DashboardShell'
@@ -26,6 +27,7 @@ function App() {
   const [desktopView, setDesktopView] = useState<DesktopView>('dashboard')
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [selectedPcId, setSelectedPcId] = useState('')
+  const [buildLabel, setBuildLabel] = useState<string | null>(null)
 
   const {
     hasBearerToken,
@@ -36,6 +38,26 @@ function App() {
     activeTokenRole,
   } = useTokenValidation()
   const isMobile = useMediaQuery(MOBILE_BREAKPOINT)
+
+  useEffect(() => {
+    let mounted = true
+    void fetchHealth()
+      .then((response) => {
+        if (!mounted) {
+          return
+        }
+        setBuildLabel(`v${response.version} (${response.build})`)
+      })
+      .catch(() => {
+        if (!mounted) {
+          return
+        }
+        setBuildLabel(null)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const {
     themeId,
@@ -172,6 +194,7 @@ function App() {
         tokenConfigured={isTokenVerified}
         activeTokenName={activeTokenName}
         activeTokenRole={activeTokenRole}
+        buildLabel={buildLabel}
         onRefreshAllStatuses={isTokenVerified ? refreshAllStatusesEntry : () => undefined}
         onOpenSettings={handleOpenSettings}
       />

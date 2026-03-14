@@ -50,6 +50,15 @@
     letter-spacing: 0.1em;
   }
 
+  .hero__eyebrow-row {
+    gap: 6px;
+  }
+
+  .hero__build {
+    font-size: 0.58rem;
+    max-width: 42vw;
+  }
+
   .hero__description {
     display: none;
   }
@@ -111,6 +120,12 @@
 
   .column-panel {
     gap: 12px;
+  }
+
+  .mobile-logs-panel {
+    display: block;
+    min-height: 0;
+    height: auto;
   }
 
   .panel-embedded + .panel-embedded {

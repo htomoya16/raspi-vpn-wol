@@ -53,12 +53,33 @@
   font-size: 0.84rem;
 }
 
+.hero__eyebrow-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .hero__eyebrow {
   margin: 0;
   letter-spacing: 0.16em;
   font-size: 12px;
   color: var(--hero-eyebrow-color, var(--primary));
   font-weight: 700;
+  white-space: nowrap;
+}
+
+.hero__build {
+  margin: 0;
+  color: var(--text-sub);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  white-space: nowrap;
+  max-width: 48vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hero h1 {
@@ -333,4 +354,3 @@ button:focus:not(:focus-visible),
   color: var(--text-sub);
   font-size: 0.9rem;
 }
-

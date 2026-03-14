@@ -4,6 +4,7 @@ import type { LogEntry } from '../../types/models'
 import { formatJstDateParts } from '../../utils/datetime'
 import LoadingDots from '../LoadingDots'
 import LoadingSpinner from '../LoadingSpinner'
+import MobileLogsList from './MobileLogsList'
 import type { LogGroup } from './logGrouping'
 import { formatDetails, getActionLabel } from './logGrouping'
 
@@ -19,6 +20,7 @@ interface LogsPanelContentProps {
   showRefreshingSpinner: boolean
   showFocusButton: boolean
   showClearButton: boolean
+  isMobile: boolean
   autoLoadOnScroll: boolean
   logGroups: LogGroup[]
   collapsedGroupKeys: Set<string>
@@ -44,6 +46,10 @@ function formatCompactSubtitle(subtitle: string): string {
   return `ID: ${rawId.slice(0, 8)}...${rawId.slice(-6)}`
 }
 
+function toSortedArray(values: Set<number>): number[] {
+  return Array.from(values).sort((left, right) => left - right)
+}
+
 function LogsPanelContent({
   titleId,
   items,
@@ -56,6 +62,7 @@ function LogsPanelContent({
   showRefreshingSpinner,
   showFocusButton,
   showClearButton,
+  isMobile,
   autoLoadOnScroll,
   logGroups,
   collapsedGroupKeys,
@@ -69,6 +76,10 @@ function LogsPanelContent({
   onToggleGroup,
   onToggleDetail,
 }: LogsPanelContentProps) {
+  const mobileSheetKey = isMobile
+    ? `${logGroups.map((group) => group.key).join('|')}::${Array.from(collapsedGroupKeys).sort().join('|')}::${toSortedArray(expandedDetailIds).join('|')}`
+    : ''
+
   return (
     <>
       <div className="panel__header logs-panel__header">
@@ -107,155 +118,167 @@ function LogsPanelContent({
         <p className="empty-state">ログがありません。</p>
       ) : (
         <>
-          <div className="logs-sheet" ref={sheetRef}>
-            <table className="logs-table">
-              <thead>
-                <tr>
-                  <th>時刻</th>
-                  <th>操作</th>
-                  <th>PC</th>
-                  <th>結果</th>
-                  <th>
-                    <span className="logs-table__head-with-action">
-                      <span>メッセージ</span>
-                      {showFocusButton ? (
+          {isMobile ? (
+            <div key={mobileSheetKey} className="logs-mobile-sheet" ref={sheetRef}>
+              <MobileLogsList
+                logGroups={logGroups}
+                collapsedGroupKeys={collapsedGroupKeys}
+                expandedDetailIds={expandedDetailIds}
+                onToggleGroup={onToggleGroup}
+                onToggleDetail={onToggleDetail}
+              />
+            </div>
+          ) : (
+            <div className="logs-sheet" ref={sheetRef}>
+              <table className="logs-table">
+                <thead>
+                  <tr>
+                    <th>時刻</th>
+                    <th>操作</th>
+                    <th>PC</th>
+                    <th>結果</th>
+                    <th>
+                      <span className="logs-table__head-with-action">
+                        <span>メッセージ</span>
+                        {showFocusButton ? (
+                          <button
+                            type="button"
+                            className="logs-table__icon-btn"
+                            aria-label="ログを前面表示"
+                            onClick={onOpenFocus}
+                          >
+                            ⤢
+                          </button>
+                        ) : null}
+                      </span>
+                    </th>
+                  </tr>
+                </thead>
+                {logGroups.map((group) => (
+                  <tbody key={group.key} className="logs-table__group-block">
+                    <tr className="logs-table__group-row">
+                      <td colSpan={5}>
                         <button
                           type="button"
-                          className="logs-table__icon-btn"
-                          aria-label="ログを前面表示"
-                          onClick={onOpenFocus}
+                          className={`logs-table__group-toggle logs-table__group-toggle--${group.kind}`}
+                          aria-expanded={!collapsedGroupKeys.has(group.key)}
+                          onClick={() => onToggleGroup(group.key)}
                         >
-                          ⤢
+                          <span className="logs-table__group-label">
+                            <span className="logs-table__group-head">
+                              <span
+                                className={`logs-table__group-caret${collapsedGroupKeys.has(group.key) ? ' logs-table__group-caret--collapsed' : ''}`}
+                                aria-hidden="true"
+                              >
+                                ▾
+                              </span>
+                              <span className="logs-table__group-title">
+                                <span>{group.title}</span>
+                                {group.subtitle ? (
+                                  <span className="logs-table__group-subtitle" title={group.subtitle}>
+                                    <span className="logs-table__group-subtitle-full">{group.subtitle}</span>
+                                    <span className="logs-table__group-subtitle-compact">
+                                      {formatCompactSubtitle(group.subtitle)}
+                                    </span>
+                                  </span>
+                                ) : null}
+                              </span>
+                            </span>
+                            <span className="logs-table__group-counts">
+                              <span className="logs-table__group-count logs-table__group-count--ok">
+                                OK {group.okCount}
+                              </span>
+                              <span className="logs-table__group-count logs-table__group-count--ng">
+                                NG {group.ngCount}
+                              </span>
+                              <span className="logs-table__group-count logs-table__group-count--total">
+                                {group.items.length}件
+                              </span>
+                            </span>
+                          </span>
                         </button>
-                      ) : null}
-                    </span>
-                  </th>
-                </tr>
-              </thead>
-              {logGroups.map((group) => (
-                <tbody key={group.key} className="logs-table__group-block">
-                  <tr className="logs-table__group-row">
-                    <td colSpan={5}>
-                      <button
-                        type="button"
-                        className={`logs-table__group-toggle logs-table__group-toggle--${group.kind}`}
-                        aria-expanded={!collapsedGroupKeys.has(group.key)}
-                        onClick={() => onToggleGroup(group.key)}
-                      >
-                        <span className="logs-table__group-label">
-                          <span className="logs-table__group-head">
-                            <span
-                              className={`logs-table__group-caret${collapsedGroupKeys.has(group.key) ? ' logs-table__group-caret--collapsed' : ''}`}
-                              aria-hidden="true"
-                            >
-                              ▾
-                            </span>
-                            <span className="logs-table__group-title">
-                              <span>{group.title}</span>
-                              {group.subtitle ? (
-                                <span className="logs-table__group-subtitle" title={group.subtitle}>
-                                  <span className="logs-table__group-subtitle-full">{group.subtitle}</span>
-                                  <span className="logs-table__group-subtitle-compact">
-                                    {formatCompactSubtitle(group.subtitle)}
-                                  </span>
-                                </span>
-                              ) : null}
-                            </span>
-                          </span>
-                          <span className="logs-table__group-counts">
-                            <span className="logs-table__group-count logs-table__group-count--ok">
-                              OK {group.okCount}
-                            </span>
-                            <span className="logs-table__group-count logs-table__group-count--ng">
-                              NG {group.ngCount}
-                            </span>
-                            <span className="logs-table__group-count logs-table__group-count--total">
-                              {group.items.length}件
-                            </span>
-                          </span>
-                        </span>
-                      </button>
-                    </td>
-                  </tr>
-                  {!collapsedGroupKeys.has(group.key)
-                    ? group.items.map((item) => {
-                        const detailsText = formatDetails(item.details)
-                        const hasDetails = detailsText !== '-'
-                        const isExpanded = hasDetails && expandedDetailIds.has(item.id)
-                        const timeParts = formatJstDateParts(item.created_at, {
-                          fallbackDate: '-',
-                          fallbackTime: '',
-                        })
+                      </td>
+                    </tr>
+                    {!collapsedGroupKeys.has(group.key)
+                      ? group.items.map((item) => {
+                          const detailsText = formatDetails(item.details)
+                          const hasDetails = detailsText !== '-'
+                          const isExpanded = hasDetails && expandedDetailIds.has(item.id)
+                          const timeParts = formatJstDateParts(item.created_at, {
+                            fallbackDate: '-',
+                            fallbackTime: '',
+                          })
 
-                        return (
-                          <Fragment key={item.id}>
-                            <tr
-                              className={`logs-table__row${hasDetails ? ' logs-table__row--expandable' : ''}${isExpanded ? ' logs-table__row--expanded' : ''}`}
-                            >
-                              <td data-label="時刻">
-                                <span className="logs-time-cell">
-                                  <span className="logs-time-cell__value">
-                                    <span className="logs-time-cell__date">{timeParts.date}</span>
-                                    {timeParts.time ? (
-                                      <span className="logs-time-cell__time">{timeParts.time}</span>
-                                    ) : null}
+                          return (
+                            <Fragment key={item.id}>
+                              <tr
+                                className={`logs-table__row${hasDetails ? ' logs-table__row--expandable' : ''}${isExpanded ? ' logs-table__row--expanded' : ''}`}
+                              >
+                                <td data-label="時刻">
+                                  <span className="logs-time-cell">
+                                    <span className="logs-time-cell__value">
+                                      <span className="logs-time-cell__date">{timeParts.date}</span>
+                                      {timeParts.time ? (
+                                        <span className="logs-time-cell__time">{timeParts.time}</span>
+                                      ) : null}
+                                    </span>
+                                    <span
+                                      className={`logs-result-badge logs-result-badge--mobile ${item.ok ? 'logs-result-badge--ok' : 'logs-result-badge--ng'}`}
+                                      aria-label={item.ok ? '結果: OK' : '結果: NG'}
+                                    >
+                                      {item.ok ? 'OK' : 'NG'}
+                                    </span>
                                   </span>
-                                  <span
-                                    className={`logs-result-badge logs-result-badge--mobile ${item.ok ? 'logs-result-badge--ok' : 'logs-result-badge--ng'}`}
-                                    aria-label={item.ok ? '結果: OK' : '結果: NG'}
-                                  >
+                                </td>
+                                <td data-label="操作">{getActionLabel(item)}</td>
+                                <td data-label="PC">{item.pc_id || '-'}</td>
+                                <td data-label="結果">
+                                  <span className={item.ok ? 'result-ok' : 'result-ng'}>
                                     {item.ok ? 'OK' : 'NG'}
                                   </span>
-                                </span>
-                              </td>
-                              <td data-label="操作">{getActionLabel(item)}</td>
-                              <td data-label="PC">{item.pc_id || '-'}</td>
-                              <td data-label="結果">
-                                <span className={item.ok ? 'result-ok' : 'result-ng'}>
-                                  {item.ok ? 'OK' : 'NG'}
-                                </span>
-                              </td>
-                              <td data-label="メッセージ">
-                                <span className="logs-message-cell">
-                                  <span className="logs-message-cell__text">{item.message || '-'}</span>
-                                  {hasDetails ? (
-                                    <button
-                                      type="button"
-                                      className={`logs-message-cell__hint${isExpanded ? ' logs-message-cell__hint--open' : ''}`}
-                                      onClick={() => onToggleDetail(item.id)}
-                                      aria-expanded={isExpanded}
-                                      aria-label={isExpanded ? '詳細を閉じる' : '詳細を表示'}
-                                    >
-                                      {isExpanded ? '閉じる' : '詳細'}
-                                    </button>
-                                  ) : null}
-                                </span>
-                              </td>
-                            </tr>
-                            {hasDetails && isExpanded ? (
-                              <tr className="logs-table__detail-row">
-                                <td colSpan={5}>
-                                  <div className="log-details">
-                                    <pre className="log-details__text log-details__text--expanded">
-                                      {detailsText}
-                                    </pre>
-                                  </div>
+                                </td>
+                                <td data-label="メッセージ">
+                                  <span className="logs-message-cell">
+                                    <span className="logs-message-cell__text">{item.message || '-'}</span>
+                                    {hasDetails ? (
+                                      <button
+                                        type="button"
+                                        className={`logs-message-cell__hint${isExpanded ? ' logs-message-cell__hint--open' : ''}`}
+                                        onClick={() => onToggleDetail(item.id)}
+                                        aria-expanded={isExpanded}
+                                        aria-label={isExpanded ? '詳細を閉じる' : '詳細を表示'}
+                                      >
+                                        {isExpanded ? '閉じる' : '詳細'}
+                                      </button>
+                                    ) : null}
+                                  </span>
                                 </td>
                               </tr>
-                            ) : null}
-                          </Fragment>
-                        )
-                      })
-                    : null}
-                </tbody>
-              ))}
-            </table>
-          </div>
+                              {hasDetails && isExpanded ? (
+                                <tr className="logs-table__detail-row">
+                                  <td colSpan={5}>
+                                    <div className="log-details">
+                                      <pre className="log-details__text log-details__text--expanded">
+                                        {detailsText}
+                                      </pre>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ) : null}
+                            </Fragment>
+                          )
+                        })
+                      : null}
+                  </tbody>
+                ))}
+              </table>
+            </div>
+          )}
           {hasMore ? (
             <div className="logs-load-more">
               {autoLoadOnScroll ? (
                 <div className="logs-load-more__sentinel" ref={loadMoreSentinelRef} aria-live="polite">
-                  {loadingMore ? <LoadingDots label="さらに読み込み中" /> : '下に引っ張ると、さらに200件読み込みます'}
+                  {loadingMore ? <LoadingDots label="さらに読み込み中" /> : '下端でさらに下へ引っ張ると、さらに200件読み込みます'}
                 </div>
               ) : (
                 <button

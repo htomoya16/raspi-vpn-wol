@@ -10,6 +10,7 @@
 - 2026-03-14: CI を常時起動 + 差分判定実行へ変更し、`paths` 起因の required check `pending` を解消。
 - 2026-03-14: CD の backend 反映を `github.sha` 固定に変更し、承認待ち中の main 進行による混在デプロイを防止。
 - 2026-03-14: CD の frontend 同期を backend 更新・再起動・health check 成功後へ移動し、部分反映リスクを低減。
+- 2026-03-14: CD 実行時に `APP_VERSION` を CalVer（`YYYY.MM.DD.<run_number>`）で自動採番し、`APP_BUILD` は短縮SHAで自動更新するようにした。
 - 2026-03-13: デプロイ後ヘルスチェックを強化（FastAPI起動待ち + nginx経由確認）し、失敗時に nginx ログ採取を追加。
 - 2026-03-13: Node 20 deprecation 対応として GitHub Actions を更新（`checkout@v6` / `setup-node@v6` / `setup-python@v6` / `upload-artifact@v7` / `download-artifact@v8`）。
 - 2026-03-13: CD 実行時に SQLite DB/backup ディレクトリの権限を runner ユーザーへ補正する手順を追加。
@@ -42,6 +43,7 @@
   - `permissions: contents: read`（最小権限）
   - `concurrency: deploy-production`（デプロイ直列化）
   - backend は `github.sha` を `main` へ checkout して実行 run と同一コミットへ固定
+  - backend/.env の版情報はデプロイ時に自動更新（`APP_VERSION=YYYY.MM.DD.<run_number>`, `APP_BUILD=<短縮SHA>`）
   - DB/backup ディレクトリの権限を runner ユーザーへ補正してから backup/migration を実行
   - ヘルスチェックは `127.0.0.1:8000/api/health` の起動待ち後、`127.0.0.1/api/health`（nginx経由）を確認
   - frontend 配備は backend 更新 + health 成功後に実施

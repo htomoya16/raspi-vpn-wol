@@ -10,7 +10,12 @@ from app.services import api_token_service
 def test_health_is_public(client_without_auth_header: TestClient) -> None:
     response = client_without_auth_header.get("/api/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    body = response.json()
+    assert body["status"] == "ok"
+    assert isinstance(body["version"], str)
+    assert body["version"]
+    assert isinstance(body["build"], str)
+    assert body["build"]
 
 
 def test_protected_api_requires_bearer_token(client_without_auth_header: TestClient) -> None:

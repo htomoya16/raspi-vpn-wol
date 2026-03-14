@@ -1,3 +1,5 @@
+import { useCallback } from 'react'
+
 import JobQueue from '../JobQueue'
 import LogsPanel from '../LogsPanel'
 import PcForm from '../PcForm'
@@ -71,6 +73,21 @@ function MobileWorkspace({
     logsPanelProps,
   } = dashboard
 
+  const handleMobileNavClick = useCallback(
+    (view: MobileView) => {
+      onChangeMobileView(view)
+      if (view !== 'logs' || typeof window === 'undefined') {
+        return
+      }
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          window.scrollTo({ top: 0, behavior: 'smooth' })
+        })
+      })
+    },
+    [onChangeMobileView],
+  )
+
   return (
     <>
       <section className="mobile-workspace">
@@ -82,7 +99,7 @@ function MobileWorkspace({
 
         {mobileView === 'logs' ? (
           <div className="mobile-workspace__logs">
-            <section className="panel column-panel column-panel--right">
+            <section className="panel mobile-logs-panel">
               <JobQueue jobs={jobs} embedded />
               <LogsPanel {...logsPanelProps} embedded />
             </section>
@@ -121,7 +138,7 @@ function MobileWorkspace({
                 key={item.view}
                 type="button"
                 className={`mobile-bottom-nav__btn mobile-bottom-nav__btn--register ${active ? 'mobile-bottom-nav__btn--active' : ''}`}
-                onClick={() => onChangeMobileView(item.view)}
+                onClick={() => handleMobileNavClick(item.view)}
                 aria-label={item.ariaLabel ?? item.label}
               >
                 <span className="mobile-bottom-nav__register-circle" aria-hidden="true">
@@ -136,7 +153,7 @@ function MobileWorkspace({
               key={item.view}
               type="button"
               className={`mobile-bottom-nav__btn mobile-bottom-nav__btn--stack ${active ? 'mobile-bottom-nav__btn--active' : ''}`}
-              onClick={() => onChangeMobileView(item.view)}
+              onClick={() => handleMobileNavClick(item.view)}
               aria-label={item.ariaLabel}
             >
               <img src={item.icon} alt="" aria-hidden="true" className="mobile-bottom-nav__icon" />

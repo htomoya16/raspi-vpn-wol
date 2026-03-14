@@ -24,7 +24,7 @@
   - `jobs`: `job_type + state + created_at DESC`
   - `status_history`: `pc_id + changed_at + id`、`changed_at`
   - `uptime_daily_summary`: `pc_id + tz + date`
-- `GET /api/health` を提供し、`{"status":"ok"}` を返す。
+- `GET /api/health` を提供し、`{"status":"ok","version":"<app-version>","build":"<build-id>"}` を返す。
 
 ## 運用時の注意点
 

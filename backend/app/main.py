@@ -5,6 +5,7 @@ from fastapi import Depends, FastAPI, Request
 from starlette.responses import Response
 
 from app.api import admin_tokens, auth, events, jobs, logs, pcs
+from app.build_info import get_build_info
 from app.db.database import init_db
 from app.security import require_admin_token, require_bearer_token, reset_current_api_actor, set_current_api_actor
 from app.services import status_monitor_service
@@ -53,11 +54,12 @@ app.include_router(events.router, prefix="/api", tags=["events"], dependencies=g
             "description": "稼働確認成功",
             "content": {
                 "application/json": {
-                    "example": {"status": "ok"},
+                    "example": {"status": "ok", "version": "dev", "build": "abc123def456"},
                 }
             },
         }
     },
 )
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    build_info = get_build_info()
+    return {"status": "ok", "version": build_info["version"], "build": build_info["build"]}

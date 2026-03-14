@@ -48,6 +48,49 @@ function comparePeriodicGroupKey(left: string, right: string): number {
   return left.localeCompare(right)
 }
 
+function buildPeriodicTransferMap(removedKeys: string[], addedKeys: string[]): Map<string, string> {
+  const transferMap = new Map<string, string>()
+  const usedAddedKeys = new Set<string>()
+
+  const removedWithId = removedKeys
+    .map((key) => ({ key, id: parsePeriodicGroupId(key) }))
+    .filter((entry) => entry.id !== null)
+    .sort((left, right) => (right.id as number) - (left.id as number))
+  const addedWithId = addedKeys
+    .map((key) => ({ key, id: parsePeriodicGroupId(key) }))
+    .filter((entry) => entry.id !== null)
+
+  for (const removed of removedWithId) {
+    let bestAddedKey: string | null = null
+    let bestDistance = Number.POSITIVE_INFINITY
+    for (const added of addedWithId) {
+      if (usedAddedKeys.has(added.key)) {
+        continue
+      }
+      const distance = Math.abs((removed.id as number) - (added.id as number))
+      if (distance < bestDistance) {
+        bestDistance = distance
+        bestAddedKey = added.key
+      }
+    }
+    if (!bestAddedKey) {
+      continue
+    }
+    transferMap.set(bestAddedKey, removed.key)
+    usedAddedKeys.add(bestAddedKey)
+  }
+
+  const transferredRemovedKeys = new Set<string>(transferMap.values())
+  const remainingRemovedKeys = removedKeys.filter((removedKey) => !transferredRemovedKeys.has(removedKey))
+  const remainingAddedKeys = addedKeys.filter((key) => !transferMap.has(key))
+  const fallbackCount = Math.min(remainingRemovedKeys.length, remainingAddedKeys.length)
+  for (let index = 0; index < fallbackCount; index += 1) {
+    transferMap.set(remainingAddedKeys[index], remainingRemovedKeys[index])
+  }
+
+  return transferMap
+}
+
 function areSetsEqual<T>(left: Set<T>, right: Set<T>): boolean {
   if (left.size !== right.size) {
     return false
@@ -112,19 +155,16 @@ function reducer(state: LogsPanelState, action: LogsPanelAction): LogsPanelState
         .filter((key) => isPeriodicStatusGroupKey(key) && !state.currentGroupKeys.has(key))
         .sort(comparePeriodicGroupKey)
 
-      const transferredAddedKeys = new Set<string>()
-      const transferCount = Math.min(removedPeriodicKeys.length, addedPeriodicKeys.length)
-      for (let index = 0; index < transferCount; index += 1) {
-        const removedKey = removedPeriodicKeys[index]
-        const addedKey = addedPeriodicKeys[index]
-        transferredAddedKeys.add(addedKey)
-        if (state.collapsedGroupKeys.has(removedKey)) {
-          next.add(addedKey)
+      const transferMap = buildPeriodicTransferMap(removedPeriodicKeys, addedPeriodicKeys)
+      for (const [addedKey, removedKey] of transferMap.entries()) {
+        if (!state.collapsedGroupKeys.has(removedKey)) {
+          continue
         }
+        next.add(addedKey)
       }
 
       for (const key of addedPeriodicKeys) {
-        if (transferredAddedKeys.has(key)) {
+        if (transferMap.has(key)) {
           continue
         }
         next.add(key)
