@@ -332,6 +332,47 @@ def test_refresh_pc_status_resets_offline_streak_after_success(monkeypatch: pyte
     assert updates == [("online", False), ("online", True), ("online", False)]
 
 
+def test_offline_streak_is_cleared_by_send_wol_flow(monkeypatch: pytest.MonkeyPatch) -> None:
+    pc_service.cache.clear()
+    current_status = {"value": "online"}
+    probes = iter(
+        [
+            {"pc_id": "pc-1", "status": "offline"},
+            {"pc_id": "pc-1", "status": "online"},
+            {"pc_id": "pc-1", "status": "offline"},
+        ]
+    )
+
+    monkeypatch.setattr(
+        pc_service.pc_repository,
+        "get_pc_by_id",
+        lambda _: _pc_row(status=current_status["value"], last_seen_at="2026-01-01T00:00:00+00:00"),
+    )
+    monkeypatch.setattr(pc_service.status_service, "get_pc_status", lambda _: next(probes))
+    monkeypatch.setattr(pc_service.wol_service, "send_wol", lambda **kwargs: {"message": "sent"})
+    monkeypatch.setattr(pc_service.time, "sleep", lambda _: None)
+    monkeypatch.setattr(pc_service, "BOOTING_POLL_MAX_ATTEMPTS", 1)
+
+    updates: list[tuple[str, bool]] = []
+
+    def _capture_update(_pc_id: str, status: str, mark_seen: bool = False) -> dict[str, object]:
+        updates.append((status, mark_seen))
+        current_status["value"] = status
+        return _pc_row(status=status, last_seen_at="2026-01-01T00:00:00+00:00")
+
+    monkeypatch.setattr(pc_service.pc_registry_service, "update_runtime_status", _capture_update)
+
+    first = pc_service.refresh_pc_status("pc-1")
+    wol_result = pc_service.send_wol("pc-1")
+    second = pc_service.refresh_pc_status("pc-1")
+
+    assert first["status"] == "online"
+    assert wol_result["final_status"] == "online"
+    assert second["status"] == "online"
+    assert ("offline", False) not in updates
+    assert updates == [("online", False), ("booting", False), ("online", True), ("online", False)]
+
+
 def test_list_pcs_uses_memory_cache(monkeypatch: pytest.MonkeyPatch) -> None:
     pc_service.cache.clear()
     call_count = {"list_pcs": 0}
