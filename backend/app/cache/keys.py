@@ -6,6 +6,7 @@ from urllib.parse import quote
 PCS_LIST_PREFIX = "pcs:list:"
 UPTIME_SUMMARY_PREFIX = "uptime:summary:"
 UPTIME_WEEKLY_PREFIX = "uptime:weekly:"
+STATUS_OFFLINE_STREAK_PREFIX = "status:offline_streak:"
 
 
 def _part(value: str | None) -> str:
@@ -68,3 +69,7 @@ def uptime_summary_pc_prefix(pc_id: str) -> str:
 
 def uptime_weekly_pc_prefix(pc_id: str) -> str:
     return f"{UPTIME_WEEKLY_PREFIX}pc={_part(pc_id)}:"
+
+
+def status_offline_streak_key(pc_id: str) -> str:
+    return f"{STATUS_OFFLINE_STREAK_PREFIX}pc={_part(pc_id)}"
