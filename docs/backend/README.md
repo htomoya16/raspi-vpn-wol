@@ -25,7 +25,7 @@
 
 ## 現状の機能
 
-- `GET /api/health`: 稼働確認（`{"status":"ok"}`）。
+- `GET /api/health`: 稼働確認（`{"status":"ok","version":"<app-version>","build":"<build-id>"}`）。
 - `GET /api/pcs`: PC一覧取得（検索/フィルタ/カーソル対応）。
 - `POST /api/pcs`: PC登録。
 - `GET /api/pcs/{pc_id}`: PC詳細取得。

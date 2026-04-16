@@ -7,12 +7,27 @@
 
 ## 対象ファイル
 
+- `backend/tests/services/test_build_info.py`
 - `backend/tests/services/test_pc_registry_service.py`
 - `backend/tests/services/test_status_service.py`
 - `backend/tests/services/test_wol_service.py`
 - `backend/tests/services/test_job_and_event_service.py`
 - `backend/tests/services/test_status_monitor_service.py`
 - `backend/tests/services/test_pc_service.py`
+
+## `build_info`
+
+- `test_resolve_git_short_sha_returns_local_when_git_command_not_found`
+  - `git` コマンド未導入時でも `build=local` にフォールバックすること。
+
+- `test_resolve_git_short_sha_returns_local_when_git_command_times_out`
+  - `git` 実行タイムアウト時でも `build=local` にフォールバックすること。
+
+- `test_resolve_git_short_sha_returns_local_on_non_zero_exit`
+  - `git` が非0終了時に `build=local` を返すこと。
+
+- `test_resolve_git_short_sha_returns_truncated_sha_on_success`
+  - 正常時に短縮SHA（12桁）を返すこと。
 
 ## `pc_registry_service`
 
@@ -91,6 +106,15 @@
 
 - `test_refresh_pc_status_keeps_unreachable_when_probe_is_offline`
   - 既に `unreachable` のPCは、ステータス確認結果が `offline` でも `unreachable` を維持すること。
+
+- `test_refresh_pc_status_sets_offline_after_two_consecutive_failures`
+  - `offline` 判定は2回連続失敗で反映されること（1回目は前回状態維持）。
+
+- `test_refresh_pc_status_resets_offline_streak_after_success`
+  - 失敗カウントは `online` 成功でリセットされること。
+
+- `test_offline_streak_is_cleared_by_send_wol_flow`
+  - refresh以外（`send_wol`）の状態更新後に失敗カウントが持ち越されないこと。
 
 ## 運用時の注意点
 
