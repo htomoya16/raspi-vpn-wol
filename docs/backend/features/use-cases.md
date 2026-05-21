@@ -13,6 +13,8 @@
 - ステータス更新受付の流れを `app/use_cases/status_use_case.py` に切り出した。
 - `POST /api/pcs/{pc_id}/status/refresh` の router は、単体ステータス更新 use case を呼び、HTTPレスポンスへ変換する役割に絞った。
 - `POST /api/pcs/status/refresh` の router は、全PCステータス更新ジョブの受付 use case を呼び、HTTPレスポンスへ変換する役割に絞った。
+- トークン管理の流れを `app/use_cases/api_token_use_case.py` に切り出した。
+- `GET|POST|DELETE /api/admin/tokens*` の router は、トークン管理 use case を呼び、HTTPレスポンスへ変換する役割に絞った。
 - `request_wol()` は以下を担当する。
   - PC存在確認
   - WOLジョブpayload作成
@@ -26,6 +28,11 @@
   - 全PCステータス更新ジョブの作成または既存ジョブ再利用
   - 新規ジョブ作成時のバックグラウンド実行予約
   - SSE向けジョブイベント通知
+- `api_token_use_case.py` は以下を担当する。
+  - トークン一覧取得
+  - トークン発行
+  - トークン失効
+  - 失効済みトークン削除
 
 ## 責務分担
 

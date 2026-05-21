@@ -10,7 +10,7 @@ from app.models.api_tokens import (
     ApiTokenRevokeResponse,
 )
 from app.security.rate_limit import enforce_admin_write_rate_limit
-from app.services import api_token_service
+from app.use_cases import api_token_use_case
 
 router = APIRouter()
 
@@ -22,7 +22,7 @@ router = APIRouter()
     responses={401: {"description": "認証エラー"}, 403: {"description": "認可エラー"}},
 )
 def list_api_tokens() -> ApiTokenListResponse:
-    return ApiTokenListResponse(items=api_token_service.list_tokens())
+    return ApiTokenListResponse(items=api_token_use_case.list_api_tokens())
 
 
 @router.post(
@@ -41,7 +41,7 @@ def list_api_tokens() -> ApiTokenListResponse:
 )
 def create_api_token(payload: ApiTokenCreateRequest) -> ApiTokenCreateResponse:
     try:
-        result = api_token_service.create_token(name=payload.name, expires_at=payload.expires_at, role=payload.role)
+        result = api_token_use_case.create_api_token(payload)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return ApiTokenCreateResponse.model_validate(result)
@@ -62,7 +62,7 @@ def create_api_token(payload: ApiTokenCreateRequest) -> ApiTokenCreateResponse:
 )
 def revoke_api_token(token_id: str) -> ApiTokenRevokeResponse:
     try:
-        token = api_token_service.revoke_token(token_id)
+        token = api_token_use_case.revoke_api_token(token_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -85,7 +85,7 @@ def revoke_api_token(token_id: str) -> ApiTokenRevokeResponse:
 )
 def delete_api_token(token_id: str) -> ApiTokenDeleteResponse:
     try:
-        deleted = api_token_service.delete_token(token_id)
+        deleted = api_token_use_case.delete_api_token(token_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
