@@ -15,6 +15,7 @@ from app.security.rate_limit import (
 )
 from app.services import event_service, job_service, pc_service
 from app.services.pc_service import PcConflictError
+from app.use_cases import wol_use_case
 
 router = APIRouter()
 
@@ -141,30 +142,12 @@ async def send_wol(
     pc_id: str,
     payload: WolRequest | None = Body(default=None),
 ) -> JobAccepted:
-    repeat = payload.repeat if payload is not None else 1
-    broadcast = payload.broadcast if payload is not None else None
-    port = payload.port if payload is not None else None
-    job_payload: dict[str, object] = {"pc_id": pc_id, "repeat": repeat}
-    if broadcast is not None:
-        job_payload["broadcast"] = broadcast
-    if port is not None:
-        job_payload["port"] = port
-
     try:
-        pc_service.get_pc(pc_id)
+        job = await wol_use_case.request_wol(pc_id, payload)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    job = job_service.create_job("wol", payload=job_payload)
-    asyncio.create_task(
-        job_service.run_job(
-            job["id"],
-            lambda: pc_service.send_wol(pc_id, repeat=repeat, broadcast=broadcast, port=port),
-        )
-    )
-    await event_service.event_broker.publish("job", {"job_id": job["id"], "state": "queued"})
     return JobAccepted(job_id=job["id"], state=job["state"])
 
 
