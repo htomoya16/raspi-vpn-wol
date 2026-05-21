@@ -8,6 +8,8 @@
 ## 変更内容
 
 - `POST /api/pcs/{pc_id}/status/refresh` を提供。
+- API router はHTTP境界に絞り、単体ステータス更新とイベント通知は `app/use_cases/status_use_case.py` が担当する。
+- `POST /api/pcs/status/refresh` の全PC更新ジョブ受付も `app/use_cases/status_use_case.py` が担当する。
 - `pc_id` から `pcs.ip_address` を参照し、`status_method` に応じて判定する。
 - 返却値:
   - `online`: 疎通成功
@@ -60,3 +62,4 @@
   - 超過時は `429` と `Retry-After` を返す。
 - バックエンド起動中は、60秒ごとに全PCステータス更新ジョブを自動投入する。
 - 自動投入時は `status_refresh_all` の重複起動を抑止し、既存 `queued/running` ジョブを再利用する。
+- ステータス更新受付の処理順序を変更する場合は、API router ではなく `status_use_case.py` と対応テストを更新する。

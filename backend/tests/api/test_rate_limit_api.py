@@ -12,28 +12,10 @@ def _assert_retry_after_header(response) -> None:
 def test_wol_endpoint_rate_limit_returns_429(client: TestClient, monkeypatch) -> None:
     import app.api.pcs as pcs_api
 
-    def _fake_get_pc(pc_id: str) -> dict[str, object]:
-        return {"id": pc_id}
-
-    def _fake_create_job(*_: object, **__: object) -> dict[str, object]:
+    async def _fake_request_wol(*_: object, **__: object) -> dict[str, object]:
         return {"id": "job-rate-wol", "state": "queued"}
 
-    async def _fake_run_job(*_: object, **__: object) -> None:
-        return None
-
-    async def _fake_publish(*_: object, **__: object) -> None:
-        return None
-
-    def _fake_create_task(coro: object) -> object:
-        if hasattr(coro, "close"):
-            coro.close()
-        return object()
-
-    monkeypatch.setattr(pcs_api.pc_service, "get_pc", _fake_get_pc)
-    monkeypatch.setattr(pcs_api.job_service, "create_job", _fake_create_job)
-    monkeypatch.setattr(pcs_api.job_service, "run_job", _fake_run_job)
-    monkeypatch.setattr(pcs_api.event_service.event_broker, "publish", _fake_publish)
-    monkeypatch.setattr(pcs_api.asyncio, "create_task", _fake_create_task)
+    monkeypatch.setattr(pcs_api.wol_use_case, "request_wol", _fake_request_wol)
 
     for _ in range(3):
         response = client.post("/api/pcs/pc-main/wol", json={"repeat": 1})
@@ -59,14 +41,10 @@ def test_refresh_pc_endpoint_rate_limit_returns_429(client: TestClient, monkeypa
         "updated_at": "2026-03-03T01:02:03+00:00",
     }
 
-    def _fake_refresh_pc_status(_: str) -> dict[str, object]:
+    async def _fake_refresh_pc_status(_: str) -> dict[str, object]:
         return sample_pc
 
-    async def _fake_publish(*_: object, **__: object) -> None:
-        return None
-
-    monkeypatch.setattr(pcs_api.pc_service, "refresh_pc_status", _fake_refresh_pc_status)
-    monkeypatch.setattr(pcs_api.event_service.event_broker, "publish", _fake_publish)
+    monkeypatch.setattr(pcs_api.status_use_case, "refresh_pc_status", _fake_refresh_pc_status)
 
     for _ in range(6):
         response = client.post("/api/pcs/pc-main/status/refresh")
@@ -79,24 +57,14 @@ def test_refresh_pc_endpoint_rate_limit_returns_429(client: TestClient, monkeypa
 def test_refresh_all_endpoint_rate_limit_returns_429(client: TestClient, monkeypatch) -> None:
     import app.api.pcs as pcs_api
 
-    def _fake_create_or_get_active_job(*_: object, **__: object) -> tuple[dict[str, object], bool]:
-        return {"id": "job-rate-refresh-all", "state": "queued"}, True
+    async def _fake_request_refresh_all_statuses() -> dict[str, object]:
+        return {"id": "job-rate-refresh-all", "state": "queued"}
 
-    async def _fake_run_job(*_: object, **__: object) -> None:
-        return None
-
-    async def _fake_publish(*_: object, **__: object) -> None:
-        return None
-
-    def _fake_create_task(coro: object) -> object:
-        if hasattr(coro, "close"):
-            coro.close()
-        return object()
-
-    monkeypatch.setattr(pcs_api.job_service, "create_or_get_active_job", _fake_create_or_get_active_job)
-    monkeypatch.setattr(pcs_api.job_service, "run_job", _fake_run_job)
-    monkeypatch.setattr(pcs_api.event_service.event_broker, "publish", _fake_publish)
-    monkeypatch.setattr(pcs_api.asyncio, "create_task", _fake_create_task)
+    monkeypatch.setattr(
+        pcs_api.status_use_case,
+        "request_refresh_all_statuses",
+        _fake_request_refresh_all_statuses,
+    )
 
     first = client.post("/api/pcs/status/refresh")
     assert first.status_code == 202
