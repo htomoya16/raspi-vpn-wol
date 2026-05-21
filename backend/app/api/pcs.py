@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Response, status
 
 from app.models.jobs import JobAccepted
@@ -13,8 +11,10 @@ from app.security.rate_limit import (
     enforce_refresh_pc_rate_limit,
     enforce_wol_send_rate_limit,
 )
-from app.services import event_service, job_service, pc_service
+from app.services import pc_service
 from app.services.pc_service import PcConflictError
+from app.use_cases import status_use_case
+from app.use_cases import wol_use_case
 
 router = APIRouter()
 
@@ -141,30 +141,12 @@ async def send_wol(
     pc_id: str,
     payload: WolRequest | None = Body(default=None),
 ) -> JobAccepted:
-    repeat = payload.repeat if payload is not None else 1
-    broadcast = payload.broadcast if payload is not None else None
-    port = payload.port if payload is not None else None
-    job_payload: dict[str, object] = {"pc_id": pc_id, "repeat": repeat}
-    if broadcast is not None:
-        job_payload["broadcast"] = broadcast
-    if port is not None:
-        job_payload["port"] = port
-
     try:
-        pc_service.get_pc(pc_id)
+        job = await wol_use_case.request_wol(pc_id, payload)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    job = job_service.create_job("wol", payload=job_payload)
-    asyncio.create_task(
-        job_service.run_job(
-            job["id"],
-            lambda: pc_service.send_wol(pc_id, repeat=repeat, broadcast=broadcast, port=port),
-        )
-    )
-    await event_service.event_broker.publish("job", {"job_id": job["id"], "state": "queued"})
     return JobAccepted(job_id=job["id"], state=job["state"])
 
 
@@ -177,21 +159,11 @@ async def send_wol(
 )
 async def refresh_pc_status(pc_id: str) -> PcResponse:
     try:
-        pc = await asyncio.to_thread(pc_service.refresh_pc_status, pc_id)
+        pc = await status_use_case.refresh_pc_status(pc_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-    await event_service.event_broker.publish(
-        "pc_status",
-        {
-            "pc_id": pc_id,
-            "status": pc["status"],
-            "updated_at": pc["updated_at"],
-            "last_seen_at": pc["last_seen_at"],
-        },
-    )
     return PcResponse(pc=pc)
 
 
@@ -204,10 +176,7 @@ async def refresh_pc_status(pc_id: str) -> PcResponse:
     responses={429: {"description": "レート制限超過"}},
 )
 async def refresh_all_statuses() -> JobAccepted:
-    job, created = job_service.create_or_get_active_job("status_refresh_all", payload=None)
-    if created:
-        asyncio.create_task(job_service.run_job(job["id"], pc_service.refresh_all_statuses))
-        await event_service.event_broker.publish("job", {"job_id": job["id"], "state": "queued"})
+    job = await status_use_case.request_refresh_all_statuses()
     return JobAccepted(job_id=job["id"], state=job["state"])
 
 
