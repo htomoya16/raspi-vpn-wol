@@ -24,6 +24,18 @@ def _status_offline(pc_id: str, message: str) -> PcStatusProbeResult:
 
 
 def _probe_ping(ip_value: ipaddress.IPv4Address, pc_id: str) -> PcStatusProbeResult:
+    """システムのpingコマンドを1回実行してPCを疎通確認する。
+
+    Args:
+        ip_value: 対象IPv4アドレス。
+        pc_id: ログ記録に使う登録済みPC ID。
+
+    Returns:
+        pingが成功した場合はonline、それ以外はoffline。
+
+    Raises:
+        ValueError: pingコマンドを実行できない場合。
+    """
     command = ["ping", "-c", "1", "-W", "1", str(ip_value)]
     try:
         result = subprocess.run(command, capture_output=True, text=True, check=False)
@@ -45,6 +57,16 @@ def _probe_ping(ip_value: ipaddress.IPv4Address, pc_id: str) -> PcStatusProbeRes
 
 
 def _probe_tcp(ip_value: ipaddress.IPv4Address, status_port: int, pc_id: str) -> PcStatusProbeResult:
+    """短時間のTCP接続を開いてPCを疎通確認する。
+
+    Args:
+        ip_value: 対象IPv4アドレス。
+        status_port: 起動判定に使うTCPポート。
+        pc_id: ログ記録に使う登録済みPC ID。
+
+    Returns:
+        接続に成功した場合はonline、それ以外はoffline。
+    """
     try:
         with socket.create_connection((str(ip_value), status_port), timeout=DEFAULT_STATUS_TIMEOUT_SECONDS):
             pass
@@ -57,6 +79,20 @@ def _probe_tcp(ip_value: ipaddress.IPv4Address, status_port: int, pc_id: str) ->
 
 
 def get_pc_status(pc_id: str) -> PcStatusProbeResult:
+    """登録済みPCの現在ステータスを確認する。
+
+    判定方式はPC設定から選択する。ステータス確認はダッシュボードに表示する
+    運用イベントなので、判定試行ごとにログへ記録する。
+
+    Args:
+        pc_id: 登録済みPC ID。
+
+    Returns:
+        PC IDとonline/offlineステータスを含む判定結果。
+
+    Raises:
+        ValueError: PC設定が不足している、または未対応の場合。
+    """
     normalized_id = pc_id.strip()
     if not normalized_id:
         raise ValueError("pc_id is required")

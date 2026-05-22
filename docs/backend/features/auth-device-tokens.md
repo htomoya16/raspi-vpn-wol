@@ -11,6 +11,7 @@
 - 2026-03-02: トークン管理 API（一覧/作成/失効）と管理画面 MVP 方針を追加。
 - 2026-03-02: Backend 実装（`api_tokens` / Bearer ガード / 管理 API / API テスト）を反映。
 - 2026-03-02: admin 専用化（role分離 / CLI復旧経路 / 監査ログ主体記録）を実装反映。
+- 2026-03-03: トークン管理 API のアプリケーション処理を `app/use_cases/api_token_use_case.py` へ切り出した。
 
 ## 認証仕様（v1）
 
@@ -174,6 +175,7 @@
   - FastAPI: Bearer 検証依存（`/api/health` 除外）と admin 専用依存（`/api/admin/*`）
   - 管理 API: 一覧 / 発行（role対応） / 失効（last admin 保護）
   - 管理 API: 失効済みトークン削除（`DELETE /api/admin/tokens/{token_id}`）
+  - Use case: `app/use_cases/api_token_use_case.py` が一覧/発行/失効/削除の流れを担当
   - CLI: `scripts/create_api_token.py`（break-glass 復旧）
   - tests: 認証・認可・監査ログ主体・CLI の回帰テスト
   - フロント: role選択 / admin専用表示制御 / 失効済み削除確認ダイアログ

@@ -9,6 +9,7 @@
 
 - `POST /api/pcs/{pc_id}/wol` で `pc_id` を受け取り、`pcs` 設定から送信する。
 - 実行はジョブとして受け付け、`202` + `job_id` を返す。
+- API router はHTTP境界に絞り、PC存在確認・ジョブ作成・バックグラウンド実行予約・イベント通知は `app/use_cases/wol_use_case.py` が担当する。
 - Magic Packet 仕様:
   - `0xFF` を 6バイト
   - MACアドレスを 16回連結
@@ -38,3 +39,4 @@
 - WOLは同一L2/LANセグメント前提なので、VPN IF（`wg0`）には送らない。
 - `ip_address` と `send_interface` の組み合わせが不整合だと送信前にエラーになる。
 - `broadcast_ip` を明示した場合、IF自動算出より優先される。
+- WOL送信受付の処理順序を変更する場合は、API router ではなく `wol_use_case.request_wol()` と対応テストを更新する。

@@ -26,10 +26,18 @@ STATUS_OFFLINE_STREAK_TTL_SECONDS = 24 * 60 * 60
 
 
 class PcConflictError(ValueError):
+    """PC作成または更新が既存レコードと競合した場合に送出する例外。"""
+
     pass
 
 
 def _invalidate_pc_related_cache(pc_id: str | None = None) -> None:
+    """PC変更の影響を受けるPC一覧と稼働時間キャッシュを無効化する。
+
+    Args:
+        pc_id: 任意のPC ID。省略時は全件ステータス更新のように複数レコードへ
+            影響するため、PC関連の稼働時間キャッシュをすべて無効化する。
+    """
     cache.invalidate_prefix(cache_keys.PCS_LIST_PREFIX)
     if pc_id is None:
         cache.invalidate_prefix(cache_keys.UPTIME_SUMMARY_PREFIX)
@@ -136,6 +144,18 @@ def list_pcs(
     limit: int,
     cursor: str | None,
 ) -> tuple[list[dict[str, object]], str | None]:
+    """正規化したフィルタと短時間キャッシュを使ってPC一覧を返す。
+
+    Args:
+        q: 任意の検索文字列。
+        status: 任意の実行時ステータスフィルタ。
+        tag: 任意のタグフィルタ。
+        limit: 最大取得件数。
+        cursor: 最後に取得したPC IDを含む任意カーソル。
+
+    Returns:
+        PCレスポンスオブジェクトのページと、続きがある場合の次カーソル。
+    """
     normalized_q = q.strip() if q else None
     normalized_tag = tag.strip() if tag else None
     normalized_cursor = cursor.strip() if cursor else None
@@ -184,6 +204,18 @@ def get_pc(pc_id: str) -> dict[str, object]:
 
 
 def create_pc(payload: PcCreate) -> dict[str, object]:
+    """ID自動生成とMAC重複確認を行ってPCレコードを作成する。
+
+    Args:
+        payload: バリデーション済みのPC作成ペイロード。
+
+    Returns:
+        作成後のPCレスポンスオブジェクト。
+
+    Raises:
+        PcConflictError: 指定IDまたはMACアドレスが既に存在する場合。
+        ValueError: 一意な自動生成IDを作れない場合。
+    """
     requested_id = payload.id.strip() if payload.id else ""
     if requested_id:
         if pc_repository.get_pc_by_id(requested_id) is not None:
@@ -215,6 +247,20 @@ def create_pc(payload: PcCreate) -> dict[str, object]:
 
 
 def update_pc(pc_id: str, payload: PcUpdate) -> dict[str, object]:
+    """実行時状態とWOL設定を保持しながら編集可能なPC項目を更新する。
+
+    Args:
+        pc_id: 登録済みPC ID。
+        payload: PC部分更新ペイロード。
+
+    Returns:
+        更新後のPCレスポンスオブジェクト。
+
+    Raises:
+        LookupError: PCが存在しない場合。
+        PcConflictError: 新しいMACアドレスが別PCと競合する場合。
+        ValueError: 既存PCに必須ネットワーク設定が不足している場合。
+    """
     existing = pc_repository.get_pc_by_id(pc_id.strip())
     if existing is None:
         raise LookupError(f"pc not found: {pc_id}")
@@ -260,6 +306,21 @@ def delete_pc(pc_id: str) -> None:
 
 
 def _refresh_pc_status_internal(pc_id: str, *, invalidate_cache: bool) -> dict[str, object]:
+    """単体PCのステータスを更新し、offline確定ルールを適用する。
+
+    1回の疎通失敗だけではPCを即座にofflineへ変更しない。一時的な通信断が
+    ダッシュボードに出にくいよう、サービス内メモリで連続失敗回数を保持する。
+
+    Args:
+        pc_id: 登録済みPC ID。
+        invalidate_cache: PC関連キャッシュを即時無効化するかどうか。
+
+    Returns:
+        更新後のPCレスポンスオブジェクト。
+
+    Raises:
+        LookupError: PCが存在しない場合。
+    """
     normalized_id = pc_id.strip()
     existing = pc_repository.get_pc_by_id(normalized_id)
     if existing is None:
@@ -308,6 +369,11 @@ def refresh_pc_status(pc_id: str) -> dict[str, object]:
 
 
 def refresh_all_statuses() -> dict[str, int]:
+    """全PCのステータスを更新し、一括ジョブ用の件数を返す。
+
+    Returns:
+        total、succeeded、failedの件数。
+    """
     rows = pc_repository.list_pcs()
     total = len(rows)
     succeeded = 0
@@ -330,6 +396,20 @@ def send_wol(
     broadcast: str | None = None,
     port: int | None = None,
 ) -> dict[str, object]:
+    """WOL送信後、対象がonline確定またはタイムアウトするまでポーリングする。
+
+    Args:
+        pc_id: 登録済みPC ID。
+        repeat: WOLパケットの送信回数。1未満は1として扱う。
+        broadcast: 任意のブロードキャストアドレス上書き。
+        port: 任意のUDPポート上書き。
+
+    Returns:
+        PCがonlineになった場合のWOL結果と起動確認メタデータ。
+
+    Raises:
+        RuntimeError: パケット送信、疎通確認、起動確認のいずれかに失敗した場合。
+    """
     normalized_id = pc_id.strip()
     current = pc_repository.get_pc_by_id(normalized_id)
     had_seen_before = bool(current and current.get("last_seen_at"))
@@ -414,6 +494,18 @@ def get_uptime_summary(
     bucket: str,
     tz: str | None,
 ) -> dict[str, object]:
+    """単体PCの稼働時間サマリーをキャッシュ付きで返す。
+
+    Args:
+        pc_id: 登録済みPC ID。
+        from_date: 任意の開始日。
+        to_date: 任意の終了日。
+        bucket: 集計単位。
+        tz: 集計サービスで使う任意のタイムゾーン名。
+
+    Returns:
+        稼働時間サマリーレスポンス。
+    """
     normalized_pc_id = pc_id.strip()
     cache_key = cache_keys.uptime_summary_key(
         pc_id=normalized_pc_id,
@@ -443,6 +535,16 @@ def get_weekly_timeline(
     week_start: str | None,
     tz: str | None,
 ) -> dict[str, object]:
+    """単体PCの週次稼働タイムラインをキャッシュ付きで返す。
+
+    Args:
+        pc_id: 登録済みPC ID。
+        week_start: 任意の週開始日。
+        tz: 集計サービスで使う任意のタイムゾーン名。
+
+    Returns:
+        週次稼働タイムラインレスポンス。
+    """
     normalized_pc_id = pc_id.strip()
     cache_key = cache_keys.uptime_weekly_key(
         pc_id=normalized_pc_id,
