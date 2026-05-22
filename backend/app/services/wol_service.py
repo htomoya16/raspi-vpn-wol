@@ -36,6 +36,17 @@ def _ioctl_ipv4_address(interface_name: str, request: int) -> str:
 
 
 def _get_interface_ipv4_config(interface_name: str) -> tuple[str, str, ipaddress.IPv4Network]:
+    """WOL送信元として使うインターフェースのIPv4設定を取得する。
+
+    Args:
+        interface_name: Magic Packet を送信するLAN側インターフェース名。
+
+    Returns:
+        インターフェースのIPv4アドレス、ブロードキャストアドレス、IPv4ネットワーク。
+
+    Raises:
+        ValueError: インターフェースがLAN側WOL送信に使えない場合。
+    """
     if len(interface_name) > 15:
         raise ValueError("send_interface must be 15 characters or less")
     if interface_name.lower().startswith("wg"):
@@ -62,6 +73,18 @@ def _send_magic_packet(
     wol_port: int,
     source_ip: str,
 ) -> None:
+    """指定した送信元アドレスからWake-on-LANのMagic Packetを送信する。
+
+    Args:
+        mac_address: 対象PCのMACアドレス。
+        broadcast_ip: 対象LANへ送るIPv4ブロードキャストアドレス。
+        wol_port: UDP宛先ポート。
+        source_ip: 送信元としてbindするIPv4アドレス。
+
+    Raises:
+        ValueError: MACアドレスが不正な場合。
+        OSError: socketのbindまたはUDP送信に失敗した場合。
+    """
     mac_bytes = _parse_mac_address(mac_address)
     packet = b"\xff" * 6 + mac_bytes * 16
 
@@ -76,6 +99,23 @@ def send_wol(
     broadcast_ip_override: str | None = None,
     wol_port_override: int | None = None,
 ) -> WolResult:
+    """登録済みPCへWake-on-LANパケットを送信する。
+
+    パケットはWireGuardインターフェースではなく、設定済みのLAN側
+    インターフェースから送信する。これによりWOL送信範囲を
+    Raspberry Piの自宅LAN側に限定する。
+
+    Args:
+        pc_id: 登録済みPC ID。
+        broadcast_ip_override: APIから指定された任意のブロードキャストアドレス。
+        wol_port_override: APIから指定された任意のUDPポート。
+
+    Returns:
+        送信結果メッセージ。
+
+    Raises:
+        ValueError: PC、インターフェース、IP設定、socket送信のいずれかに失敗した場合。
+    """
     normalized_id = pc_id.strip()
     if not normalized_id:
         raise ValueError("pc_id is required")

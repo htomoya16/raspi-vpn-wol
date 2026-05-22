@@ -15,6 +15,18 @@ async def require_bearer_token(
     request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
 ) -> dict[str, Any] | None:
+    """ブートストラップ中を除き、有効なBearerトークンを要求する。
+
+    Args:
+        request: SSEのクエリトークン代替を扱うためのFastAPIリクエスト。
+        credentials: 解析済みのHTTP Authorizationヘッダー資格情報。
+
+    Returns:
+        認証済みトークンメタデータ。有効トークンが0件の間はNone。
+
+    Raises:
+        HTTPException: 認証が必要で、トークンが不正な場合。
+    """
     # Bootstrap mode: if no active tokens exist yet, skip auth temporarily.
     if not api_token_service.has_active_tokens():
         set_current_api_actor(None)
@@ -42,6 +54,17 @@ async def require_bearer_token(
 async def require_admin_token(
     authenticated: dict[str, Any] | None = Depends(require_bearer_token),
 ) -> dict[str, Any] | None:
+    """管理系エンドポイントでadminトークンを要求する。
+
+    Args:
+        authenticated: Bearer認証で得たトークンメタデータ。
+
+    Returns:
+        adminトークンメタデータ。ブートストラップ中はNone。
+
+    Raises:
+        HTTPException: 認証済みトークンがadminではない場合。
+    """
     # Bootstrap mode: no active tokens yet.
     if authenticated is None:
         return None

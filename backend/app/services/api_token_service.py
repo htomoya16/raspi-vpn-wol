@@ -12,6 +12,8 @@ _ALLOWED_ROLES: set[str] = {"admin", "device"}
 
 
 class AuthError(ValueError):
+    """Bearerトークン認証に失敗した場合に送出する例外。"""
+
     pass
 
 
@@ -30,6 +32,22 @@ def create_token(
     expires_at: str | None,
     role: str | None = None,
 ) -> dict[str, object]:
+    """APIトークンを作成し、一度だけ表示する平文トークンを返す。
+
+    初回セットアップで管理者トークンが存在しないままロックアウトしないよう、
+    最初の有効トークンは強制的にadminにする。
+
+    Args:
+        name: 人が識別するためのトークン名。
+        expires_at: タイムゾーン付きISO-8601形式の任意有効期限。
+        role: 任意のトークンロール。初回以外の省略時はdevice。
+
+    Returns:
+        トークンメタデータと作成時だけ表示する平文トークン。
+
+    Raises:
+        ValueError: 入力バリデーションに失敗した場合。
+    """
     normalized_name = name.strip()
     if not normalized_name:
         raise ValueError("name is required")
@@ -65,6 +83,18 @@ def list_tokens() -> list[dict[str, object]]:
 
 
 def revoke_token(token_id: str) -> dict[str, object]:
+    """有効なadminトークンを最低1件残しながらAPIトークンを失効する。
+
+    Args:
+        token_id: APIトークンID。
+
+    Returns:
+        失効後のトークンメタデータ。
+
+    Raises:
+        LookupError: トークンが存在しない場合。
+        ValueError: 最後の有効adminトークンを失効しようとした場合。
+    """
     normalized_id = token_id.strip()
     if not normalized_id:
         raise ValueError("token_id is required")
@@ -90,6 +120,18 @@ def revoke_token(token_id: str) -> dict[str, object]:
 
 
 def delete_token(token_id: str) -> dict[str, object]:
+    """失効済みトークンだけを物理削除する。
+
+    Args:
+        token_id: APIトークンID。
+
+    Returns:
+        削除したトークンIDを含む削除結果。
+
+    Raises:
+        LookupError: トークンが存在しない場合。
+        ValueError: トークンがまだ有効な場合。
+    """
     normalized_id = token_id.strip()
     if not normalized_id:
         raise ValueError("token_id is required")
@@ -108,6 +150,17 @@ def delete_token(token_id: str) -> dict[str, object]:
 
 
 def authenticate_bearer_token(plain_token: str) -> dict[str, object]:
+    """Bearerトークンを認証し、最終利用日時を更新する。
+
+    Args:
+        plain_token: リクエストから受け取ったBearerトークン。
+
+    Returns:
+        認証済みトークンメタデータ。
+
+    Raises:
+        AuthError: トークンが空、失効済み、期限切れ、または未知の場合。
+    """
     normalized_token = plain_token.strip()
     if not normalized_token:
         raise AuthError("missing bearer token")
