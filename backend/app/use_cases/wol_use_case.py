@@ -7,6 +7,19 @@ from app.services import event_service, job_service, pc_service
 
 
 async def request_wol(pc_id: str, payload: WolRequest | None) -> dict[str, object]:
+    """WOLジョブを登録し、初期イベントを配信する。
+
+    Args:
+        pc_id: APIで指定された登録済みPC ID。
+        payload: repeat回数や上書きポートなどの任意WOL設定。
+
+    Returns:
+        作成したジョブ行。
+
+    Raises:
+        LookupError: 対象PCが存在しない場合。
+        ValueError: 対象PC IDが不正な場合。
+    """
     repeat = payload.repeat if payload is not None else 1
     broadcast = payload.broadcast if payload is not None else None
     port = payload.port if payload is not None else None
@@ -28,4 +41,3 @@ async def request_wol(pc_id: str, payload: WolRequest | None) -> dict[str, objec
     )
     await event_service.event_broker.publish("job", {"job_id": job["id"], "state": "queued"})
     return job
-
