@@ -84,23 +84,21 @@ function PcRowItem({
           >
             {isBusy.wol ? <LoadingDots label="起動中" /> : '起動'}
           </button>
-          <div className="pc-row__power-control">
-            <button
-              type="button"
-              className="btn btn--danger"
-              onClick={() => onShutdown(pc.id)}
-              disabled={!pc.shutdown?.configured || pc.status !== 'online' || Boolean(isBusy.wol || isBusy.shutdown || isBusy.delete || isBusy.update)}
-              aria-describedby={`shutdown-reason-${pc.id}`}
-            >
-              {isBusy.shutdown ? <LoadingDots label="停止確認中" /> : 'シャットダウン'}
-            </button>
-            <p id={`shutdown-reason-${pc.id}`} className="pc-row__shutdown-hint">
-              {!pc.shutdown?.configured ? pc.shutdown?.reason || 'SSH未設定' : pc.status !== 'online' ? 'オンライン時のみ操作できます' : '強制終了なし'}
-            </p>
-          </div>
           <button
             type="button"
-            className="btn btn--soft"
+            className="btn btn--danger"
+            onClick={() => onShutdown(pc.id)}
+            disabled={!pc.shutdown?.configured || pc.status !== 'online' || Boolean(isBusy.wol || isBusy.shutdown || isBusy.delete || isBusy.update)}
+            aria-describedby={`shutdown-reason-${pc.id}`}
+          >
+            {isBusy.shutdown ? <LoadingDots label="停止確認中" /> : 'シャットダウン'}
+          </button>
+          <p id={`shutdown-reason-${pc.id}`} className="pc-row__shutdown-hint">
+            {!pc.shutdown?.configured ? pc.shutdown?.reason || 'SSH未設定' : pc.status !== 'online' ? 'オンライン時のみ操作できます' : '強制終了なし'}
+          </p>
+          <button
+            type="button"
+            className="btn btn--soft pc-row__status-control"
             onClick={(event) => {
               event.stopPropagation()
               onRefreshStatus(pc.id)
