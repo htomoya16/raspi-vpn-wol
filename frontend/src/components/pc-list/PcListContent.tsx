@@ -15,6 +15,7 @@ interface PcListContentProps {
   onOpenDetail: (pcId: string) => void
   onSelectPc?: (pcId: string) => void
   onSendWol: (pcId: string) => Promise<void> | void
+  onShutdown: (pcId: string) => void
   onRefreshStatus: (pcId: string) => Promise<void> | void
 }
 
@@ -30,6 +31,7 @@ function PcListContent({
   onOpenDetail,
   onSelectPc,
   onSendWol,
+  onShutdown,
   onRefreshStatus,
 }: PcListContentProps) {
   return (
@@ -52,6 +54,7 @@ function PcListContent({
                 isBusy={isBusy}
                 statusLabel={STATUS_LABELS[pc.status]}
                 rowError={rowErrorById[pc.id]}
+                onShutdown={onShutdown}
                 onOpenDetail={onOpenDetail}
                 onSendWol={async (pcId) => {
                   onSelectPc?.(pcId)

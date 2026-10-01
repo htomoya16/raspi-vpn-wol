@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { useMediaQuery } from '../hooks/useMediaQuery'
 import type { BusyById, Pc, PcFilterState, PcUpdatePayload, RowErrorById } from '../types/models'
 import PcDeleteDialog from './pc-list/PcDeleteDialog'
+import PcShutdownDialog from './pc-list/PcShutdownDialog'
 import PcDetailDialog from './pc-list/PcDetailDialog'
 import PcListContent from './pc-list/PcListContent'
 import PcListFilters from './pc-list/PcListFilters'
@@ -23,6 +24,7 @@ export interface PcListProps {
   onReload: () => Promise<void> | void
   onRefreshStatus: (pcId: string) => Promise<void> | void
   onSendWol: (pcId: string) => Promise<void> | void
+  onShutdown: (pcId: string) => Promise<void> | void
   onDelete: (pcId: string) => Promise<void>
   onUpdate: (pcId: string, payload: PcUpdatePayload) => Promise<Pc>
   onSelectPc?: (pcId: string) => void
@@ -30,6 +32,7 @@ export interface PcListProps {
   rowErrorById: RowErrorById
   lastSyncedAt: string
   embedded?: boolean
+  canManageSsh?: boolean
 }
 
 function PcList({
@@ -44,6 +47,7 @@ function PcList({
   onReload,
   onRefreshStatus,
   onSendWol,
+  onShutdown,
   onDelete,
   onUpdate,
   onSelectPc,
@@ -51,9 +55,12 @@ function PcList({
   rowErrorById,
   lastSyncedAt,
   embedded = false,
+  canManageSsh = false,
 }: PcListProps) {
   const isMobile = useMediaQuery('(max-width: 760px)')
   const [showFilters, setShowFilters] = useState(false)
+  const [shutdownTargetId, setShutdownTargetId] = useState<string | null>(null)
+  const shutdownTarget = items.find((pc) => pc.id === shutdownTargetId)
   const {
     selectedPcId,
     detailOpen,
@@ -92,7 +99,7 @@ function PcList({
       return undefined
     }
 
-    const lockScroll = detailOpen || Boolean(pendingDelete)
+    const lockScroll = detailOpen || Boolean(pendingDelete) || Boolean(shutdownTargetId)
     if (!lockScroll) {
       return undefined
     }
@@ -106,7 +113,7 @@ function PcList({
       document.body.style.overflow = prevOverflow
       document.body.style.overscrollBehavior = prevOverscroll
     }
-  }, [detailOpen, pendingDelete])
+  }, [detailOpen, pendingDelete, shutdownTargetId])
 
 
   const content = (
@@ -140,6 +147,7 @@ function PcList({
         onOpenDetail={openDetail}
         onSelectPc={onSelectPc}
         onSendWol={onSendWol}
+        onShutdown={setShutdownTargetId}
         onRefreshStatus={onRefreshStatus}
       />
     </>
@@ -150,9 +158,24 @@ function PcList({
   return (
     <>
       {embedded ? <div className="panel-embedded">{content}</div> : <section className="panel">{content}</section>}
+      {portalTarget && shutdownTarget ? createPortal(
+        <PcShutdownDialog
+          pc={shutdownTarget}
+          disabled={!shutdownTarget.shutdown?.configured || shutdownTarget.status !== 'online' || Object.values(busyById[shutdownTarget.id] || {}).some(Boolean)}
+          onClose={() => setShutdownTargetId(null)}
+          onConfirm={() => {
+            setShutdownTargetId(null)
+            onSelectPc?.(shutdownTarget.id)
+            void onShutdown(shutdownTarget.id)
+          }}
+        />, portalTarget,
+      ) : null}
       {portalTarget && detailOpen && selectedPc
         ? createPortal(
             <PcDetailDialog
+              key={selectedPc.id}
+              canManageSsh={canManageSsh}
+              onSshSettingsChanged={onReload}
               selectedPc={selectedPc}
               isEditing={isEditing}
               editForm={editForm}

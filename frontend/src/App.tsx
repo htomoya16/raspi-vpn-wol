@@ -95,6 +95,7 @@ function App() {
     updatePcEntry,
     refreshPcStatusEntry,
     sendPcWolEntry,
+    shutdownPcEntry,
     refreshAllStatusesEntry,
     clearLogsEntry,
     handleFilterChange,
@@ -146,6 +147,7 @@ function App() {
   }, [])
 
   const pcListProps: PcListProps = {
+    canManageSsh: activeTokenRole === 'admin',
     items: pcs,
     loading: pcLoading,
     error: pcError,
@@ -157,6 +159,7 @@ function App() {
     onReload: loadPcs,
     onRefreshStatus: refreshPcStatusEntry,
     onSendWol: sendPcWolEntry,
+    onShutdown: shutdownPcEntry,
     onDelete: deletePcEntry,
     onUpdate: updatePcEntry,
     onSelectPc: setSelectedPcId,

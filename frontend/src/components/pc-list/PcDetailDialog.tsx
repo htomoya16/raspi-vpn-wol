@@ -4,6 +4,7 @@ import type { Pc } from '../../types/models'
 import { formatLocalDateTime } from '../../utils/datetime'
 import LoadingDots from '../LoadingDots'
 import type { PcEditFormState } from './constants'
+import PcSshSettingsPanel from './PcSshSettingsPanel'
 
 interface PcDetailDialogProps {
   selectedPc: Pc
@@ -20,6 +21,8 @@ interface PcDetailDialogProps {
   onCancelEdit: () => void
   onOpenDeleteDialog: (pcId: string, pcName: string) => void
   onUpdateEditField: (key: keyof PcEditFormState, value: string) => void
+  canManageSsh?: boolean
+  onSshSettingsChanged?: () => Promise<void> | void
 }
 
 function PcDetailDialog({
@@ -37,6 +40,8 @@ function PcDetailDialog({
   onCancelEdit,
   onOpenDeleteDialog,
   onUpdateEditField,
+  canManageSsh = false,
+  onSshSettingsChanged,
 }: PcDetailDialogProps) {
   return (
     <div className="pc-detail-dialog__backdrop" role="presentation" onClick={onClose}>
@@ -169,6 +174,7 @@ function PcDetailDialog({
                 {deleteBusy ? <LoadingDots label="削除中" /> : '削除'}
               </button>
             </div>
+            {canManageSsh ? <PcSshSettingsPanel pc={selectedPc} onSettingsChanged={onSshSettingsChanged} /> : null}
           </>
         )}
 

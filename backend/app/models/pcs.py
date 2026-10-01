@@ -7,7 +7,13 @@ from pydantic import BaseModel, Field, model_validator
 PcStatus = Literal["online", "offline", "unknown", "booting", "unreachable"]
 
 
+class ShutdownCapability(BaseModel):
+    configured: bool = False
+    reason: str | None = "SSH未設定"
+
+
 class Pc(BaseModel):
+    shutdown: ShutdownCapability = Field(default_factory=ShutdownCapability)
     id: str = Field(
         ...,
         description="PC識別子。",

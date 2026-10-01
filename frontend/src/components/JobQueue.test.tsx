@@ -56,3 +56,14 @@ describe('JobQueue', () => {
     expect(screen.queryByText(/経過:/)).not.toBeInTheDocument()
   })
 })
+
+describe('shutdown job outcome', () => {
+  it('shows that a sent command can finish without observing offline', () => {
+    render(<JobQueue jobs={[{
+      id: 'stop-1', type: 'shutdown', label: 'シャットダウン: pc-1', state: 'succeeded',
+      updated_at: '2026-10-01T12:00:00Z',
+      result: { command_sent: true, offline_observed: false, message: '停止指示は送信済みですが、通信の停止は確認できませんでした。' },
+    }]} />)
+    expect(screen.getByText('停止指示は送信済みですが、通信の停止は確認できませんでした。')).toBeInTheDocument()
+  })
+})

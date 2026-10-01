@@ -6,6 +6,12 @@ from app.models.pcs import PcCreate
 from app.services import pc_service
 
 
+@pytest.fixture(autouse=True)
+def unconfigured_ssh(monkeypatch: pytest.MonkeyPatch) -> None:
+    """PC管理の単体テストでは、SSH設定のDB参照を分離する。"""
+    monkeypatch.setattr(pc_service, "get_shutdown_capability", lambda *args: {"configured": False, "reason": "SSH未設定"})
+
+
 def _pc_row(**overrides: object) -> dict[str, object]:
     row: dict[str, object] = {
         "id": "pc-1",

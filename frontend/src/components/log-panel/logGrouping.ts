@@ -15,6 +15,8 @@ export interface LogGroup {
 }
 
 const ACTION_LABELS: Record<string, string> = {
+  ssh_setup: 'SSH設定',
+  shutdown: 'シャットダウン',
   wol: 'WOL送信',
   status: 'ステータス確認',
   pc_upsert: 'PC登録/更新',
@@ -70,6 +72,7 @@ function isPeriodicStatusJobLog(item: LogEntry): boolean {
 
 function inferJobName(items: LogEntry[]): string | null {
   const actions = items.map((item) => item.action).filter(Boolean)
+  if (actions.includes('shutdown')) return 'シャットダウン'
   if (actions.length === 0) {
     return null
   }

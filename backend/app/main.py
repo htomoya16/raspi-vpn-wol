@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager, suppress
 from fastapi import Depends, FastAPI, Request
 from starlette.responses import Response
 
-from app.api import admin_tokens, auth, events, jobs, logs, pcs
+from app.api import admin_tokens, auth, events, jobs, logs, pcs, ssh_settings
 from app.build_info import get_build_info
 from app.db.database import init_db
 from app.security import require_admin_token, require_bearer_token, reset_current_api_actor, set_current_api_actor
@@ -41,6 +41,7 @@ app.include_router(admin_tokens.router, prefix="/api", tags=["admin"], dependenc
 app.include_router(auth.router, prefix="/api", tags=["auth"], dependencies=guard_dependencies)
 app.include_router(logs.router, prefix="/api", tags=["logs"], dependencies=guard_dependencies)
 app.include_router(pcs.router, prefix="/api", tags=["pcs"], dependencies=guard_dependencies)
+app.include_router(ssh_settings.router, prefix="/api", tags=["ssh-settings"], dependencies=guard_dependencies)
 app.include_router(jobs.router, prefix="/api", tags=["jobs"], dependencies=guard_dependencies)
 app.include_router(events.router, prefix="/api", tags=["events"], dependencies=guard_dependencies)
 

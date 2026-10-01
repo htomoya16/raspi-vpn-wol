@@ -42,6 +42,7 @@ function createDashboardData(): DashboardWorkspaceData {
       onReload: vi.fn(),
       onRefreshStatus: vi.fn(),
       onSendWol: vi.fn(),
+      onShutdown: vi.fn(),
       onDelete: vi.fn().mockResolvedValue(undefined),
       onUpdate: vi.fn().mockResolvedValue(createPcFactory()),
       onSelectPc: vi.fn(),

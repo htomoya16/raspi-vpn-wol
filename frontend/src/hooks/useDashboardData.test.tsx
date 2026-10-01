@@ -2,7 +2,7 @@ import { renderHook, act } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { invalidateLogsCache } from '../api/logs'
-import { invalidatePcsAndUptimeCache } from '../api/pcs'
+import { invalidatePcsAndUptimeCache, shutdownPc } from '../api/pcs'
 import { useDashboardData } from './useDashboardData'
 
 const openEventsMock = vi.fn()
@@ -24,6 +24,7 @@ vi.mock('../api/pcs', () => ({
   invalidatePcsAndUptimeCache: vi.fn(),
   refreshAllStatuses: vi.fn(),
   sendPcWol: vi.fn(),
+  shutdownPc: vi.fn(),
 }))
 
 vi.mock('./useLogsData', () => ({
@@ -305,6 +306,29 @@ describe('useDashboardData SSE cache invalidation', () => {
     expect(loadLogs).not.toHaveBeenCalled()
     expect(loadPcs).not.toHaveBeenCalled()
     expect(openEventsMock).not.toHaveBeenCalled()
+  })
+
+  it('tracks a shutdown job and blocks repeated requests while it runs', async () => {
+    useLogsDataMock.mockReturnValue({ logs: [], loadLogs: vi.fn().mockResolvedValue(undefined) })
+    usePcDataMock.mockReturnValue({
+      pcs: [], loadPcs: vi.fn().mockResolvedValue(undefined),
+      setBusy: vi.fn(), setRowError: vi.fn(),
+    })
+    openEventsMock.mockReturnValue(null)
+    let finish: (() => void) | undefined
+    const pending = new Promise<void>((resolve) => { finish = resolve })
+    const trackJob = vi.fn().mockReturnValue(pending)
+    useJobTrackerMock.mockReturnValue({ jobs: [], trackJob })
+    vi.mocked(shutdownPc).mockResolvedValue({ job_id: 'job-stop', state: 'queued' })
+    const { result } = renderHook(() => useDashboardData({ enabled: false }))
+    let first: Promise<void> | undefined
+    await act(async () => {
+      first = result.current.shutdownPcEntry('pc-1')
+      await result.current.shutdownPcEntry('pc-1')
+    })
+    expect(shutdownPc).toHaveBeenCalledExactlyOnceWith('pc-1')
+    expect(trackJob).toHaveBeenCalledWith('job-stop', 'シャットダウン: pc-1')
+    await act(async () => { finish?.(); await first })
   })
 
   it('invalidates caches when job tracker requests progress or terminal refresh', async () => {

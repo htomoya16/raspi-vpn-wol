@@ -80,7 +80,7 @@ export function formatApiError(error: unknown): string {
     if (error.detail.includes('ID')) {
       return 'このIDは既に登録されています'
     }
-    return `重複エラー: ${error.detail}`
+    return `操作できません: ${error.detail}`
   }
   if (error.status === 422) {
     return `形式エラー: ${error.detail}`

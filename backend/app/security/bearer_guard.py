@@ -73,6 +73,25 @@ async def require_admin_token(
     return authenticated
 
 
+async def require_authenticated_admin_token(
+    authenticated: dict[str, Any] | None = Depends(require_admin_token),
+) -> dict[str, Any]:
+    """鍵やSSH設定の管理に、認証済み管理者を要求する。
+
+    Args:
+        authenticated: 管理者のトークン情報。
+
+    Returns:
+        認証済み管理者の情報。
+
+    Raises:
+        HTTPException: 初期設定用の認証省略中など、管理者の認証がない場合。
+    """
+    if authenticated is None:
+        raise _unauthorized()
+    return authenticated
+
+
 def _unauthorized() -> HTTPException:
     return HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,

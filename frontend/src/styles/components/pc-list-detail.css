@@ -6,6 +6,38 @@
   padding: 12px;
 }
 
+.pc-ssh-settings {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.pc-ssh-settings__body {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.pc-ssh-settings__body p { margin: 0; }
+
+.pc-ssh-settings__text { display: grid; gap: 6px; }
+
+.pc-ssh-settings__text textarea,
+.pc-ssh-settings__text input {
+  width: 100%;
+  min-width: 0;
+  font-family: monospace;
+}
+
+.pc-edit-form .pc-ssh-settings__checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pc-ssh-settings__checkbox input { width: auto; }
+.pc-ssh-settings__fingerprint { overflow-wrap: anywhere; }
+
 .pc-detail-dialog__backdrop {
   position: fixed;
   inset: 0;
