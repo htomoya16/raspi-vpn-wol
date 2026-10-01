@@ -151,11 +151,6 @@
   cursor: default;
 }
 
-.pc-row__power-control {
-  display: grid;
-  gap: 4px;
-}
-
 .pc-row__shutdown-hint {
   margin: 0;
   max-width: 160px;
@@ -331,14 +326,26 @@
   }
 
   .pc-row__list-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     width: 100%;
     margin-left: 0;
-    justify-content: flex-start;
-    flex-wrap: wrap;
+    align-items: stretch;
   }
 
   .pc-row__list-actions .btn {
-    flex: 1 1 140px;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+  }
+
+  .pc-row__shutdown-hint,
+  .pc-row__status-control {
+    grid-column: 1 / -1;
+  }
+
+  .pc-row__shutdown-hint {
+    max-width: none;
   }
 
   .pc-row__last-seen {

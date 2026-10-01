@@ -7,9 +7,6 @@ import { createPcFactory } from '../../test/factories'
 import type { DashboardWorkspaceData } from './types'
 import MobileWorkspace from './MobileWorkspace'
 
-vi.mock('../PcList', () => ({
-  default: () => <div>Mock PcList</div>,
-}))
 vi.mock('../PcForm', () => ({
   default: () => <div>Mock PcForm</div>,
 }))
@@ -65,6 +62,37 @@ function createDashboardData(): DashboardWorkspaceData {
 }
 
 describe('MobileWorkspace', () => {
+  it('shows shutdown for every PC and confirms only the selected available PC', async () => {
+    const user = userEvent.setup()
+    const dashboard = createDashboardData()
+    const pcs = [
+      createPcFactory({ shutdown: { configured: true, reason: null } }),
+      createPcFactory({ id: 'pc-2', name: 'Unconfigured PC' }),
+      createPcFactory({ id: 'pc-3', name: 'Offline PC', status: 'offline', shutdown: { configured: true, reason: null } }),
+    ]
+    dashboard.pcListProps.items = pcs
+    render(<MobileWorkspace
+      mobileView="pcs" onChangeMobileView={vi.fn()}
+      selectedThemeId="default" appearanceMode="system" effectiveAppearanceMode="light"
+      themeOptions={[]} onThemeChange={vi.fn()} onAppearanceChange={vi.fn()}
+      dashboard={dashboard} pcs={pcs} selectedPcId="pc-1" onSelectPc={vi.fn()}
+    />)
+    const shutdownButtons = screen.getAllByRole('button', { name: 'シャットダウン' })
+    expect(shutdownButtons).toHaveLength(3)
+    for (const button of shutdownButtons) expect(button).toBeVisible()
+    expect(shutdownButtons[0]).toBeEnabled()
+    expect(shutdownButtons[1]).toBeDisabled()
+    expect(shutdownButtons[2]).toBeDisabled()
+    expect(screen.getByText('SSH未設定')).toBeInTheDocument()
+    expect(screen.getByText('オンライン時のみ操作できます')).toBeInTheDocument()
+    await user.click(shutdownButtons[0])
+    expect(screen.getByRole('dialog')).toHaveTextContent('Main PC')
+    expect(dashboard.pcListProps.onShutdown).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'シャットダウンする' }))
+    expect(dashboard.pcListProps.onShutdown).toHaveBeenCalledExactlyOnceWith('pc-1')
+    expect(dashboard.pcListProps.onSendWol).not.toHaveBeenCalled()
+  })
+
   it('renders bottom nav entries in expected order and changes view on tap', async () => {
     const user = userEvent.setup()
     const onChangeMobileView = vi.fn()
