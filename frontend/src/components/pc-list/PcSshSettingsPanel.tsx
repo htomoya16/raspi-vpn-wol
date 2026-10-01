@@ -137,7 +137,7 @@ export default function PcSshSettingsPanel({ pc, onSettingsChanged }: PcSshSetti
         <button type="button" className="btn btn--soft" disabled={busy || dirty || !settings?.username} onClick={() => void runOperation(() => generatePcSshKey(pc.id), '公開鍵を用意しました。Windows側で登録してください。')}>鍵を作成・表示</button>
         {settings?.public_key ? <>
           <CopyableText label="公開鍵" value={settings.public_key} />
-          <p>WindowsでOpenSSHサーバーを有効にし、上で指定したユーザーのPowerShellで登録コマンドを実行してください。</p>
+          <p>WindowsでOpenSSHサーバーを有効にし、上で指定したユーザーの管理者PowerShellで登録コマンドを実行してください。</p>
           {settings.setup_script ? <CopyableText label="Windowsで実行する公開鍵登録コマンド" value={settings.setup_script} /> : null}
           <p>続いてPC側のPowerShellで以下を実行し、表示されたSHA256の指紋を確認します。</p>
           <CopyableText label="PC側のホスト鍵を確認するコマンド" value={settings.fingerprint_command} />
