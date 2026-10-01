@@ -9,9 +9,11 @@
   - `401`（未指定 / 不正形式 / 無効トークン / 失効 / 期限切れ）
   - レスポンス例: `{"detail":"invalid bearer token"}`
 - note: 有効トークンが 0 件の間はブートストラップ目的で一時的に認証をバイパスする。
+- 例外: シャットダウンとSSH設定APIはブートストラップ中も認証必須。
 - 認可（現行）:
   - `/api/pcs` などの業務APIは `admin` / `device` の両方許可。
   - `/api/admin/*` は `admin` role のみ許可し、`device` role には `403` を返す。
+  - `/api/pcs/{pc_id}/ssh` とその配下は認証済み `admin` のみ許可。
 
 ## レート制限（v1）
 
@@ -21,6 +23,8 @@
   - `Retry-After: <seconds>`
 - ルール:
   - `POST /api/pcs/{pc_id}/wol`: `3回/60秒`
+  - `POST /api/pcs/{pc_id}/shutdown`: `3回/60秒`
+  - `PUT|POST /api/pcs/{pc_id}/ssh` とその配下: 合計 `20回/600秒`
   - `POST /api/pcs/{pc_id}/status/refresh`: `6回/60秒`
   - `POST /api/pcs/status/refresh`: `1回/30秒`
   - `POST|DELETE /api/admin/*`: `10回/600秒`
@@ -122,6 +126,32 @@
 - note: 起動確認で `unknown` / `unreachable` が返った場合は再試行せず、その状態でジョブを `failed` 終了する
 - note: 起動確認で `online` に到達しない場合（`offline/unknown/unreachable`）はジョブ状態を `failed` として終了する
 
+### `POST /api/pcs/{pc_id}/shutdown`
+
+- summary: 対象Windows PCへ通常の停止指示を送る（非同期、`admin/device` とも認証必須）。
+- responses: `202` (`JobAccepted`), `401`, `404`, `409`, `429`
+- note: 有効なSSH設定・鍵・現在のIPでの接続確認・オンライン状態が必要。未完了の同一PC停止ジョブがあれば既存IDを返す。
+- note: 固定コマンド `shutdown /s /t 0` を使用。ジョブ結果は `pc_id`, `command_sent`, `offline_observed`, `message`。通信停止の観測は電源断の保証ではない。
+
+### PC別SSH設定（`admin` 専用）
+
+| Method / Path | 用途 | 入力 | 成功レスポンス |
+|---|---|---|---|
+| `GET /api/pcs/{pc_id}/ssh` | 設定取得 | — | `200 PcSshSettingsResponse` (`no-store`) |
+| `PUT /api/pcs/{pc_id}/ssh` | 設定保存 | `PcSshSettingsUpdate` | `200 PcSshSettingsResponse` |
+| `POST /api/pcs/{pc_id}/ssh/key` | 鍵生成・既存公開鍵取得 | — | `200 PcSshSettingsResponse` |
+| `POST /api/pcs/{pc_id}/ssh/host-key/scan` | 未確認のホスト鍵候補取得 | — | `200 HostKeyCandidate` |
+| `POST /api/pcs/{pc_id}/ssh/host-key` | 指紋を照合して登録 | `HostKeyConfirmation` | `200 PcSshSettingsResponse` |
+| `POST /api/pcs/{pc_id}/ssh/test` | 停止命令なしの接続確認 | — | `200 PcSshSettingsResponse` |
+
+- 共通エラー: `401`, `403`, `404`, `409`（設定不足・照合/接続失敗）, `503`（ファイル操作失敗）。変更操作は `429`、入力不正は `422`。
+- `PcSshSettingsUpdate`: `username`（1〜64文字、英数字・`_ . -`、先頭は英数字か`_`）, `port`（整数1〜65535、既定22）, `enabled`（既定false）。IPはPC登録情報を参照する。
+- `HostKeyCandidate`: `host_key`, `fingerprint`, `ip`, `revision`。取得だけでは信頼しない。
+- `HostKeyConfirmation`: 候補の `host_key`, `ip`, `revision` と、PC側で確認した `fingerprint`。取得後の設定/IP変更は拒否する。
+- `PcSshSettingsResponse`: `pc_id`, `ip`, `username`, `port`, `enabled`, `public_key`, `host_fingerprint`, `verified`, `verified_at`, `setup_script`, `fingerprint_command`。秘密鍵・保存パスは返さない。
+- ユーザー名/ポート変更はホスト鍵と接続確認、IP変更は接続確認を解除する。有効/無効だけの変更は確認結果を保持する。
+- 運用手順: [PCシャットダウン](../../deploy/runbook.md#pcシャットダウン)。
+
 ### `POST /api/pcs/{pc_id}/status/refresh`
 
 - operationId: `refreshPcStatus`
@@ -196,7 +226,7 @@
 ## 主要スキーマ
 
 - `PcStatus`: `online`, `offline`, `unknown`, `booting`, `unreachable`
-- `Pc`: PC基本情報 + `status` + `timestamps`
+- `Pc`: PC基本情報 + `status` + `timestamps` + `shutdown`（`configured`, `reason`）。SSHの準備状態と不可理由を返し、オンライン状態は `status` で別途判定する。
 - `PcCreate` / `PcUpdate`: 登録/更新入力
 - `WolRequest`: `broadcast`, `port`, `repeat`
 - `JobAccepted`, `Job`, `JobState`: 非同期処理

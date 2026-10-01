@@ -7,6 +7,7 @@
 
 ## 変更内容
 
+- 2026-10-01: `pc_ssh_settings` を追加（PC別SSH設定・ホスト鍵・接続確認、revision `6e12ab90c3d4`）。
 - 2026-03-03: 運用保持ポリシーを更新（`logs`: 30日 + 200,000件、`jobs`: 30日 + 50,000件）。
 - 2026-03-02: `api_tokens.role` と `logs.api_token_id` / `logs.actor_label` を追加（admin認可・監査主体記録）。
 - 2026-03-02: `api_tokens` を追加（端末別 Bearer トークン認証）。
@@ -39,6 +40,18 @@ erDiagram
         INTEGER status_port
         TEXT created_at
         TEXT updated_at
+    }
+
+    pc_ssh_settings {
+        TEXT pc_id PK, FK
+        TEXT username "NOT NULL"
+        INTEGER port "1..65535, DEFAULT 22"
+        INTEGER enabled "0|1, DEFAULT 0"
+        TEXT key_id "UNIQUE, NOT NULL"
+        TEXT host_key "NULL可"
+        TEXT verified_ip "NULL可"
+        TEXT verified_at "NULL可"
+        INTEGER revision "NOT NULL, DEFAULT 1"
     }
 
     status_history {
@@ -108,6 +121,7 @@ erDiagram
     }
 
     pcs ||--o{ logs : "logs.pc_id -> pcs.id (ON DELETE SET NULL)"
+    pcs ||--o| pc_ssh_settings : "PC別SSH設定 (ON DELETE CASCADE)"
     jobs ||--o{ logs : "logs.job_id -> jobs.id (logical reference)"
     pcs ||--o{ status_history : "status_history.pc_id -> pcs.id (ON DELETE CASCADE)"
     pcs ||--o{ uptime_daily_summary : "uptime_daily_summary.pc_id -> pcs.id (ON DELETE CASCADE)"
@@ -135,6 +149,8 @@ erDiagram
 
 ## 運用時の注意点
 
+- SSH秘密鍵はDB外（既定 `/var/lib/wol/ssh/<key_id>/`）。DBバックアップとは別に鍵を保全する。PC削除時はSSH設定行を同時削除するが、鍵ファイルは復元用に保持する。
+- IP変更時は接続確認を解除し `revision` を進める。ユーザー名/ポート変更時はホスト鍵も解除する。古い版の接続確認結果は採用しない。
 - `pcs.mac_address` は起動時マイグレーションで正規化される（`AA:BB:CC:DD:EE:FF` 形式）。
 - `pcs.ip_address` は必須（`NOT NULL`）。`NULL/空文字` 行がある状態では `3f2a6df9d4a1` マイグレーションが失敗するため、事前に補正または削除が必要。
 - 既存データに同一MACの重複があると、一意制約作成時に起動エラーになる。重複解消後に再起動する。
