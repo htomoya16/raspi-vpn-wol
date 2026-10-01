@@ -9,14 +9,48 @@ from app.models.wol import WolRequest
 from app.security.rate_limit import (
     enforce_refresh_all_rate_limit,
     enforce_refresh_pc_rate_limit,
+    enforce_shutdown_rate_limit,
     enforce_wol_send_rate_limit,
 )
 from app.services import pc_service
 from app.services.pc_service import PcConflictError
-from app.use_cases import status_use_case
-from app.use_cases import wol_use_case
+from app.services.shutdown_service import ShutdownUnavailableError
+from app.use_cases import shutdown_use_case, status_use_case, wol_use_case
 
 router = APIRouter()
+
+
+@router.post(
+    "/pcs/{pc_id}/shutdown",
+    response_model=JobAccepted,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="PCシャットダウン（非同期・強制終了なし）",
+    dependencies=[Depends(enforce_shutdown_rate_limit)],
+    responses={
+        404: {"description": "対象が存在しない"},
+        409: {"description": "SSH未設定または実行不可"},
+        429: {"description": "レート制限超過"},
+    },
+)
+async def submit_pc_shutdown(pc_id: str) -> JobAccepted:
+    """対象PCの停止操作を、非同期ジョブとして受け付ける。
+
+    Args:
+        pc_id: 停止対象の登録済みPC ID。
+
+    Returns:
+        ジョブIDと受付時の状態。
+
+    Raises:
+        HTTPException: 対象PCが存在しない、または停止操作を受け付けられない場合。
+    """
+    try:
+        job = await shutdown_use_case.request_pc_shutdown(pc_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ShutdownUnavailableError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return JobAccepted(job_id=str(job["id"]), state=job["state"])
 
 
 @router.get(

@@ -46,7 +46,21 @@ def get_active_job_by_type(job_type: str) -> dict[str, object] | None:
 def create_or_get_active_job(
     job_type: str,
     payload: dict[str, object] | None,
+    pc_id: str | None = None,
 ) -> tuple[dict[str, object], bool]:
+    """未完了ジョブを再利用し、なければ新しく作成する。
+
+    Args:
+        job_type: ジョブの種類。
+        payload: ジョブに保存する入力情報。
+        pc_id: 対象PCのID。省略時はジョブ種類全体を重複判定の範囲にする。
+
+    Returns:
+        ジョブ情報と、新しく作成したかどうか。
+
+    Raises:
+        ValueError: ジョブ種類が空の場合。
+    """
     normalized_type = job_type.strip()
     if not normalized_type:
         raise ValueError("job_type is required")
@@ -55,6 +69,7 @@ def create_or_get_active_job(
         row, created = job_repository.create_or_get_active_job(
             job_type=normalized_type,
             payload_json=payload_json,
+            pc_id=pc_id,
         )
         job = _to_job(row)
         if created or not _is_stale_active_job(job):

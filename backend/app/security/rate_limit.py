@@ -9,7 +9,7 @@ from typing import Any, Callable
 
 from fastapi import Depends, HTTPException, Request, status
 
-from app.security.bearer_guard import require_admin_token, require_bearer_token
+from app.security.bearer_guard import require_admin_token, require_bearer_token, require_authenticated_admin_token
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,6 +64,8 @@ class InMemoryRateLimiter:
 
 
 RATE_LIMIT_WOL_SEND = RateLimitRule(scope="wol_send", limit=3, window_seconds=60)
+RATE_LIMIT_SHUTDOWN = RateLimitRule(scope="shutdown", limit=3, window_seconds=60)
+RATE_LIMIT_SSH_SETUP = RateLimitRule(scope="ssh_setup", limit=20, window_seconds=600)
 RATE_LIMIT_REFRESH_PC = RateLimitRule(scope="status_refresh_pc", limit=6, window_seconds=60)
 RATE_LIMIT_REFRESH_ALL = RateLimitRule(scope="status_refresh_all", limit=1, window_seconds=30)
 RATE_LIMIT_ADMIN_WRITE = RateLimitRule(scope="admin_tokens_write", limit=10, window_seconds=600)
@@ -80,6 +82,44 @@ async def enforce_wol_send_rate_limit(
     authenticated: dict[str, Any] | None = Depends(require_bearer_token),
 ) -> None:
     _enforce_rule(request, authenticated, RATE_LIMIT_WOL_SEND)
+
+
+async def enforce_shutdown_rate_limit(
+    request: Request,
+    authenticated: dict[str, Any] | None = Depends(require_bearer_token),
+) -> None:
+    """認証済みの停止要求について、トークンごとの回数制限を確認する。
+
+    Args:
+        request: 対象のHTTPリクエスト。
+        authenticated: Bearer認証で取得したトークン情報。
+
+    Raises:
+        HTTPException: 未認証の場合、または回数制限を超えた場合。
+    """
+    if authenticated is None:
+        # 初期設定用の認証省略中も、PCの停止操作にはトークンを要求する。
+        raise HTTPException(
+            status_code=401, detail="シャットダウンにはBearer認証が必要です",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    _enforce_rule(request, authenticated, RATE_LIMIT_SHUTDOWN)
+
+
+async def enforce_ssh_setup_rate_limit(
+    request: Request,
+    authenticated: dict[str, Any] = Depends(require_authenticated_admin_token),
+) -> None:
+    """鍵作成や接続テストの回数を、管理者トークンごとに制限する。
+
+    Args:
+        request: 設定操作のHTTPリクエスト。
+        authenticated: 認証済み管理者のトークン情報。
+
+    Raises:
+        HTTPException: 設定操作の回数制限を超えた場合。
+    """
+    _enforce_rule(request, authenticated, RATE_LIMIT_SSH_SETUP)
 
 
 async def enforce_refresh_pc_rate_limit(

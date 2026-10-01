@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { formatApiError } from '../api/http'
 import { invalidateLogsCache } from '../api/logs'
-import { invalidatePcsAndUptimeCache, refreshAllStatuses, sendPcWol } from '../api/pcs'
+import { invalidatePcsAndUptimeCache, refreshAllStatuses, sendPcWol, shutdownPc } from '../api/pcs'
 import type { PcCreatePayload, PcFilterState, PcUpdatePayload } from '../types/models'
 import { useDashboardSse } from './useDashboardSse'
 import { useJobTracker } from './useJobTracker'
@@ -37,6 +37,7 @@ export interface UseDashboardDataResult {
   updatePcEntry: (pcId: string, payload: PcUpdatePayload) => Promise<ReturnType<typeof usePcData>['pcs'][number]>
   refreshPcStatusEntry: (pcId: string) => Promise<void>
   sendPcWolEntry: (pcId: string) => Promise<void>
+  shutdownPcEntry: (pcId: string) => Promise<void>
   refreshAllStatusesEntry: () => Promise<void>
   clearLogsEntry: () => Promise<void>
   handleFilterChange: (key: keyof PcFilterState, value: string) => void
@@ -53,6 +54,8 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
   const [notice, setNotice] = useState('')
   const [refreshAllLoading, setRefreshAllLoading] = useState(false)
   const refreshAllInFlightRef = useRef(false)
+  // 同じPCの電源操作は重ねず、別PCの操作は独立して受け付ける。
+  const powerInFlightRef = useRef(new Set<string>())
   const trackedJobIdsRef = useRef<Set<string>>(new Set())
 
   const logsData = useLogsData({ setNotice })
@@ -122,6 +125,8 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
 
   const sendPcWolEntry = useCallback(
     async (pcId: string) => {
+      if (powerInFlightRef.current.has(pcId)) return
+      powerInFlightRef.current.add(pcId)
       setBusy(pcId, 'wol', true)
       setRowError(pcId, '')
 
@@ -133,11 +138,29 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
       } catch (error) {
         setRowError(pcId, formatApiError(error))
       } finally {
+        powerInFlightRef.current.delete(pcId)
         setBusy(pcId, 'wol', false)
       }
     },
     [setBusy, setPcStatusLocal, setRowError, trackJob],
   )
+
+  const shutdownPcEntry = useCallback(async (pcId: string) => {
+    if (powerInFlightRef.current.has(pcId)) return
+    powerInFlightRef.current.add(pcId)
+    setBusy(pcId, 'shutdown', true)
+    setRowError(pcId, '')
+    try {
+      const job = await shutdownPc(pcId)
+      setNotice(`シャットダウンジョブを投入しました: ${pcId}`)
+      await trackJob(job.job_id, `シャットダウン: ${pcId}`)
+    } catch (error) {
+      setRowError(pcId, formatApiError(error))
+    } finally {
+      powerInFlightRef.current.delete(pcId)
+      setBusy(pcId, 'shutdown', false)
+    }
+  }, [setBusy, setRowError, trackJob])
 
   const refreshAllStatusesEntry = useCallback(async () => {
     if (refreshAllInFlightRef.current) {
@@ -200,6 +223,7 @@ export function useDashboardData(options: UseDashboardDataOptions = {}): UseDash
     updatePcEntry,
     refreshPcStatusEntry,
     sendPcWolEntry,
+    shutdownPcEntry,
     refreshAllStatusesEntry,
     clearLogsEntry,
     handleFilterChange,

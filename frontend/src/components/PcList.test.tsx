@@ -24,6 +24,7 @@ function renderPcList(overrides: Partial<PcListProps> = {}) {
     onReload: vi.fn(),
     onRefreshStatus: vi.fn(),
     onSendWol: vi.fn(),
+    onShutdown: vi.fn(),
     onDelete: vi.fn().mockResolvedValue(undefined),
     onUpdate: vi.fn().mockImplementation(async () => createPc()),
     busyById: {},
@@ -37,6 +38,37 @@ function renderPcList(overrides: Partial<PcListProps> = {}) {
 }
 
 describe('PcList', () => {
+  it('disables shutdown for unconfigured and offline PCs', () => {
+    renderPcList({ items: [createPc({ id: 'pc-1', status: 'online' }), createPc({ id: 'pc-2', status: 'offline', shutdown: { configured: true, reason: null } })] })
+    expect(screen.getAllByRole('button', { name: 'シャットダウン' })).toHaveLength(2)
+    for (const button of screen.getAllByRole('button', { name: 'シャットダウン' })) expect(button).toBeDisabled()
+    expect(screen.getByText('SSH未設定')).toBeInTheDocument()
+    expect(screen.getByText('オンライン時のみ操作できます')).toBeInTheDocument()
+  })
+
+  it('requires confirmation for only the selected PC and supports cancellation', async () => {
+    const user = userEvent.setup()
+    const onShutdown = vi.fn().mockResolvedValue(undefined)
+    renderPcList({ onShutdown, items: [createPc({ status: 'online', shutdown: { configured: true, reason: null } })] })
+    await user.click(screen.getByRole('button', { name: 'シャットダウン' }))
+    expect(screen.getByRole('dialog')).toHaveTextContent('Main PC')
+    expect(screen.getByRole('dialog')).toHaveTextContent('pc-1')
+    expect(onShutdown).not.toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'キャンセル' })).toHaveFocus()
+    await user.click(screen.getByRole('button', { name: 'キャンセル' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(onShutdown).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'シャットダウン' }))
+    await user.click(screen.getByRole('button', { name: 'シャットダウンする' }))
+    expect(onShutdown).toHaveBeenCalledExactlyOnceWith('pc-1')
+  })
+
+  it('disables both power actions while shutdown is running', () => {
+    renderPcList({ busyById: { 'pc-1': { shutdown: true } }, items: [createPc({ status: 'online', shutdown: { configured: true, reason: null } })] })
+    expect(screen.getByRole('button', { name: '起動' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /停止確認中/ })).toBeDisabled()
+  })
+
   afterEach(() => {
     vi.useRealTimers()
   })
@@ -67,6 +99,14 @@ describe('PcList', () => {
     await user.click(screen.getByText('Main PC'))
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(screen.getByText('MAC')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'SSH設定' })).not.toBeInTheDocument()
+  })
+
+  it('shows SSH settings in the PC detail only for administrators', async () => {
+    const user = userEvent.setup()
+    renderPcList({ canManageSsh: true })
+    await user.click(screen.getByText('Main PC'))
+    expect(screen.getByRole('button', { name: 'SSH設定' })).toBeInTheDocument()
   })
 
   it('shows validation message when editing with empty required fields', async () => {

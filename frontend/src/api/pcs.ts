@@ -124,6 +124,13 @@ export function sendPcWol(
   })
 }
 
+export async function shutdownPc(pcId: string): Promise<JobAccepted> {
+  const response = await request<JobAccepted>(`/api/pcs/${encodeURIComponent(pcId)}/shutdown`, { method: 'POST' })
+  invalidatePcsAndUptimeCache(pcId)
+  invalidateLogCache()
+  return response
+}
+
 export interface GetPcUptimeSummaryParams {
   from?: string
   to?: string

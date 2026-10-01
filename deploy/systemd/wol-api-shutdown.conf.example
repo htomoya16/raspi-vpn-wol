@@ -1,0 +1,5 @@
+# 保存先を変更する場合だけ、/etc/systemd/system/wol-api.service.d/shutdown.conf へ配置する。
+# 未指定時は /var/lib/wol/ssh に鍵を自動作成する。設定はSQLiteに保存する。
+# APIサービスから書き込める場所を使い、既存の鍵は移動・バックアップして保持する。
+[Service]
+# Environment=WOL_SSH_KEY_DIR=/var/lib/wol/ssh

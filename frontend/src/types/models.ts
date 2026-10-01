@@ -1,6 +1,31 @@
 export type PcStatus = 'online' | 'offline' | 'unknown' | 'booting' | 'unreachable'
 
+export interface PcSshSettingsPayload {
+  username: string
+  port: number
+  enabled: boolean
+}
+
+export interface PcSshSettings extends PcSshSettingsPayload {
+  pc_id: string
+  ip: string
+  public_key: string | null
+  host_fingerprint: string | null
+  verified: boolean
+  verified_at: string | null
+  setup_script: string | null
+  fingerprint_command: string
+}
+
+export interface HostKeyCandidate {
+  host_key: string
+  fingerprint: string
+  ip: string
+  revision: number
+}
+
 export interface Pc {
+  shutdown?: { configured: boolean; reason: string | null }
   id: string
   name: string
   mac: string
@@ -103,6 +128,7 @@ export interface PcFilterState {
 }
 
 export interface PcBusyState {
+  shutdown?: boolean
   delete?: boolean
   update?: boolean
   status?: boolean

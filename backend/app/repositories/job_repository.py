@@ -90,11 +90,26 @@ def get_active_job_by_type(job_type: str) -> JobRow | None:
     return cast(JobRow, dict(row))
 
 
-def create_or_get_active_job(job_type: str, payload_json: str | None) -> tuple[JobRow, bool]:
+def create_or_get_active_job(
+    job_type: str, payload_json: str | None, pc_id: str | None = None,
+) -> tuple[JobRow, bool]:
+    """重複を判定して未完了ジョブを取得するか、新しく登録する。
+
+    Args:
+        job_type: 登録するジョブの種類。
+        payload_json: JSON形式の入力情報。
+        pc_id: 重複判定の対象PC。省略時は同じ種類の全ジョブを対象にする。
+
+    Returns:
+        対象ジョブの行と、新しく登録したかどうか。
+
+    Raises:
+        ValueError: ジョブを登録・取得できなかった場合。
+    """
     now_iso = datetime.now(timezone.utc).isoformat()
     created = False
     with connection() as conn:
-        # Keep "active check + insert" atomic to avoid duplicate queued jobs.
+        # 重複確認と登録を同じトランザクションで行い、同時要求でも二重作成しない。
         conn.execute("BEGIN IMMEDIATE")
         row = conn.execute(
             """
@@ -112,10 +127,11 @@ def create_or_get_active_job(job_type: str, payload_json: str | None) -> tuple[J
             FROM jobs
             WHERE job_type = ?
               AND state IN ('queued', 'running')
+              AND (? IS NULL OR json_extract(payload_json, '$.pc_id') = ?)
             ORDER BY created_at DESC
             LIMIT 1
             """,
-            (job_type,),
+            (job_type, pc_id, pc_id),
         ).fetchone()
 
         if row is None:

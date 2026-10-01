@@ -12,6 +12,7 @@ from app.cache import keys as cache_keys
 from app.models.pcs import PcCreate, PcStatus, PcUpdate
 from app.repositories import pc_repository
 from app.services import pc_registry_service, status_service, uptime_service, wol_service
+from app.services.shutdown_service import get_shutdown_capability
 from app.types import PcRow
 
 STATUS_VALUES: set[PcStatus] = {"online", "offline", "unknown", "booting", "unreachable"}
@@ -124,6 +125,7 @@ def _row_to_pc(pc_row: PcRow) -> dict[str, object]:
     if status_value not in STATUS_VALUES:
         status_value = "unknown"
     return {
+        "shutdown": get_shutdown_capability(pc_row["id"], pc_row["ip_address"]),
         "id": pc_row["id"],
         "name": pc_row["name"],
         "mac": pc_row["mac_address"],

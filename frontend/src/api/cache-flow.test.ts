@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { setStoredBearerToken } from './auth'
 import { clearApiCacheForTest } from './cache'
 import { createPc, listPcs } from './pcs'
+import { testPcSshConnection } from './ssh-settings'
+import { createPcFactory } from '../test/factories'
 
 describe('cache invalidation flow', () => {
   const fetchMock = vi.fn()
@@ -17,6 +19,19 @@ describe('cache invalidation flow', () => {
     fetchMock.mockReset()
     clearApiCacheForTest()
     setStoredBearerToken('')
+  })
+
+  it('reloads shutdown availability after an SSH retest fails', async () => {
+    const pc = createPcFactory({ shutdown: { configured: true, reason: null } })
+    const disabledPc = { ...pc, shutdown: { configured: false, reason: 'SSH接続テストが必要です' } }
+    fetchMock
+      .mockResolvedValueOnce(Response.json({ items: [pc], next_cursor: null }))
+      .mockResolvedValueOnce(Response.json({ detail: 'SSH接続が失敗しました' }, { status: 409 }))
+      .mockResolvedValueOnce(Response.json({ items: [disabledPc], next_cursor: null }))
+    expect((await listPcs()).items[0].shutdown?.configured).toBe(true)
+    await expect(testPcSshConnection(pc.id)).rejects.toThrow()
+    expect((await listPcs()).items[0].shutdown?.configured).toBe(false)
+    expect(fetchMock).toHaveBeenCalledTimes(3)
   })
 
   it('re-fetches pcs list after create mutation invalidates cache', async () => {

@@ -90,6 +90,8 @@ function JobQueue({ jobs, embedded = false }: JobQueueProps) {
                     </div>
                   </div>
                   {job.error ? <p className="feedback feedback--error">{job.error}</p> : null}
+                  {job.type === 'shutdown' && job.result && typeof job.result === 'object' && 'message' in job.result && typeof job.result.message === 'string'
+                    ? <p className="job-type">{job.result.message}</p> : null}
                 </li>
               )
             })}

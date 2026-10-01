@@ -178,6 +178,7 @@ describe('http api helpers', () => {
       'このMACアドレスは既に登録されています',
     )
     expect(formatApiError(new ApiError(422, 'invalid body', null))).toBe('形式エラー: invalid body')
+    expect(formatApiError(new ApiError(409, 'SSH接続テストが必要です', null))).toBe('操作できません: SSH接続テストが必要です')
     expect(formatApiError(new ApiError(429, 'too many requests', null, 27))).toBe(
       'リクエストが多すぎます。27秒後に再試行してください',
     )

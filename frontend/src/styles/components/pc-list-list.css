@@ -145,9 +145,23 @@
 
 .pc-row__list-actions {
   display: flex;
+  align-items: start;
   gap: 6px;
   margin-left: auto;
   cursor: default;
+}
+
+.pc-row__power-control {
+  display: grid;
+  gap: 4px;
+}
+
+.pc-row__shutdown-hint {
+  margin: 0;
+  max-width: 160px;
+  color: var(--text-sub);
+  font-size: 0.72rem;
+  white-space: normal;
 }
 
 .pc-row__list-actions .btn {

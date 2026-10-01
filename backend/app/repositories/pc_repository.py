@@ -161,6 +161,15 @@ def upsert_pc(
     status_port: int,
 ) -> PcRow:
     with connection() as conn:
+        # IPを元に戻した場合も、古い接続確認を復活させない。
+        conn.execute(
+            """UPDATE pc_ssh_settings SET verified_ip = NULL, verified_at = NULL,
+                 revision = revision + 1
+               WHERE pc_id = ? AND EXISTS (
+                 SELECT 1 FROM pcs WHERE id = ? AND ip_address <> ?
+               )""",
+            (pc_id, pc_id, ip_address),
+        )
         conn.execute(
             """
             INSERT INTO pcs (
@@ -219,6 +228,8 @@ def upsert_pc(
 
 def delete_pc_by_id(pc_id: str) -> bool:
     with connection() as conn:
+        # SQLiteの接続設定に依存せず、PC削除と設定削除を同時に行う。
+        conn.execute("DELETE FROM pc_ssh_settings WHERE pc_id = ?", (pc_id,))
         result = conn.execute(
             """
             DELETE FROM pcs
