@@ -7,6 +7,7 @@
 
 ## 変更内容
 
+- シャットダウンの文字コード回帰テストを追加。SSHの代わりにローカルの子プロセスからCP932の警告を出し、正常終了と非0終了を正しく判定することを確認する。実際のSSH接続や停止命令は実行しない。
 - `backend/tests/api/test_auth_device_tokens_api.py` を追加。
   - Bearer 必須判定、admin/device 認可、トークン発行/失効、最後のadmin失効防止、期限不正の `400` を検証。
 - `backend/tests/scripts/test_create_api_token.py` を追加。

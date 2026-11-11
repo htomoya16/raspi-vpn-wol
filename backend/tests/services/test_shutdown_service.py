@@ -3,12 +3,38 @@ from __future__ import annotations
 import base64
 import hashlib
 import subprocess
+import sys
 from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
 
 from app.services import pc_service, shutdown_service, ssh_settings_service
+
+
+@pytest.mark.parametrize("returncode", [0, 1])
+def test_non_utf8_ssh_output_preserves_command_result(monkeypatch, returncode: int) -> None:
+    """実プロセスのCP932出力で、デコード例外ではなく実行結果を判定する。"""
+    run = subprocess.run
+    settings = shutdown_service.ShutdownSshSettings(
+        "192.168.10.103", "wol-user", 22, "unused-key", "unused-hosts", "wol-pc-pc-1", 1,
+    )
+    warning = "ハンドルが無効です。".encode("cp932")
+    script = (
+        "import sys; sys.stdout.buffer.write(b'wol-dashboard-ssh-ready\\r\\n'); "
+        f"sys.stderr.buffer.write({warning!r}); sys.exit({returncode})"
+    )
+
+    def simulate_ssh(argv, **kwargs):
+        # モックのCompletedProcessでは再現できない、subprocess内部のデコードも検証する。
+        return run([sys.executable, "-c", script], **kwargs)
+
+    monkeypatch.setattr(shutdown_service.subprocess, "run", simulate_ssh)
+    if returncode == 0:
+        assert shutdown_service._execute_ssh_command(settings, shutdown_service.SSH_CHECK_COMMAND) == b"wol-dashboard-ssh-ready"
+    else:
+        with pytest.raises(shutdown_service.ShutdownUnavailableError, match="SSH処理が失敗"):
+            shutdown_service._execute_ssh_command(settings, shutdown_service.SSH_CHECK_COMMAND)
 
 
 @pytest.fixture
@@ -31,7 +57,7 @@ def shutdown_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tup
     pc_row = {"ip_address": "192.168.10.103", "status": "online"}
     monkeypatch.setattr(shutdown_service.pc_repository, "get_pc_by_id", lambda _: pc_row)
     ssh_process = Mock(return_value=subprocess.CompletedProcess(
-        args=[], returncode=0, stdout="wol-dashboard-ssh-ready\n", stderr="",
+        args=[], returncode=0, stdout=b"wol-dashboard-ssh-ready\n", stderr=b"",
     ))
     monkeypatch.setattr(shutdown_service.subprocess, "run", ssh_process)
     monkeypatch.setattr(shutdown_service, "insert_log", Mock())
@@ -76,7 +102,7 @@ def test_ssh_failure_stops_before_shutdown_and_hides_output(shutdown_environment
     if failure == "timeout":
         ssh_process.side_effect = subprocess.TimeoutExpired("private-key-path", 10)
     else:
-        ssh_process.return_value = subprocess.CompletedProcess([], 255, stdout="private-key-path", stderr="secret-user")
+        ssh_process.return_value = subprocess.CompletedProcess([], 255, stdout=b"private-key-path", stderr=b"secret-user")
     settings = shutdown_service.get_ready_shutdown_connection("pc-1")
     with pytest.raises(shutdown_service.ShutdownUnavailableError) as error:
         shutdown_service.shutdown_pc_and_check_status("pc-1", settings)
@@ -96,7 +122,7 @@ def test_ip_change_during_job_does_not_operate_on_another_pc(shutdown_environmen
         def simulate_ssh(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess:
             if argv[-1] == "shutdown /s /t 0":
                 pc_row["ip_address"] = "192.168.10.104"
-            return subprocess.CompletedProcess(argv, 0, stdout="wol-dashboard-ssh-ready", stderr="")
+            return subprocess.CompletedProcess(argv, 0, stdout=b"wol-dashboard-ssh-ready", stderr=b"")
         ssh_process.side_effect = simulate_ssh
         result = shutdown_service.shutdown_pc_and_check_status("pc-1", settings)
         assert result["command_sent"] is True and result["offline_observed"] is False

@@ -73,7 +73,7 @@ def verify_pc_ssh_connection(pc_id: str) -> dict[str, object]:
     pc = get_registered_pc(pc_id)
     settings = load_pc_ssh_connection(pc_id, pc["ip_address"], require_verified=False)
     try:
-        if _execute_ssh_command(settings, SSH_CHECK_COMMAND) != "wol-dashboard-ssh-ready":
+        if _execute_ssh_command(settings, SSH_CHECK_COMMAND) != b"wol-dashboard-ssh-ready":
             raise ShutdownUnavailableError("SSH接続の確認に失敗しました")
         if not ssh_settings_repository.record_ssh_verification(pc_id, settings.ip_address, settings.revision, True):
             raise ShutdownUnavailableError("確認中にPCまたはSSH設定が変更されました。再度接続テストしてください")
@@ -88,7 +88,7 @@ def verify_pc_ssh_connection(pc_id: str) -> dict[str, object]:
     return ssh_settings_service.get_ssh_settings(pc_id)
 
 
-def _execute_ssh_command(settings: ShutdownSshSettings, command: str) -> str:
+def _execute_ssh_command(settings: ShutdownSshSettings, command: str) -> bytes:
     """指定したPCへ、アプリで決めた固定コマンドをSSHで送る。
 
     Args:
@@ -96,7 +96,7 @@ def _execute_ssh_command(settings: ShutdownSshSettings, command: str) -> str:
         command: 接続確認またはWindows停止用の固定コマンド。
 
     Returns:
-        前後の空白を取り除いた標準出力。
+        前後の空白を取り除いた標準出力のバイト列。
 
     Raises:
         ShutdownUnavailableError: SSHを実行できない、失敗する、または時間切れの場合。
@@ -114,7 +114,9 @@ def _execute_ssh_command(settings: ShutdownSshSettings, command: str) -> str:
         "-l", settings.username, settings.ip_address, command,
     ]
     try:
-        result = subprocess.run(argv, capture_output=True, text=True, timeout=10, check=False)
+        # Windowsのプロファイル等が返す出力の文字コードは保証されない。
+        # デコードせず、終了コードとASCIIの確認文字列だけで判定する。
+        result = subprocess.run(argv, capture_output=True, timeout=10, check=False)
     except FileNotFoundError as exc:
         raise ShutdownUnavailableError("ラズパイ側にSSHクライアントがありません") from exc
     except (OSError, subprocess.TimeoutExpired) as exc:
@@ -181,7 +183,7 @@ def shutdown_pc_and_check_status(
         if settings != expected_settings:
             raise ShutdownUnavailableError("PCまたはSSH設定が変更されました。再確認してください")
         # 直前の疎通確認はSSHで行い、別ポートへの重複した確認は行わない。
-        if _execute_ssh_command(settings, SSH_CHECK_COMMAND) != "wol-dashboard-ssh-ready":
+        if _execute_ssh_command(settings, SSH_CHECK_COMMAND) != b"wol-dashboard-ssh-ready":
             raise ShutdownUnavailableError("SSH接続の確認に失敗しました")
         if get_ready_shutdown_connection(pc_id) != expected_settings:
             raise ShutdownUnavailableError("PCまたはSSH設定が変更されました。再確認してください")
