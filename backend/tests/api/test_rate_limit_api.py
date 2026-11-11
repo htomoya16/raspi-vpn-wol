@@ -15,7 +15,7 @@ def test_wol_endpoint_rate_limit_returns_429(client: TestClient, monkeypatch) ->
     async def _fake_request_wol(*_: object, **__: object) -> dict[str, object]:
         return {"id": "job-rate-wol", "state": "queued"}
 
-    monkeypatch.setattr(pcs_api.wol_use_case, "request_wol", _fake_request_wol)
+    monkeypatch.setattr(pcs_api.pc_service, "request_wol", _fake_request_wol)
 
     for _ in range(3):
         response = client.post("/api/pcs/pc-main/wol", json={"repeat": 1})
@@ -44,7 +44,7 @@ def test_refresh_pc_endpoint_rate_limit_returns_429(client: TestClient, monkeypa
     async def _fake_refresh_pc_status(_: str) -> dict[str, object]:
         return sample_pc
 
-    monkeypatch.setattr(pcs_api.status_use_case, "refresh_pc_status", _fake_refresh_pc_status)
+    monkeypatch.setattr(pcs_api.pc_service, "refresh_pc_status_and_publish", _fake_refresh_pc_status)
 
     for _ in range(6):
         response = client.post("/api/pcs/pc-main/status/refresh")
@@ -61,7 +61,7 @@ def test_refresh_all_endpoint_rate_limit_returns_429(client: TestClient, monkeyp
         return {"id": "job-rate-refresh-all", "state": "queued"}
 
     monkeypatch.setattr(
-        pcs_api.status_use_case,
+        pcs_api.pc_service,
         "request_refresh_all_statuses",
         _fake_request_refresh_all_statuses,
     )

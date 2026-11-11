@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 import subprocess
 import time
 
 from app.cache import cache
 from app.cache import keys as cache_keys
 from app.repositories import pc_repository, ssh_settings_repository
+from app.services import event_service, job_service
 from app.services.log_service import insert_log
 from app.services.ssh_settings_service import (
     ShutdownSshSettings, ShutdownUnavailableError, get_registered_pc, load_pc_ssh_connection,
@@ -73,7 +75,7 @@ def verify_pc_ssh_connection(pc_id: str) -> dict[str, object]:
     pc = get_registered_pc(pc_id)
     settings = load_pc_ssh_connection(pc_id, pc["ip_address"], require_verified=False)
     try:
-        if _execute_ssh_command(settings, SSH_CHECK_COMMAND) != "wol-dashboard-ssh-ready":
+        if _execute_ssh_command(settings, SSH_CHECK_COMMAND) != b"wol-dashboard-ssh-ready":
             raise ShutdownUnavailableError("SSH接続の確認に失敗しました")
         if not ssh_settings_repository.record_ssh_verification(pc_id, settings.ip_address, settings.revision, True):
             raise ShutdownUnavailableError("確認中にPCまたはSSH設定が変更されました。再度接続テストしてください")
@@ -88,7 +90,7 @@ def verify_pc_ssh_connection(pc_id: str) -> dict[str, object]:
     return ssh_settings_service.get_ssh_settings(pc_id)
 
 
-def _execute_ssh_command(settings: ShutdownSshSettings, command: str) -> str:
+def _execute_ssh_command(settings: ShutdownSshSettings, command: str) -> bytes:
     """指定したPCへ、アプリで決めた固定コマンドをSSHで送る。
 
     Args:
@@ -96,7 +98,7 @@ def _execute_ssh_command(settings: ShutdownSshSettings, command: str) -> str:
         command: 接続確認またはWindows停止用の固定コマンド。
 
     Returns:
-        前後の空白を取り除いた標準出力。
+        前後の空白を取り除いた標準出力のバイト列。
 
     Raises:
         ShutdownUnavailableError: SSHを実行できない、失敗する、または時間切れの場合。
@@ -114,7 +116,9 @@ def _execute_ssh_command(settings: ShutdownSshSettings, command: str) -> str:
         "-l", settings.username, settings.ip_address, command,
     ]
     try:
-        result = subprocess.run(argv, capture_output=True, text=True, timeout=10, check=False)
+        # Windowsのプロファイル等が返す出力の文字コードは保証されない。
+        # デコードせず、終了コードとASCIIの確認文字列だけで判定する。
+        result = subprocess.run(argv, capture_output=True, timeout=10, check=False)
     except FileNotFoundError as exc:
         raise ShutdownUnavailableError("ラズパイ側にSSHクライアントがありません") from exc
     except (OSError, subprocess.TimeoutExpired) as exc:
@@ -181,7 +185,7 @@ def shutdown_pc_and_check_status(
         if settings != expected_settings:
             raise ShutdownUnavailableError("PCまたはSSH設定が変更されました。再確認してください")
         # 直前の疎通確認はSSHで行い、別ポートへの重複した確認は行わない。
-        if _execute_ssh_command(settings, SSH_CHECK_COMMAND) != "wol-dashboard-ssh-ready":
+        if _execute_ssh_command(settings, SSH_CHECK_COMMAND) != b"wol-dashboard-ssh-ready":
             raise ShutdownUnavailableError("SSH接続の確認に失敗しました")
         if get_ready_shutdown_connection(pc_id) != expected_settings:
             raise ShutdownUnavailableError("PCまたはSSH設定が変更されました。再確認してください")
@@ -202,3 +206,29 @@ def shutdown_pc_and_check_status(
         )
         insert_log("shutdown", pc_id, "failed", message=message)
         raise ShutdownUnavailableError(message) from exc
+
+
+async def request_pc_shutdown(pc_id: str) -> dict[str, object]:
+    """対象PCの停止ジョブを受け付け、非同期実行を開始する。
+
+    Args:
+        pc_id: 停止対象の登録済みPC ID。
+
+    Returns:
+        作成したジョブ、または同じPCですでに実行中のジョブ。
+
+    Raises:
+        LookupError: 対象PCが存在しない場合。
+        ShutdownUnavailableError: SSH未設定、またはPCがオンラインでない場合。
+    """
+    settings = get_ready_shutdown_connection(pc_id)
+    job, created = job_service.create_or_get_active_job(
+        "shutdown", payload={"pc_id": pc_id}, pc_id=pc_id,
+    )
+    if created:
+        # 同じPCへの再要求では既存ジョブを返し、停止命令の二重送信を避ける。
+        asyncio.create_task(job_service.run_job(
+            str(job["id"]), lambda: shutdown_pc_and_check_status(pc_id, settings),
+        ))
+        await event_service.event_broker.publish("job", {"job_id": job["id"], "state": "queued"})
+    return job

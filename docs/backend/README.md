@@ -9,7 +9,7 @@
 
 - 2026-03-03: ログ保持上限を 200,000 件へ拡張し、`jobs` にも保持ポリシー（30日 + 50,000件）を追加。
 - 2026-03-03: Google スタイル docstring の付与基準を追加し、WOL/status/PC管理/認証の境界処理へ適用した。
-- 2026-03-03: WOL送信受付、ステータス更新受付、トークン管理のアプリケーション処理を `app/use_cases/` へ切り出し、router の責務をHTTP境界へ寄せた。
+- 2026-11-12: usecase層を廃止し、WOL・ステータス更新・停止の受付を既存serviceに統合。routerの責務はHTTP境界に維持した。
 - 2026-03-02: SSE認証を EventSource 対応（`/api/events?token=...`）にし、`logs/jobs` の `Cache-Control: no-store` を明示。APIメモリキャッシュに上限/期限切れ掃除を追加。
 - 2026-03-02: `/api/admin/*` を admin 専用化し、CLI復旧経路と監査ログ主体記録を追加。
 - 2026-03-02: 端末別 Bearer トークン認証を実装（`api_tokens` / 管理 API / APIテスト）。
@@ -85,7 +85,7 @@
 - `docs/backend/features/runtime.md`
 - `docs/backend/features/auth-device-tokens.md`
 - `docs/backend/features/docstrings.md`
-- `docs/backend/features/use-cases.md`
+- `docs/backend/features/service-structure.md`
 - `docs/backend/features/types-and-models.md`
 - `docs/backend/features/backlog.md`
 - `docs/backend/features/testing.md`

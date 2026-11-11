@@ -14,7 +14,7 @@ def test_wol_endpoint_builds_job_payload_with_overrides(client: TestClient, monk
         assert getattr(payload, "repeat") == 3
         return {"id": "job-wol-test", "state": "queued"}
 
-    monkeypatch.setattr(pcs_api.wol_use_case, "request_wol", _fake_request_wol)
+    monkeypatch.setattr(pcs_api.pc_service, "request_wol", _fake_request_wol)
 
     response = client.post(
         "/api/pcs/pc-wol/wol",

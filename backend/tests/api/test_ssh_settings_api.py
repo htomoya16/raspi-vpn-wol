@@ -34,7 +34,7 @@ def ssh_setup(client, monkeypatch, tmp_path):
         if argv[0] == "ssh-keyscan":
             return subprocess.CompletedProcess(argv, 0, stdout=f"192.168.10.103 {host_key}\n", stderr="")
         assert argv[0] == "ssh" and argv[-1] == "echo wol-dashboard-ssh-ready"
-        return subprocess.CompletedProcess(argv, 0, stdout="wol-dashboard-ssh-ready\n", stderr="")
+        return subprocess.CompletedProcess(argv, 0, stdout=b"wol-dashboard-ssh-ready\n", stderr=b"")
 
     monkeypatch.setattr(ssh_settings_service.subprocess, "run", simulate_ssh)
     return client, path, tmp_path / "keys", generated.json(), calls
@@ -100,7 +100,7 @@ def test_stale_confirmation_and_failed_or_changed_connection_never_enable_shutdo
     client.put(path, json={"username": "wol-user", "port": 2222, "enabled": True})
     assert client.post(path + "/host-key", json=candidate).status_code == 409
     assert confirm_and_test(client, path)["verified"]
-    failed = Mock(return_value=subprocess.CompletedProcess([], 255, stdout="", stderr="secret-path"))
+    failed = Mock(return_value=subprocess.CompletedProcess([], 255, stdout=b"", stderr=b"secret-path"))
     monkeypatch.setattr(shutdown_service.subprocess, "run", failed)
     failure = client.post(path + "/test")
     assert failure.status_code == 409 and "secret-path" not in failure.text
@@ -109,7 +109,7 @@ def test_stale_confirmation_and_failed_or_changed_connection_never_enable_shutdo
 
     def change_settings_during_probe(argv, **kwargs):
         ssh_settings_repository.save_pc_ssh_settings("pc-1", "other-user", 2222, True)
-        return subprocess.CompletedProcess(argv, 0, stdout="wol-dashboard-ssh-ready\n", stderr="")
+        return subprocess.CompletedProcess(argv, 0, stdout=b"wol-dashboard-ssh-ready\n", stderr=b"")
 
     monkeypatch.setattr(shutdown_service.subprocess, "run", change_settings_during_probe)
     assert client.post(path + "/test").status_code == 409
