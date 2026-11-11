@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import re
 import time
@@ -10,8 +11,9 @@ from uuid import uuid4
 from app.cache import cache
 from app.cache import keys as cache_keys
 from app.models.pcs import PcCreate, PcStatus, PcUpdate
+from app.models.wol import WolRequest
 from app.repositories import pc_repository
-from app.services import pc_registry_service, status_service, uptime_service, wol_service
+from app.services import event_service, job_service, pc_registry_service, status_service, uptime_service, wol_service
 from app.services.shutdown_service import get_shutdown_capability
 from app.types import PcRow
 
@@ -564,3 +566,78 @@ def get_weekly_timeline(
     )
     cache.set(cache_key, response, ttl_seconds=UPTIME_WEEKLY_CACHE_TTL_SECONDS)
     return response
+
+
+async def request_wol(pc_id: str, payload: WolRequest | None) -> dict[str, object]:
+    """WOLジョブを登録し、初期イベントを配信する。
+
+    Args:
+        pc_id: APIで指定された登録済みPC ID。
+        payload: repeat回数や上書きポートなどの任意WOL設定。
+
+    Returns:
+        作成したジョブ行。
+
+    Raises:
+        LookupError: 対象PCが存在しない場合。
+        ValueError: 対象PC IDが不正な場合。
+    """
+    repeat = payload.repeat if payload is not None else 1
+    broadcast = payload.broadcast if payload is not None else None
+    port = payload.port if payload is not None else None
+
+    job_payload: dict[str, object] = {"pc_id": pc_id, "repeat": repeat}
+    if broadcast is not None:
+        job_payload["broadcast"] = broadcast
+    if port is not None:
+        job_payload["port"] = port
+
+    get_pc(pc_id)
+
+    job = job_service.create_job("wol", payload=job_payload)
+    asyncio.create_task(
+        job_service.run_job(
+            str(job["id"]),
+            lambda: send_wol(pc_id, repeat=repeat, broadcast=broadcast, port=port),
+        )
+    )
+    await event_service.event_broker.publish("job", {"job_id": job["id"], "state": "queued"})
+    return job
+
+
+async def refresh_pc_status_and_publish(pc_id: str) -> dict[str, object]:
+    """単体PCのステータスを更新し、更新後の実行時状態を配信する。
+
+    Args:
+        pc_id: 登録済みPC ID。
+
+    Returns:
+        更新後のPCレスポンスオブジェクト。
+
+    Raises:
+        LookupError: 対象PCが存在しない場合。
+    """
+    pc = await asyncio.to_thread(refresh_pc_status, pc_id)
+    await event_service.event_broker.publish(
+        "pc_status",
+        {
+            "pc_id": pc_id,
+            "status": pc["status"],
+            "updated_at": pc["updated_at"],
+            "last_seen_at": pc["last_seen_at"],
+        },
+    )
+    return pc
+
+
+async def request_refresh_all_statuses() -> dict[str, object]:
+    """全登録PCのステータスを更新する単一のアクティブジョブを登録する。
+
+    Returns:
+        既存または新規作成したステータス更新ジョブ。
+    """
+    job, created = job_service.create_or_get_active_job("status_refresh_all", payload=None)
+    if created:
+        asyncio.create_task(job_service.run_job(str(job["id"]), refresh_all_statuses))
+        await event_service.event_broker.publish("job", {"job_id": job["id"], "state": "queued"})
+    return job
