@@ -30,7 +30,7 @@ def test_refresh_all_statuses_reuses_active_job(client: TestClient, monkeypatch)
     async def _fake_request_refresh_all_statuses() -> dict[str, object]:
         return {"id": "job-active", "state": "running"}
 
-    monkeypatch.setattr(pcs_api.status_use_case, "request_refresh_all_statuses", _fake_request_refresh_all_statuses)
+    monkeypatch.setattr(pcs_api.pc_service, "request_refresh_all_statuses", _fake_request_refresh_all_statuses)
 
     response = client.post("/api/pcs/status/refresh")
     assert response.status_code == 202

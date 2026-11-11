@@ -9,7 +9,6 @@ import pytest
 from app.repositories import job_repository, pc_repository, ssh_settings_repository
 from app.services import api_token_service, job_service, pc_service, shutdown_service
 from app.security.rate_limit import reset_rate_limiter_for_test
-from app.use_cases import shutdown_use_case
 
 
 def register_test_pc(client, pc_id="pc-1", mac="AA:BB:CC:DD:EE:01", ip="192.168.10.103"):
@@ -36,7 +35,7 @@ def test_both_roles_can_shutdown_with_rate_limit(client, monkeypatch, role):
     async def request(pc_id):
         calls.append(pc_id)
         return {"id": "job-shutdown", "state": "queued"}
-    monkeypatch.setattr(shutdown_use_case, "request_pc_shutdown", request)
+    monkeypatch.setattr(shutdown_service, "request_pc_shutdown", request)
     for _ in range(3):
         assert client.post("/api/pcs/pc-1/shutdown").status_code == 202
     assert client.post("/api/pcs/pc-1/shutdown").status_code == 429

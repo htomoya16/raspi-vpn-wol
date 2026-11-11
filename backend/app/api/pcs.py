@@ -12,10 +12,9 @@ from app.security.rate_limit import (
     enforce_shutdown_rate_limit,
     enforce_wol_send_rate_limit,
 )
-from app.services import pc_service
+from app.services import pc_service, shutdown_service
 from app.services.pc_service import PcConflictError
 from app.services.shutdown_service import ShutdownUnavailableError
-from app.use_cases import shutdown_use_case, status_use_case, wol_use_case
 
 router = APIRouter()
 
@@ -45,7 +44,7 @@ async def submit_pc_shutdown(pc_id: str) -> JobAccepted:
         HTTPException: 対象PCが存在しない、または停止操作を受け付けられない場合。
     """
     try:
-        job = await shutdown_use_case.request_pc_shutdown(pc_id)
+        job = await shutdown_service.request_pc_shutdown(pc_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ShutdownUnavailableError as exc:
@@ -176,7 +175,7 @@ async def send_wol(
     payload: WolRequest | None = Body(default=None),
 ) -> JobAccepted:
     try:
-        job = await wol_use_case.request_wol(pc_id, payload)
+        job = await pc_service.request_wol(pc_id, payload)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -193,7 +192,7 @@ async def send_wol(
 )
 async def refresh_pc_status(pc_id: str) -> PcResponse:
     try:
-        pc = await status_use_case.refresh_pc_status(pc_id)
+        pc = await pc_service.refresh_pc_status_and_publish(pc_id)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
@@ -210,7 +209,7 @@ async def refresh_pc_status(pc_id: str) -> PcResponse:
     responses={429: {"description": "レート制限超過"}},
 )
 async def refresh_all_statuses() -> JobAccepted:
-    job = await status_use_case.request_refresh_all_statuses()
+    job = await pc_service.request_refresh_all_statuses()
     return JobAccepted(job_id=job["id"], state=job["state"])
 
 

@@ -20,13 +20,13 @@ def test_status_refresh_http_error_mapping(client: TestClient, monkeypatch) -> N
     async def _raise_value_error(_: str) -> dict[str, object]:
         raise ValueError("forced error")
 
-    monkeypatch.setattr(pcs_api.status_use_case, "refresh_pc_status", _raise_value_error)
+    monkeypatch.setattr(pcs_api.pc_service, "refresh_pc_status_and_publish", _raise_value_error)
     value_error_response = client.post("/api/pcs/pc-any/status/refresh")
     assert value_error_response.status_code == 400
     assert value_error_response.json()["detail"] == "forced error"
 
 
-def test_status_refresh_endpoint_uses_use_case(client: TestClient, monkeypatch) -> None:
+def test_status_refresh_endpoint_uses_service(client: TestClient, monkeypatch) -> None:
     import app.api.pcs as pcs_api
 
     async def _fake_refresh_pc_status(pc_id: str) -> dict[str, object]:
@@ -44,7 +44,7 @@ def test_status_refresh_endpoint_uses_use_case(client: TestClient, monkeypatch) 
             "updated_at": "2026-03-03T00:00:00+00:00",
         }
 
-    monkeypatch.setattr(pcs_api.status_use_case, "refresh_pc_status", _fake_refresh_pc_status)
+    monkeypatch.setattr(pcs_api.pc_service, "refresh_pc_status_and_publish", _fake_refresh_pc_status)
 
     response = client.post("/api/pcs/pc-status/status/refresh")
 
@@ -53,14 +53,14 @@ def test_status_refresh_endpoint_uses_use_case(client: TestClient, monkeypatch) 
     assert response.json()["pc"]["status"] == "online"
 
 
-def test_status_refresh_all_endpoint_uses_use_case(client: TestClient, monkeypatch) -> None:
+def test_status_refresh_all_endpoint_uses_service(client: TestClient, monkeypatch) -> None:
     import app.api.pcs as pcs_api
 
     async def _fake_request_refresh_all_statuses() -> dict[str, object]:
         return {"id": "job-status-test", "state": "queued"}
 
     monkeypatch.setattr(
-        pcs_api.status_use_case,
+        pcs_api.pc_service,
         "request_refresh_all_statuses",
         _fake_request_refresh_all_statuses,
     )
